@@ -9,15 +9,23 @@ interface UserMenuProps {
   isVisible: boolean;
   onLogout: () => void;
   onInvite: () => void;
+  phoneNumber: string;
 }
 
 export const UserMenu: React.FC<UserMenuProps> = ({
   isVisible,
   onLogout,
   onInvite,
+  phoneNumber,
 }) => {
   const [showDropdown, setShowDropdown] = useState(false);
   const [showBubble, setShowBubble] = useState(true); // 控制气泡显示
+
+  // 获取手机号后4位
+  const getPhoneLast4Digits = () => {
+    if (!phoneNumber || phoneNumber.length < 4) return '';
+    return phoneNumber.slice(-4);
+  };
 
   const toggleDropdown = () => {
     console.log('Toggle dropdown clicked, current state:', showDropdown);
@@ -72,15 +80,18 @@ export const UserMenu: React.FC<UserMenuProps> = ({
         </TouchableOpacity>
       )}
       
-      {/* 三个点按钮 */}
+      {/* 手机尾号 + 三个点按钮 */}
       <TouchableOpacity
         style={styles.menuButton}
         onPress={toggleDropdown}
         activeOpacity={0.7}
       >
-        <View style={styles.dot} />
-        <View style={styles.dot} />
-        <View style={styles.dot} />
+        <Text style={styles.phoneNumber}>{getPhoneLast4Digits()}</Text>
+        <View style={styles.dotsContainer}>
+          <View style={styles.dot} />
+          <View style={styles.dot} />
+          <View style={styles.dot} />
+        </View>
       </TouchableOpacity>
 
       {/* 下拉菜单 */}
@@ -128,12 +139,13 @@ const styles = StyleSheet.create({
     zIndex: 1000,
   },
   menuButton: {
-    width: width > 768 ? 40 : 36,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: width > 768 ? 12 : 10,
     height: width > 768 ? 40 : 36,
     borderRadius: width > 768 ? 20 : 18,
     backgroundColor: COLORS.WHITE,
-    alignItems: 'center',
-    justifyContent: 'center',
     shadowColor: COLORS.SHADOW,
     shadowOffset: {
       width: 0,
@@ -142,6 +154,16 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 3,
+  },
+  phoneNumber: {
+    fontSize: width > 768 ? 14 : 12,
+    fontWeight: '600',
+    color: COLORS.TEXT_PRIMARY,
+    marginRight: width > 768 ? 8 : 6,
+  },
+  dotsContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   dot: {
     width: width > 768 ? 4 : 3,
@@ -196,7 +218,7 @@ const styles = StyleSheet.create({
   inviteBubble: {
     position: 'absolute',
     top: 0,
-    right: 50,
+    right: 70, // 增加右侧距离，因为按钮变宽了
     backgroundColor: COLORS.PRIMARY,
     borderRadius: width > 768 ? 20 : 18,
     paddingHorizontal: width > 768 ? 20 : 16, // 增加水平内边距

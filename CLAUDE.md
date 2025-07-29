@@ -4,9 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a React Native/Expo app called "omnilaze-universal" with dual backend support: Python Flask for local development and Cloudflare Workers for production deployment. The app is a food ordering application with a multi-step authentication and form interface that collects user information and manages order creation with ratings and feedback.
+This is a React Native/Expo app called "omnilaze-universal" (懒得点外卖) with dual backend support: Python Flask for local development and Cloudflare Workers for production deployment. The app is a food ordering application with a multi-step authentication and form interface that collects user information and manages order creation with ratings and feedback.
 
 Key feature: **Address Autocomplete** - Integrated with Amap (高德地图) API for real address search, with intelligent caching (5-minute cache, 70-85% API call reduction) and 4+ Chinese character input requirement.
+
+**Critical Architecture Note**: This project uses a unique dual-backend architecture where the Flask server is primarily for local development/testing, while Cloudflare Workers handles production traffic. The frontend automatically detects and adapts to both environments.
 
 ## Architecture
 
@@ -107,7 +109,25 @@ psql -f jwt/supabase_setup.sql
 wrangler d1 execute omnilaze-orders --file=./migrations/001_initial.sql
 ```
 
-## Key Features
+## Testing and Development
+
+### Running Tests
+Currently no automated tests are configured. Manual testing through:
+- `python jwt/test_api.py` for backend API testing
+- Manual UI testing through the development server
+
+### Common Development Tasks
+- **Address Component Testing**: Use dev mode with `DEV_CONFIG.SKIP_AUTH = true`
+- **API Testing**: Use Flask dev server with in-memory storage
+- **Production Testing**: Deploy to Cloudflare Workers staging environment
+
+### Debugging
+- **Frontend Logs**: Check browser console or React Native debugger
+- **Flask Backend**: Check terminal output where Flask server is running
+- **Workers**: Use `wrangler tail` for real-time logging
+- **Environment Issues**: Check `.env` file and environment variable configuration
+
+## Key Features & Implementation Details
 
 1. **Dual Backend Architecture**: Flask for local development, Cloudflare Workers for production
 2. **Modular Authentication System**: Separate `AuthComponent` for reusable phone verification
@@ -121,6 +141,32 @@ wrangler d1 execute omnilaze-orders --file=./migrations/001_initial.sql
 10. **Map Integration**: Address confirmation with map display
 11. **CORS Configuration**: Supports multiple development server ports
 12. **Automated Deployment**: One-click deployment scripts for Cloudflare infrastructure
+
+### Critical Implementation Notes
+
+#### Authentication Flow (App.tsx:309-340)
+The app implements a sophisticated 3-stage auth system that switches between development and production modes:
+- Development: Uses predefined invite codes and in-memory storage
+- Production: Integrates with SMS service and persistent database
+
+#### State Management Architecture (App.tsx:58-106)
+Complex state coordination between:
+- Authentication state (managed by AuthComponent)
+- Form progression state (currentStep, editingStep)
+- Order state (currentOrderId, isOrderSubmitting)
+- UI animation state (various animation values)
+
+#### Address Autocomplete System (src/components/AddressAutocomplete.tsx)
+- **API Integration**: Amap (高德地图) with intelligent caching
+- **Performance**: 5-minute cache reduces API calls by 70-85%
+- **Input Validation**: Minimum 4 Chinese characters required
+- **Cross-platform**: Different rendering for Web vs Native
+
+#### Component Architecture Patterns
+- **Conditional Rendering**: Heavy use of conditional components based on authentication state
+- **Animation Coordination**: Multiple Animated.Value instances managed centrally
+- **Form Validation**: Step-by-step validation with error handling
+- **State Persistence**: Cookie-based session management with automatic restoration
 
 ## Environment Setup
 

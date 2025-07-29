@@ -62,7 +62,7 @@ export const InviteModal: React.FC<InviteModalProps> = ({
   };
 
   const inviteCode = inviteStats?.user_invite_code || generateInviteCode(userPhoneNumber);
-  const inviteText = `我在用懒得点外卖，体验非常棒！使用我的邀请码 ${inviteCode} 到order.omnilaze.co注册，一起享受智能点餐服务吧！🎉`;
+  const inviteText = `我在用懒得点外卖，体验非常棒！使用我的邀请码 ${inviteCode} 到order.omnilaze.co注册，邀请三位新用户注册可获得免费奶茶一杯哦！🧋`;
 
   // Web环境下使用navigator.clipboard，React Native使用不同的API
   const copyToClipboard = async (text: string) => {
@@ -127,7 +127,7 @@ export const InviteModal: React.FC<InviteModalProps> = ({
           {/* 内容 */}
           <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
             <Text style={styles.description}>
-              分享你的邀请码，让朋友也懒得点外卖吧
+              分享你的邀请码，让朋友也懒得点外卖吧！
             </Text>
 
             {loading ? (
@@ -158,13 +158,16 @@ export const InviteModal: React.FC<InviteModalProps> = ({
                   {inviteStats && (
                     <View style={styles.statsContainer}>
                       <Text style={styles.statsText}>
-                        已邀请 {inviteStats.current_uses || 0}/{inviteStats.max_uses || 2} 人
+                        已邀请 {inviteStats.current_uses || 0}/{inviteStats.max_uses || 3} 人
+                      </Text>
+                      <Text style={styles.rewardText}>
+                        邀请三个新用户注册，免单奶茶 🧋
                       </Text>
                       <View style={styles.progressBar}>
                         <View 
                           style={[
                             styles.progressFill, 
-                            { width: `${((inviteStats.current_uses || 0) / (inviteStats.max_uses || 2)) * 100}%` }
+                            { width: `${((inviteStats.current_uses || 0) / (inviteStats.max_uses || 3)) * 100}%` }
                           ]} 
                         />
                       </View>
@@ -313,6 +316,12 @@ const styles = StyleSheet.create({
   statsText: {
     fontSize: 14,
     color: COLORS.TEXT_SECONDARY,
+    marginBottom: 4,
+  },
+  rewardText: {
+    fontSize: 13,
+    color: COLORS.PRIMARY,
+    fontWeight: '600',
     marginBottom: 8,
   },
   progressBar: {

@@ -246,39 +246,23 @@ export default function LemonadeApp() {
 
   useEffect(() => {
     // 未认证状态下的打字机效果
-    if (editingStep === null && !isAuthenticated) {
+    if (editingStep === null && !isAuthenticated && !isTyping) {
       inputSectionAnimation.setValue(0);
       currentQuestionAnimation.setValue(1);
-      
-      // 如果displayedText为空或者是初始问题，触发打字机效果
-      if (!displayedText || displayedText === '请输入手机号获取验证码') {
-        typeText(authQuestionText, TIMING.TYPING_SPEED);
-      }
+      typeText(authQuestionText, TIMING.TYPING_SPEED);
     }
     
-    // 已认证状态下的打字机效果 - 添加防重复逻辑
-    if (editingStep === null && isAuthenticated && currentStep < STEP_CONTENT.length && !completedAnswers[currentStep]) {
+    // 已认证状态下的打字机效果
+    if (editingStep === null && isAuthenticated && currentStep < STEP_CONTENT.length && !completedAnswers[currentStep] && !isTyping) {
       const stepData = getCurrentStepData();
-      // 支付步骤只在第一次进入时触发打字机效果
-      if (stepData.showPayment && displayedText === stepData.message) {
-        return; // 如果已经显示了支付步骤的文本，就不重复触发
-      }
       
       inputSectionAnimation.setValue(0);
       currentQuestionAnimation.setValue(1);
       
-      // 直接调用typeText，让它处理所有逻辑
       const newMessage = stepData.message;
       typeText(newMessage, TIMING.TYPING_SPEED);
     }
-  }, [currentStep, editingStep, isAuthenticated, selectedFoodType]); // 移除authQuestionText依赖避免支付页面重复触发
-
-  // 单独处理未认证状态下的authQuestionText变化
-  useEffect(() => {
-    if (!isAuthenticated && editingStep === null && authQuestionText) {
-      typeText(authQuestionText, TIMING.TYPING_SPEED);
-    }
-  }, [authQuestionText, isAuthenticated]);
+  }, [currentStep, editingStep, isAuthenticated, selectedFoodType, authQuestionText]); // 添加authQuestionText依赖
 
   // Handle editing mode - skip typewriter effect and set up immediately
   useEffect(() => {
@@ -502,7 +486,7 @@ export default function LemonadeApp() {
     const stepData = getCurrentStepData();
     switch (stepData.inputType) {
       case 'address':
-        return isAddressConfirmed && !!address.trim();
+        return !!address.trim() && address.trim().length >= 5;
       case 'foodType':
         return selectedFoodType.length > 0;
       case 'allergy':
@@ -538,15 +522,21 @@ export default function LemonadeApp() {
     setIsAddressConfirmed(true);
     changeEmotion('✅');
     
-    Animated.timing(mapAnimation, {
-      toValue: 1,
-      duration: 700,
-      useNativeDriver: true,
-    }).start();
+    // 注释掉地图动画和显示
+    // Animated.timing(mapAnimation, {
+    //   toValue: 1,
+    //   duration: 700,
+    //   useNativeDriver: true,
+    // }).start();
     
+    // setTimeout(() => {
+    //   setShowMap(true);
+    // }, 500);
+    
+    // 地址确认后直接进入下一步
     setTimeout(() => {
-      setShowMap(true);
-    }, 500);
+      handleNext();
+    }, 300);
   };
 
   const handleNext = () => {
@@ -811,15 +801,16 @@ export default function LemonadeApp() {
         [editingStep]: currentAnswer
       }));
       
-      // 特殊处理地址步骤
+      // 特殊处理地址步骤 - 注释掉地图显示
       if (editingStep === 0) {
         setIsAddressConfirmed(true);
-        Animated.timing(mapAnimation, {
-          toValue: 1,
-          duration: 700,
-          useNativeDriver: true,
-        }).start();
-        setTimeout(() => setShowMap(true), 500);
+        // 注释掉地图动画
+        // Animated.timing(mapAnimation, {
+        //   toValue: 1,
+        //   duration: 700,
+        //   useNativeDriver: true,
+        // }).start();
+        // setTimeout(() => setShowMap(true), 500);
       }
       
       // 特殊处理食物类型编辑后的步骤调整
@@ -894,8 +885,9 @@ export default function LemonadeApp() {
         case 'address':
           setAddress(originalAnswerBeforeEdit.value);
           setIsAddressConfirmed(true);
-          setShowMap(true);
-          mapAnimation.setValue(1);
+          // 注释掉地图相关逻辑
+          // setShowMap(true);
+          // mapAnimation.setValue(1);
           break;
         case 'foodType':
           // 从中文标签转换回ID
@@ -969,8 +961,8 @@ export default function LemonadeApp() {
             errorMessage={inputError}
           />
           
-          {/* Map Container - 编辑地址时显示 */}
-          {showMap && editingStep === 0 && (
+          {/* Map Container - 编辑地址时显示 - 已注释 */}
+          {/* {showMap && editingStep === 0 && (
             <Animated.View 
               style={[
                 {
@@ -988,7 +980,7 @@ export default function LemonadeApp() {
                 <MapComponent showMap={showMap} mapAnimation={mapAnimation} />
               </View>
             </Animated.View>
-          )}
+          )} */}
         </View>
       );
     }
@@ -1095,14 +1087,14 @@ export default function LemonadeApp() {
     
     // 手机号步骤的按钮逻辑已移动到AuthComponent
     
-    // 正常流程的按钮 - 地址确认现在是第一步（步骤0）
-    if (currentStep === 0 && !isAddressConfirmed) {
+    // 正常流程的按钮 - 地址输入直接使用确认按钮（步骤0）
+    if (currentStep === 0) {
       return (
         <ActionButton
           onPress={handleAddressConfirm}
-          title="确认地址"
-          disabled={!address.trim()}
-          isActive={!!address.trim()}
+          title="确认"
+          disabled={!address.trim() || address.trim().length < 5}
+          isActive={!!address.trim() && address.trim().length >= 5}
           animationValue={inputSectionAnimation}
         />
       );
@@ -1141,6 +1133,7 @@ export default function LemonadeApp() {
           isVisible={true}
           onLogout={handleLogout}
           onInvite={handleInvite}
+          phoneNumber={authResult?.phoneNumber || ''}
         />
       )}
       
@@ -1255,8 +1248,8 @@ export default function LemonadeApp() {
                       emotionAnimation={emotionAnimation}
                       shakeAnimation={shakeAnimation}
                     >
-                      {/* Map Container - 地址确认时显示（现在是第0步） */}
-                      {showMap && (currentStep === 0 || editingStep === 0) && editingStep === null && (
+                      {/* Map Container - 地址确认时显示（现在是第0步） - 已注释 */}
+                      {/* {showMap && (currentStep === 0 || editingStep === 0) && editingStep === null && (
                         <Animated.View 
                           style={[
                             {
@@ -1274,7 +1267,7 @@ export default function LemonadeApp() {
                             <MapComponent showMap={showMap} mapAnimation={mapAnimation} />
                           </View>
                         </Animated.View>
-                      )}
+                      )} */}
 
                       {/* Input Section */}
                       {renderCurrentInput()}

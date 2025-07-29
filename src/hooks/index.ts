@@ -10,6 +10,7 @@ export const useTypewriterEffect = () => {
   const [isTyping, setIsTyping] = useState(false);
   const [showCursor, setShowCursor] = useState(true);
   const [currentTimer, setCurrentTimer] = useState<NodeJS.Timeout | null>(null);
+  const lastTextRef = useRef<string>(''); // 记录上次的文本
 
   useEffect(() => {
     const cursorInterval = setInterval(() => {
@@ -20,6 +21,14 @@ export const useTypewriterEffect = () => {
   }, []);
 
   const typeText = (text: string, speed: number = TIMING.TYPING_SPEED) => {
+    // 如果文本相同，不重复触发
+    if (lastTextRef.current === text && (isTyping || displayedText === text)) {
+      return;
+    }
+    
+    // 记录当前文本
+    lastTextRef.current = text;
+    
     // 清除之前的定时器
     if (currentTimer) {
       clearInterval(currentTimer);
