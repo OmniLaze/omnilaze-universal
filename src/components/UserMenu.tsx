@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Modal, Animated, Platform, Dimensions } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Modal, Animated, Platform, Dimensions, Image, Linking } from 'react-native';
 import { SimpleIcon } from './SimpleIcon';
 import { COLORS } from '../constants';
 
@@ -20,6 +20,7 @@ export const UserMenu: React.FC<UserMenuProps> = ({
 }) => {
   const [showDropdown, setShowDropdown] = useState(false);
   const [showBubble, setShowBubble] = useState(true); // 控制气泡显示
+  const [showAboutModal, setShowAboutModal] = useState(false); // 控制关于我们弹窗
 
   // 获取手机号后4位
   const getPhoneLast4Digits = () => {
@@ -43,6 +44,16 @@ export const UserMenu: React.FC<UserMenuProps> = ({
     setShowDropdown(false);
     setShowBubble(false); // 点击邀请后隐藏气泡
     onInvite();
+  };
+
+  const handleAbout = () => {
+    console.log('About clicked');
+    setShowDropdown(false);
+    setShowAboutModal(true);
+  };
+
+  const handleOpenWebsite = () => {
+    Linking.openURL('https://omnilaze.co').catch(err => console.error('Failed to open website:', err));
   };
 
   const handleBubbleClick = () => {
@@ -110,6 +121,17 @@ export const UserMenu: React.FC<UserMenuProps> = ({
           
           <TouchableOpacity
             style={styles.menuItem}
+            onPress={handleAbout}
+            activeOpacity={0.7}
+          >
+            <SimpleIcon name="info" size={16} color={COLORS.PRIMARY} />
+            <Text style={styles.menuItemText}>关于我们</Text>
+          </TouchableOpacity>
+          
+          <View style={styles.separator} />
+          
+          <TouchableOpacity
+            style={styles.menuItem}
             onPress={handleLogout}
             activeOpacity={0.7}
           >
@@ -127,6 +149,63 @@ export const UserMenu: React.FC<UserMenuProps> = ({
           activeOpacity={1}
         />
       )}
+
+      {/* 关于我们弹窗 */}
+      <Modal
+        visible={showAboutModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowAboutModal(false)}
+      >
+        <View style={styles.aboutOverlay}>
+          <TouchableOpacity
+            style={styles.aboutBackdrop}
+            activeOpacity={1}
+            onPress={() => setShowAboutModal(false)}
+          />
+          
+          <View style={styles.aboutModal}>
+            {/* 标题栏 */}
+            <View style={styles.aboutHeader}>
+              <Text style={styles.aboutTitle}>关于我们</Text>
+              <TouchableOpacity
+                style={styles.aboutCloseButton}
+                onPress={() => setShowAboutModal(false)}
+                activeOpacity={0.7}
+              >
+                <SimpleIcon name="close" size={20} color={COLORS.TEXT_SECONDARY} />
+              </TouchableOpacity>
+            </View>
+
+            {/* 内容 */}
+            <View style={styles.aboutContent}>
+              {/* 社交图片 */}
+              <Image 
+                source={require('../../assets/social/social.jpg')} 
+                style={styles.socialImage}
+                resizeMode="contain"
+              />
+              
+              {/* 联系信息 */}
+              <View style={styles.contactInfo}>
+                <TouchableOpacity
+                  style={styles.websiteButton}
+                  onPress={handleOpenWebsite}
+                  activeOpacity={0.7}
+                >
+                  <SimpleIcon name="language" size={16} color={COLORS.WHITE} />
+                  <Text style={styles.websiteButtonText}>官网：omnilaze.co</Text>
+                </TouchableOpacity>
+                
+                <View style={styles.wechatInfo}>
+                  <SimpleIcon name="chat" size={16} color={COLORS.TEXT_SECONDARY} />
+                  <Text style={styles.wechatText}>微信号：stevenxxzg</Text>
+                </View>
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -179,7 +258,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.WHITE,
     borderRadius: 12,
     paddingVertical: 8,
-    minWidth: 120,
+    minWidth: 140, // 增加最小宽度以适应"关于我们"
     shadowColor: COLORS.SHADOW,
     shadowOffset: {
       width: 0,
@@ -262,5 +341,90 @@ const styles = StyleSheet.create({
     borderRightColor: 'transparent',
     borderTopColor: 'transparent',
     borderBottomColor: 'transparent',
+  },
+  // 关于我们弹窗样式
+  aboutOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  aboutBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  aboutModal: {
+    backgroundColor: COLORS.WHITE,
+    borderRadius: 16,
+    width: '90%',
+    maxWidth: 400,
+    maxHeight: '80%',
+  },
+  aboutHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  aboutTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: COLORS.TEXT_PRIMARY,
+  },
+  aboutCloseButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f8f9fa',
+  },
+  aboutContent: {
+    padding: 20,
+  },
+  socialImage: {
+    width: '100%',
+    height: 266, // 从200增加到266 (200 * 1.33)
+    borderRadius: 12,
+    marginBottom: 20,
+  },
+  contactInfo: {
+    gap: 16,
+  },
+  websiteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.PRIMARY,
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  websiteButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.WHITE,
+    marginLeft: 8,
+  },
+  wechatInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 12,
+  },
+  wechatText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: COLORS.TEXT_SECONDARY,
+    marginLeft: 8,
   },
 });
