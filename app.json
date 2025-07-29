@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "omnilaze-universal",
-    "slug": "omnilaze-universal",
+    "name": "懒得点外卖",
+    "slug": "懒得",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
