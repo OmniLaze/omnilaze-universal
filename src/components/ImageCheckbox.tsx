@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, Image, Animated, TextInput } from 'react-native';
+import { View, Text, TouchableOpacity, Image, Animated, TextInput, Dimensions } from 'react-native';
 import { SimpleIcon } from './SimpleIcon';
 import { StyleSheet } from 'react-native';
 import { COLORS } from '../constants';
+
+const { width } = Dimensions.get('window');
 
 interface ImageCheckboxOption {
   id: string;
@@ -32,7 +34,18 @@ export const ImageCheckbox: React.FC<ImageCheckboxProps> = ({
   const [shouldRender, setShouldRender] = useState(!animationValue);
   const [otherText, setOtherText] = useState('');
   const [showOtherInput, setShowOtherInput] = useState(false);
-  const otherInputAnimation = new Animated.Value(0);
+  const [otherInputAnimation] = useState(new Animated.Value(0)); // 使用useState保持动画实例
+
+  useEffect(() => {
+    // 检查是否已经选中了“其他”选项，如果是则显示输入框
+    const hasOtherSelected = selectedIds.some(id => id.includes('other'));
+    if (hasOtherSelected && !showOtherInput) {
+      setShowOtherInput(true);
+      otherInputAnimation.setValue(1);
+    } else if (!hasOtherSelected && showOtherInput) {
+      hideOtherInput();
+    }
+  }, [selectedIds]);
 
   useEffect(() => {
     if (animationValue) {
@@ -53,6 +66,7 @@ export const ImageCheckbox: React.FC<ImageCheckboxProps> = ({
     
     const isSelected = selectedIds.includes(optionId);
     const isOtherOption = optionId.includes('other');
+    console.log(`点击选项: ${optionId}, 是否已选中: ${isSelected}, 是否为其他选项: ${isOtherOption}`); // 调试日志
     let newSelection: string[];
     
     if (singleSelect) {
@@ -98,19 +112,21 @@ export const ImageCheckbox: React.FC<ImageCheckboxProps> = ({
   };
 
   const showOtherInputAnimated = () => {
+    console.log('显示其他输入框'); // 调试日志
     setShowOtherInput(true);
     Animated.spring(otherInputAnimation, {
       toValue: 1,
-      tension: 60,
+      tension: 80,
       friction: 8,
       useNativeDriver: false,
     }).start();
   };
 
   const hideOtherInput = () => {
+    console.log('隐藏其他输入框'); // 调试日志
     Animated.spring(otherInputAnimation, {
       toValue: 0,
-      tension: 60,
+      tension: 80,
       friction: 8,
       useNativeDriver: false,
     }).start(() => {
@@ -197,7 +213,7 @@ export const ImageCheckbox: React.FC<ImageCheckboxProps> = ({
                 {isSelected && (
                   <SimpleIcon 
                     name="check" 
-                    size={18} 
+                    size={width > 768 ? 18 : 14} 
                     color={COLORS.WHITE} 
                   />
                 )}
@@ -240,25 +256,29 @@ export const ImageCheckbox: React.FC<ImageCheckboxProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    marginTop: 16,
-    maxWidth: 500, // 限制最大宽度
+    marginTop: width > 768 ? 16 : 8, // 移动端减少顶部间距
+    maxWidth: 500,
   },
   grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8, // 减小间距
-    justifyContent: 'center', // 改为居中对齐
+    flexDirection: width > 768 ? 'row' : 'column',
+    flexWrap: width > 768 ? 'wrap' : 'nowrap',
+    gap: width > 768 ? 8 : 4,
+    justifyContent: width > 768 ? 'center' : 'flex-start',
   },
   optionCard: {
-    width: '31%', // 一行三个，考虑gap的空间
-    aspectRatio: 0.66, // 3:2 长宽比 (2/3 = 0.66，因为高比宽)
+    width: width > 768 ? '31%' : '100%',
+    aspectRatio: width > 768 ? 0.66 : undefined,
+    height: width > 768 ? undefined : 68,
     backgroundColor: COLORS.WHITE,
-    borderRadius: 12,
+    borderRadius: width > 768 ? 12 : 8,
     borderWidth: 2,
     borderColor: '#E2E8F0',
-    padding: 12,
+    borderLeftWidth: width > 768 ? 2 : 4, // 移动端统一左边框宽度
+    padding: width > 768 ? 12 : 12,
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: width > 768 ? 'space-between' : 'flex-start',
+    flexDirection: width > 768 ? 'column' : 'row',
+    position: 'relative',
     shadowColor: COLORS.SHADOW,
     shadowOffset: {
       width: 0,
@@ -270,39 +290,46 @@ const styles = StyleSheet.create({
   },
   selectedCard: {
     borderColor: COLORS.PRIMARY,
+    borderLeftColor: COLORS.PRIMARY, // 确保选中时左边框也是主色
   },
   imageContainer: {
-    width: 160, // 增加以容纳更大的图片
-    height: 160, // 增加以容纳更大的图片
+    width: width > 768 ? 160 : 80, // 移动端放大图片容器
+    height: width > 768 ? 160 : 80,
     alignItems: 'center',
     justifyContent: 'center',
-    flex: 1,
+    flex: width > 768 ? 1 : 0,
+    marginRight: width > 768 ? 0 : 55, // 增加右边距
+    marginLeft: width > 768 ? 0 : 50, // 增加左边距
   },
   optionImage: {
-    width: 144, // 从48增加到144 (3倍)
-    height: 144, // 从48增加到144 (3倍)
+    width: width > 768 ? 144 : 75, // 移动端放大图片，从32增加到40
+    height: width > 768 ? 144 : 75,
   },
   optionLabel: {
-    fontSize: 21, // 从16增加到21 (增加1/3)
+    fontSize: width > 768 ? 21 : 16,
     fontWeight: '500',
     color: COLORS.TEXT_PRIMARY,
-    textAlign: 'center',
-    marginVertical: 8, // 从4增加到8，增加上下间距
-    marginBottom: 16, // 增加底部间距，让文字离checkbox更远
+    textAlign: width > 768 ? 'center' : 'left',
+    marginVertical: width > 768 ? 8 : 0,
+    marginBottom: width > 768 ? 16 : 0,
+    flex: width > 768 ? 0 : 1,
+    marginRight: width > 768 ? 0 : 12,
   },
   selectedLabel: {
     color: COLORS.PRIMARY,
     fontWeight: '600',
   },
   checkbox: {
-    width: 22,
-    height: 22,
+    width: width > 768 ? 22 : 18,
+    height: width > 768 ? 22 : 18,
     borderRadius: 4,
     borderWidth: 2,
     borderColor: '#D1D5DB',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: COLORS.WHITE,
+    position: width > 768 ? 'static' : 'absolute',
+    right: width > 768 ? 'auto' : 12,
   },
   checkedBox: {
     backgroundColor: COLORS.PRIMARY,
@@ -315,14 +342,15 @@ const styles = StyleSheet.create({
   otherInputContainer: {
     marginTop: 16,
     marginBottom: 8,
+    paddingHorizontal: width > 768 ? 0 : 8, // 移动端添加左右内边距
   },
   otherInput: {
     borderWidth: 2,
     borderColor: COLORS.PRIMARY,
     borderRadius: 12,
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
+    paddingVertical: width > 768 ? 12 : 10, // 移动端调整内边距
+    fontSize: width > 768 ? 16 : 14, // 移动端调整字体大小
     backgroundColor: COLORS.WHITE,
     color: COLORS.TEXT_PRIMARY,
     shadowColor: COLORS.SHADOW,
@@ -333,5 +361,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 3,
+    minHeight: width > 768 ? 44 : 40, // 设置最小高度便于点击
   },
 });

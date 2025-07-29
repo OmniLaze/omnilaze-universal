@@ -87,11 +87,19 @@ export const useValidation = () => {
         }
         return { isValid: true };
         
-      case 1: // 忌口
-      case 2: // 偏好
+      case 1: // 食物类型
+        if (!value || value === '未选择' || (Array.isArray(value) && value.length === 0)) {
+          const errorMessage = '请选择食物类型';
+          setInputError(errorMessage);
+          return { isValid: false, errorMessage };
+        }
         return { isValid: true };
         
-      case 3: // 预算
+      case 2: // 忌口
+      case 3: // 偏好
+        return { isValid: true };
+        
+      case 4: // 预算
         const budgetNum = parseFloat(value);
         if (!value || budgetNum <= 0) {
           const errorMessage = '请设置一个合理的预算金额';

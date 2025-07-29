@@ -158,13 +158,13 @@ export const InviteModal: React.FC<InviteModalProps> = ({
                   {inviteStats && (
                     <View style={styles.statsContainer}>
                       <Text style={styles.statsText}>
-                        已邀请 {inviteStats.current_uses || 0}/{inviteStats.max_uses || 3} 人
+                        已邀请 {inviteStats.current_uses || 0}/{inviteStats.max_uses || 2} 人
                       </Text>
                       <View style={styles.progressBar}>
                         <View 
                           style={[
                             styles.progressFill, 
-                            { width: `${((inviteStats.current_uses || 0) / (inviteStats.max_uses || 3)) * 100}%` }
+                            { width: `${((inviteStats.current_uses || 0) / (inviteStats.max_uses || 2)) * 100}%` }
                           ]} 
                         />
                       </View>

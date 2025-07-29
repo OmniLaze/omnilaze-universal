@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Modal, Animated, Platform, Dimensions } from 'react-native';
 import { SimpleIcon } from './SimpleIcon';
 import { COLORS } from '../constants';
@@ -17,6 +17,7 @@ export const UserMenu: React.FC<UserMenuProps> = ({
   onInvite,
 }) => {
   const [showDropdown, setShowDropdown] = useState(false);
+  const [showBubble, setShowBubble] = useState(true); // 控制气泡显示
 
   const toggleDropdown = () => {
     console.log('Toggle dropdown clicked, current state:', showDropdown);
@@ -32,8 +33,24 @@ export const UserMenu: React.FC<UserMenuProps> = ({
   const handleInvite = () => {
     console.log('Invite clicked');
     setShowDropdown(false);
+    setShowBubble(false); // 点击邀请后隐藏气泡
     onInvite();
   };
+
+  const handleBubbleClick = () => {
+    setShowBubble(false); // 点击气泡后隐藏
+    handleInvite(); // 直接触发邀请功能
+  };
+
+  // 10秒后自动隐藏气泡
+  useEffect(() => {
+    if (showBubble) {
+      const timer = setTimeout(() => {
+        setShowBubble(false);
+      }, 10000);
+      return () => clearTimeout(timer);
+    }
+  }, [showBubble]);
 
   if (!isVisible) {
     return null;
@@ -41,6 +58,20 @@ export const UserMenu: React.FC<UserMenuProps> = ({
 
   return (
     <View style={styles.container}>
+      {/* 邀请提示气泡 */}
+      {showBubble && (
+        <TouchableOpacity
+          style={styles.inviteBubble}
+          onPress={handleBubbleClick}
+          activeOpacity={0.8}
+        >
+          <View style={styles.bubbleContent}>
+            <Text style={styles.bubbleText}>邀请新用户免单奶茶哦 🎉</Text>
+          </View>
+          <View style={styles.bubbleArrow} />
+        </TouchableOpacity>
+      )}
+      
       {/* 三个点按钮 */}
       <TouchableOpacity
         style={styles.menuButton}
@@ -92,14 +123,14 @@ export const UserMenu: React.FC<UserMenuProps> = ({
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    top: width > 768 ? 120 : 55, // 调整到ProgressSteps上方一点点
-    right: width > 768 ? 185 : 100, // 调整到ProgressSteps左侧
+    top: width > 768 ? 120 : 70,
+    right: width > 768 ? 185 : 16,
     zIndex: 1000,
   },
   menuButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: width > 768 ? 40 : 36,
+    height: width > 768 ? 40 : 36,
+    borderRadius: width > 768 ? 20 : 18,
     backgroundColor: COLORS.WHITE,
     alignItems: 'center',
     justifyContent: 'center',
@@ -113,11 +144,11 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   dot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
+    width: width > 768 ? 4 : 3,
+    height: width > 768 ? 4 : 3,
+    borderRadius: width > 768 ? 2 : 1.5,
     backgroundColor: COLORS.TEXT_PRIMARY,
-    marginVertical: 1,
+    marginVertical: 0.5,
   },
   dropdown: {
     position: 'absolute',
@@ -161,5 +192,53 @@ const styles = StyleSheet.create({
     width: 1000,
     height: 1000,
     zIndex: 999,
+  },
+  inviteBubble: {
+    position: 'absolute',
+    top: 0,
+    right: 50,
+    backgroundColor: COLORS.PRIMARY,
+    borderRadius: width > 768 ? 20 : 18,
+    paddingHorizontal: width > 768 ? 20 : 16, // 增加水平内边距
+    paddingVertical: 0,
+    height: width > 768 ? 40 : 36,
+    minWidth: width > 768 ? 200 : 180, // 设置最小宽度
+    justifyContent: 'center',
+    shadowColor: COLORS.SHADOW,
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 5,
+    zIndex: 1002,
+  },
+  bubbleContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bubbleText: {
+    color: COLORS.WHITE,
+    fontSize: width > 768 ? 14 : 12, // 调整字体大小
+    fontWeight: '500',
+    textAlign: 'center',
+    lineHeight: width > 768 ? 16 : 14,
+  },
+  bubbleArrow: {
+    position: 'absolute',
+    top: '50%',
+    marginTop: -6,
+    right: -5,
+    width: 0,
+    height: 0,
+    borderLeftWidth: 6,
+    borderRightWidth: 6,
+    borderTopWidth: 6,
+    borderBottomWidth: 6,
+    borderLeftColor: COLORS.PRIMARY,
+    borderRightColor: 'transparent',
+    borderTopColor: 'transparent',
+    borderBottomColor: 'transparent',
   },
 });

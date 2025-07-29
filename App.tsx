@@ -168,6 +168,8 @@ export default function LemonadeApp() {
     
     // 重置UI相关状态
     setShowInviteModal(false);
+    setShowFreeDrinkModal(false);
+    setIsFreeOrder(false);  // 重置免单状态
     setDisplayedText('');
     setAuthQuestionText('请输入手机号获取验证码');
     
@@ -309,6 +311,12 @@ export default function LemonadeApp() {
     setIsAuthenticated(true);
     setAuthResult(result);
     
+    // 确保开始普通订餐流程时免单状态为false
+    setIsFreeOrder(false);
+    
+    // 清除之前的对话状态，确保普通订餐从地址步骤开始
+    CookieManager.clearConversationState();
+    
     // 保存用户会话到Cookie
     CookieManager.saveUserSession(result.userId!, result.phoneNumber, result.isNewUser || false);
     
@@ -324,7 +332,7 @@ export default function LemonadeApp() {
     const phoneAnswer = { type: 'phone', value: result.phoneNumber };
     setCompletedAnswers({ [-1]: phoneAnswer }); // 使用-1作为手机号步骤的索引
     
-    // 开始订单收集流程
+    // 开始订单收集流程 - 确保从地址步骤开始
     setTimeout(() => {
       setCurrentStep(0); // 设置为第一个订单收集步骤（地址）
       // useEffect会自动触发打字机效果，不需要手动调用
@@ -571,6 +579,7 @@ export default function LemonadeApp() {
         // 如果当前是食物类型选择步骤（步骤1）
         if (currentStep === 1) {
           const isSelectedDrink = selectedFoodType.includes('drink');
+          
           if (isSelectedDrink) {
             if (isFreeOrder) {
               // 免单模式：直接跳过忌口、偏好、预算，进入支付
@@ -1149,7 +1158,7 @@ export default function LemonadeApp() {
       {/* 进度条 - 仅在登录后显示 */}
       {isAuthenticated && (
         <ProgressSteps currentStep={currentStep} />
-      )}
+      )}  
 
       <ScrollView 
         ref={scrollViewRef}

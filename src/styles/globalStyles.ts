@@ -32,20 +32,29 @@ export const globalStyles = StyleSheet.create({
 
 export const progressStyles = StyleSheet.create({
   progressContainer: {
-    position: 'absolute',
-    top: width > 768 ? 130 : 80,
-    left: width > 768 ? 100 : 20, // 改为right定位
+    position: width > 768 ? 'absolute' : 'relative',
+    top: width > 768 ? 130 : 0,
+    left: width > 768 ? 100 : 0,
     zIndex: 10,
-    width: width > 768 ? 120 : 100, // 减小宽度，让文字更紧凑
-    marginBottom: 0,
+    width: width > 768 ? 120 : '100%',
+    marginBottom: width > 768 ? 0 : 16,
+    paddingHorizontal: width > 768 ? 0 : 16,
+    backgroundColor: width > 768 ? 'transparent' : COLORS.WHITE,
+    paddingVertical: width > 768 ? 0 : 12,
+    borderBottomWidth: width > 768 ? 0 : 1,
+    borderBottomColor: width > 768 ? 'transparent' : COLORS.BORDER,
   },
   progressSteps: {
-    gap: 16,
+    gap: width > 768 ? 16 : 12,
+    flexDirection: width > 768 ? 'column' : 'row',
+    justifyContent: width > 768 ? 'flex-start' : 'space-between',
+    alignItems: width > 768 ? 'flex-start' : 'center',
   },
   stepItem: {
-    flexDirection: 'row',
+    flexDirection: width > 768 ? 'row' : 'column',
     alignItems: 'center',
-    gap: 12,
+    gap: width > 768 ? 12 : 4,
+    flex: width > 768 ? 0 : 1,
   },
   activeStep: {
     width: 12,
@@ -69,13 +78,15 @@ export const progressStyles = StyleSheet.create({
     borderRadius: 6,
   },
   activeStepText: {
-    fontSize: 14,
+    fontSize: width > 768 ? 14 : 12,
     fontWeight: '500',
     color: COLORS.PRIMARY,
+    textAlign: 'center',
   },
   inactiveStepText: {
-    fontSize: 14,
+    fontSize: width > 768 ? 14 : 12,
     color: COLORS.TEXT_MUTED,
+    textAlign: 'center',
   },
 });
 
@@ -88,9 +99,9 @@ export const questionStyles = StyleSheet.create({
     backgroundColor: 'transparent',
     borderRadius: 0,
     padding: 0,
-    marginBottom: 80,
-    marginTop: 10,
-    minHeight: 200,
+    marginBottom: width > 768 ? 80 : 40, // 移动端减少底部间距
+    marginTop: width > 768 ? 10 : 5, // 移动端减少顶部间距
+    minHeight: width > 768 ? 200 : 150, // 移动端减小最小高度
   },
   completedQuestionRow: {
     backgroundColor: 'transparent',
@@ -181,10 +192,9 @@ export const rightContentStyles = StyleSheet.create({
   rightContent: {
     width: '100%',
     minHeight: height * 1.2,
-    maxWidth: width > 768 ? 700 : '100%', // 恢复原来的最大宽度
-    alignSelf: 'center', // 恢复居中对齐
-    paddingTop: width > 768 ? 90 : 60,
-    // 移除右侧内边距，让内容保持居中
+    maxWidth: width > 768 ? 700 : '100%',
+    alignSelf: 'center',
+    paddingTop: width > 768 ? 90 : 16, // 减少移动端顶部内边距，因为现在进度条在文档流中
   },
 });
 

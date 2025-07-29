@@ -644,11 +644,11 @@ def api_get_user_invite_stats():
         if DEVELOPMENT_MODE:
             # 开发模式：模拟邀请统计数据
             if user_id not in dev_user_invite_stats:
-                # 模拟用户已邀请3人，可以获得免单
+                # 模拟用户已邀请2人，可以获得免单
                 dev_user_invite_stats[user_id] = {
                     'user_invite_code': f'USR{user_id[-6:]}',
-                    'current_uses': 3,
-                    'max_uses': 3,
+                    'current_uses': 2,
+                    'max_uses': 2,
                     'remaining_uses': 0,
                     'eligible_for_free_drink': True,
                     'free_drink_claimed': False

@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { View, Text, Image, Animated, TouchableOpacity, Pressable } from 'react-native';
+import { View, Text, Image, Animated, TouchableOpacity, Pressable, Dimensions } from 'react-native';
 import { SimpleIcon } from './SimpleIcon';
 import { questionStyles, avatarStyles, answerStyles } from '../styles/globalStyles';
 import type { Answer } from '../types';
+
+const { width } = Dimensions.get('window');
 
 interface CompletedQuestionProps {
   question: string;
@@ -29,9 +31,10 @@ export const CompletedQuestion: React.FC<CompletedQuestionProps> = ({
   isEditing = false,
   editingInput,
   editingButtons,
-  canEdit = true, // 默认可以编辑
+  canEdit = true,
 }) => {
   const [isHovered, setIsHovered] = useState(false);
+  const isMobile = width <= 768;
 
   return (
     <Animated.View 
@@ -68,42 +71,57 @@ export const CompletedQuestion: React.FC<CompletedQuestionProps> = ({
             {editingButtons}
           </View>
         ) : (
-          <Pressable
-            style={[
-              answerStyles.completedAnswerText,
-              {
-                opacity: answerAnimation,
-                transform: [{
-                  scale: answerAnimation.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [0.95, 1],
-                  }),
-                }],
-              },
-            ]}
-            onPressIn={() => setIsHovered(true)}
-            onPressOut={() => setIsHovered(false)}
-            onLongPress={() => setIsHovered(!isHovered)}
-            onHoverIn={() => setIsHovered(true)}
-            onHoverOut={() => setIsHovered(false)}
+          <Pressable 
+            style={answerStyles.completedAnswerText}
+            onHoverIn={() => !isMobile && setIsHovered(true)}
+            onHoverOut={() => !isMobile && setIsHovered(false)}
           >
-            <Animated.View>
-              <View 
-                style={answerStyles.answerWithEdit}
-              >
+            <View
+              style={{
+                opacity: 1,
+              }}
+            >
+              <View style={answerStyles.answerWithEdit}>
                 <Text style={answerStyles.answerValue}>
                   {formatAnswerDisplay(answer)}
                 </Text>
-                {canEdit && isHovered && (
-                  <TouchableOpacity 
-                    onPress={onEdit}
-                    style={answerStyles.editAnswerButton}
-                  >
-                    <SimpleIcon name="edit" size={22} color="#4B5563" />
-                  </TouchableOpacity>
+                {canEdit && (
+                  isMobile ? (
+                    // 移动端：始终显示的编辑按钮
+                    <TouchableOpacity 
+                      onPress={onEdit}
+                      style={[
+                        answerStyles.editAnswerButton,
+                        {
+                          opacity: 1,
+                          backgroundColor: '#f3f4f6',
+                          borderRadius: 6,
+                          marginLeft: 8,
+                          padding: 8,
+                        }
+                      ]}
+                      hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}
+                    >
+                      <SimpleIcon 
+                        name="edit" 
+                        size={16} 
+                        color="#4B5563" 
+                      />
+                    </TouchableOpacity>
+                  ) : (
+                    // 桌面端：悬停显示
+                    isHovered && (
+                      <TouchableOpacity 
+                        onPress={onEdit}
+                        style={answerStyles.editAnswerButton}
+                      >
+                        <SimpleIcon name="edit" size={22} color="#4B5563" />
+                      </TouchableOpacity>
+                    )
+                  )
                 )}
               </View>
-            </Animated.View>
+            </View>
           </Pressable>
         )}
       </View>

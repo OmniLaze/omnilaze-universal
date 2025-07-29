@@ -44,7 +44,7 @@ if command -v wrangler &> /dev/null; then
     
     # 部署到 Pages
     echo "📤 正在部署到 Cloudflare Pages..."
-    wrangler pages publish dist --project-name=omnilaze-universal-frontend --compatibility-date=2024-01-15
+    wrangler pages deploy dist --project-name=omnilaze-universal-frontend --commit-dirty=true
     
     if [ $? -eq 0 ]; then
         echo "🎉 前端部署成功！"

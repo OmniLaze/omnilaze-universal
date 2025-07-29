@@ -87,8 +87,8 @@ export const PaymentComponent: React.FC<PaymentComponentProps> = ({
                     />
                   </View>
                   <View style={styles.textContainer}>
-                    <Text style={styles.wechatText}>微信支付</Text>
-                    <Text style={styles.budgetText}>支付金额：¥{budget}</Text>
+                    <Text style={styles.wechatText}>微信支付金额：：¥{budget}</Text>
+                    <Text style={styles.budgetText}>请使用微信扫一扫</Text>
                   </View>
                 </>
               )}

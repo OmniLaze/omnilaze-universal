@@ -808,7 +808,7 @@ async function handleGetUserInviteStats(request, env) {
     const statsResult = await env.DB.prepare(inviteStatsQuery).bind(userResult.user_invite_code).first();
 
     const currentUses = statsResult?.current_uses || 0;
-    const maxUses = statsResult?.max_uses || 3;
+    const maxUses = statsResult?.max_uses || 2;
     const isEligibleForFreeDrink = currentUses >= maxUses;
     
     // 检查用户是否已经领取过免单

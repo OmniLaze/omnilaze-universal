@@ -176,7 +176,7 @@ export const InviteModalWithFreeDrink: React.FC<InviteModalWithFreeDrinkProps> =
   const handleCopyInviteText = () => copyToClipboard(inviteText);
 
   const currentUses = inviteStats?.current_uses || 0;
-  const maxUses = inviteStats?.max_uses || 3;
+  const maxUses = inviteStats?.max_uses || 2;
   const isCompleted = currentUses >= maxUses;
 
   return (
@@ -299,7 +299,7 @@ export const InviteModalWithFreeDrink: React.FC<InviteModalWithFreeDrinkProps> =
                           恭喜您获得免单奶茶！
                         </Text>
                         <Text style={styles.freeDrinkSubtitle}>
-                          成功邀请3位好友的奖励
+                          成功邀请2位好友的奖励
                         </Text>
                         <Text style={styles.freeDrinkQuota}>
                           仅限前{freeDrinksRemaining}名，立即领取！
