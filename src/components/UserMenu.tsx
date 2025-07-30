@@ -61,12 +61,12 @@ export const UserMenu: React.FC<UserMenuProps> = ({
     handleInvite(); // 直接触发邀请功能
   };
 
-  // 10秒后自动隐藏气泡
+  // 1000秒后自动隐藏气泡
   useEffect(() => {
     if (showBubble) {
       const timer = setTimeout(() => {
         setShowBubble(false);
-      }, 10000);
+      }, 1000000);
       return () => clearTimeout(timer);
     }
   }, [showBubble]);
@@ -390,7 +390,7 @@ const styles = StyleSheet.create({
   },
   socialImage: {
     width: '100%',
-    height: 266, // 从200增加到266 (200 * 1.33)
+    height: 400, // 从200增加到266 (200 * 1.33)
     borderRadius: 12,
     marginBottom: 20,
   },
