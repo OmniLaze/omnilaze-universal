@@ -17,7 +17,7 @@ export const STEP_CONTENT: StepContent[] = [
     inputType: "allergy"
   },
   {
-    message: "想吃啥味儿的？",
+    message: "想吃什么口味的？",
     showPreferenceInput: true,
     inputType: "preference"
   },
