@@ -66,12 +66,14 @@ export const VALIDATION = {
 } as const;
 
 export const DEV_CONFIG = {
-  // 开发模式：设置为true时跳过JWT认证
-  SKIP_AUTH: true,
-  // 开发模式下的模拟用户信息
+  // 开发模式：设置为true时跳过JWT认证，使用模拟用户
+  SKIP_AUTH: false, // 改为false，启用正常认证流程但使用开发模式后端
+  // 开发模式下的模拟用户信息（仅在SKIP_AUTH为true时使用）
   MOCK_USER: {
     user_id: 'dev_user_123',
     phone_number: '13800138000',
     is_new_user: false,
   },
+  // 开发模式固定验证码
+  DEV_VERIFICATION_CODE: '100000',
 } as const;

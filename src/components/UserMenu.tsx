@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Modal, Animated, Platform, Dimensions, Image, Linking } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Modal, Animated, Platform, Dimensions, Image, Linking, ScrollView } from 'react-native';
 import { SimpleIcon } from './SimpleIcon';
 import { COLORS } from '../constants';
 
@@ -178,7 +178,11 @@ export const UserMenu: React.FC<UserMenuProps> = ({
             </View>
 
             {/* 内容 */}
-            <View style={styles.aboutContent}>
+            <ScrollView 
+              style={styles.aboutContent}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.aboutContentContainer}
+            >
               {/* 社交图片 */}
               <Image 
                 source={require('../../assets/social/social.jpg')} 
@@ -202,7 +206,7 @@ export const UserMenu: React.FC<UserMenuProps> = ({
                   <Text style={styles.wechatText}>微信号：stevenxxzg</Text>
                 </View>
               </View>
-            </View>
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -361,7 +365,8 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     width: '90%',
     maxWidth: 400,
-    maxHeight: '80%',
+    maxHeight: '85%', // 增加最大高度以提供更多空间
+    overflow: 'hidden', // 确保内容不会溢出
   },
   aboutHeader: {
     flexDirection: 'row',
@@ -386,11 +391,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8f9fa',
   },
   aboutContent: {
+    flex: 1, // 让ScrollView占据剩余空间
+  },
+  aboutContentContainer: {
     padding: 20,
   },
   socialImage: {
     width: '100%',
-    height: 400, // 从200增加到266 (200 * 1.33)
+    height: Math.min(300, Dimensions.get('window').height * 0.4), // 响应式高度，最大300或屏幕高度的40%
     borderRadius: 12,
     marginBottom: 20,
   },

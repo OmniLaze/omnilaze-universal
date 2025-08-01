@@ -3,6 +3,7 @@ import { View, Text } from 'react-native';
 import { BaseInput } from './BaseInput';
 import { ActionButton } from './ActionButton';
 import { sendVerificationCode, verifyCodeAndLogin, verifyInviteCodeAndCreateUser } from '../services/api';
+import { DEV_CONFIG } from '../constants';
 
 export interface AuthResult {
   success: boolean;
@@ -100,7 +101,14 @@ export const AuthComponent: React.FC<AuthComponentProps> = ({
         setIsVerificationCodeSent(true);
         setCountdown(180); // 3分钟倒计时
         changeEmotion('📱');
-        onQuestionChange('请输入收到的6位验证码'); // 更新问题文本
+        
+        // 根据是否为开发模式设置不同的问题文本
+        const isDevMode = result.dev_code || result.message?.includes('开发模式');
+        if (isDevMode) {
+          onQuestionChange(`请输入验证码（开发模式请输入：${DEV_CONFIG.DEV_VERIFICATION_CODE}）`);
+        } else {
+          onQuestionChange('请输入收到的6位验证码');
+        }
         
         // 等待问题文字完全显示后再显示验证码输入框和按钮
         setTimeout(() => {

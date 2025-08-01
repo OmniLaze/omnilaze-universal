@@ -31,7 +31,7 @@ export const ImageCheckbox: React.FC<ImageCheckboxProps> = ({
   onOtherTextChange,
   disabled = false, // 默认不禁用
 }) => {
-  const [shouldRender, setShouldRender] = useState(!animationValue);
+  const [shouldRender, setShouldRender] = useState(true); // 修改：默认为true，确保组件能够正常渲染
   const [otherText, setOtherText] = useState('');
   const [showOtherInput, setShowOtherInput] = useState(false);
   const [otherInputAnimation] = useState(new Animated.Value(0)); // 使用useState保持动画实例
@@ -51,14 +51,18 @@ export const ImageCheckbox: React.FC<ImageCheckboxProps> = ({
     if (animationValue) {
       // 监听动画值变化
       const listener = animationValue.addListener(({ value }) => {
-        setShouldRender(value > 0);
+        // 修复：一旦动画开始就应该渲染，不要因为动画值变为0就停止渲染
+        setShouldRender(value > 0 || selectedIds.length > 0);
       });
 
       return () => {
         animationValue.removeListener(listener);
       };
+    } else {
+      // 如果没有动画值，总是渲染
+      setShouldRender(true);
     }
-  }, [animationValue]);
+  }, [animationValue, selectedIds.length]);
 
   const toggleOption = (optionId: string) => {
     // 如果组件被禁用，不允许切换选择
@@ -72,12 +76,9 @@ export const ImageCheckbox: React.FC<ImageCheckboxProps> = ({
     if (singleSelect) {
       // 单选模式
       if (isSelected) {
-        // 如果已选择，则取消选择
-        newSelection = [];
-        // 如果取消选择的是其他选项，隐藏输入框
-        if (isOtherOption) {
-          hideOtherInput();
-        }
+        // 在单选模式下，如果点击已选择的项目，保持选择状态
+        // 这样确保始终有一个选项被选中
+        newSelection = selectedIds;
       } else {
         // 选择当前项，取消其他选择
         newSelection = [optionId];
@@ -108,7 +109,10 @@ export const ImageCheckbox: React.FC<ImageCheckboxProps> = ({
       }
     }
     
+    console.log('=== 即将调用 onSelectionChange ===', newSelection);
+    console.log('当前选择状态:', selectedIds, '-> 新选择状态:', newSelection);
     onSelectionChange(newSelection);
+    console.log('=== onSelectionChange 调用完成 ===');
   };
 
   const showOtherInputAnimated = () => {
@@ -194,17 +198,21 @@ export const ImageCheckbox: React.FC<ImageCheckboxProps> = ({
                 />
               </View>
               
-              <Text 
-                style={[
-                  styles.optionLabel,
-                  isSelected && styles.selectedLabel
-                ]}
-                numberOfLines={2}
-                adjustsFontSizeToFit={true}
-                minimumFontScale={0.8}
-              >
-                {option.label}
-              </Text>
+              {/* 文本标签容器 - Safari 兼容性 */}
+              <View style={styles.labelContainer}>
+                <Text 
+                  style={[
+                    styles.optionLabel,
+                    isSelected && styles.selectedLabel
+                  ]}
+                  numberOfLines={2}
+                  // 移除 adjustsFontSizeToFit 以避免 Safari 兼容性问题
+                  // adjustsFontSizeToFit={true}
+                  // minimumFontScale={0.8}
+                >
+                  {option.label}
+                </Text>
+              </View>
               
               <View style={[
                 styles.checkbox,
@@ -305,15 +313,31 @@ const styles = StyleSheet.create({
     width: width > 768 ? 144 : 75, // 移动端放大图片，从32增加到40
     height: width > 768 ? 144 : 75,
   },
+  labelContainer: {
+    // Safari 兼容性容器
+    flex: width > 768 ? 0 : 1,
+    minHeight: width > 768 ? 25 : 20,
+    justifyContent: 'center',
+    alignItems: width > 768 ? 'center' : 'flex-start',
+    marginRight: width > 768 ? 0 : 12,
+    marginVertical: width > 768 ? 8 : 0,
+    marginBottom: width > 768 ? 16 : 0,
+  },
   optionLabel: {
     fontSize: width > 768 ? 21 : 16,
     fontWeight: '500',
     color: COLORS.TEXT_PRIMARY,
     textAlign: width > 768 ? 'center' : 'left',
-    marginVertical: width > 768 ? 8 : 0,
-    marginBottom: width > 768 ? 16 : 0,
-    flex: width > 768 ? 0 : 1,
-    marginRight: width > 768 ? 0 : 12,
+    // Safari 兼容性修复
+    lineHeight: width > 768 ? 25 : 20,
+    // 移除可能导致 Safari 问题的样式
+    // flex: width > 768 ? 0 : 1,
+    // marginRight: width > 768 ? 0 : 12,
+    // marginVertical: width > 768 ? 8 : 0,
+    // marginBottom: width > 768 ? 16 : 0,
+    // display: 'flex',
+    // alignItems: width > 768 ? 'center' : 'flex-start',
+    // justifyContent: width > 768 ? 'center' : 'flex-start',
   },
   selectedLabel: {
     color: COLORS.PRIMARY,

@@ -151,10 +151,10 @@ export const useAnimations = () => {
 
   const triggerShake = () => {
     Animated.sequence([
-      Animated.timing(shakeAnimation, { toValue: 10, duration: TIMING.SHAKE_DURATION, useNativeDriver: true }),
-      Animated.timing(shakeAnimation, { toValue: -10, duration: TIMING.SHAKE_DURATION, useNativeDriver: true }),
-      Animated.timing(shakeAnimation, { toValue: 10, duration: TIMING.SHAKE_DURATION, useNativeDriver: true }),
-      Animated.timing(shakeAnimation, { toValue: 0, duration: TIMING.SHAKE_DURATION, useNativeDriver: true }),
+      Animated.timing(shakeAnimation, { toValue: 10, duration: TIMING.SHAKE_DURATION, useNativeDriver: false }),
+      Animated.timing(shakeAnimation, { toValue: -10, duration: TIMING.SHAKE_DURATION, useNativeDriver: false }),
+      Animated.timing(shakeAnimation, { toValue: 10, duration: TIMING.SHAKE_DURATION, useNativeDriver: false }),
+      Animated.timing(shakeAnimation, { toValue: 0, duration: TIMING.SHAKE_DURATION, useNativeDriver: false }),
     ]).start();
   };
 
@@ -163,12 +163,12 @@ export const useAnimations = () => {
       Animated.timing(emotionAnimation, {
         toValue: 0.5,
         duration: TIMING.EMOTION_DURATION,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
       Animated.timing(emotionAnimation, {
         toValue: 1,
         duration: TIMING.EMOTION_DURATION,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
     ]).start(() => {
       callback?.();

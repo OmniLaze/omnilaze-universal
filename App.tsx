@@ -66,6 +66,7 @@ export default function LemonadeApp() {
   const [selectedAllergies, setSelectedAllergies] = useState<string[]>([]);
   const [selectedPreferences, setSelectedPreferences] = useState<string[]>([]);
   const [selectedFoodType, setSelectedFoodType] = useState<string[]>([]);
+  
   const [otherAllergyText, setOtherAllergyText] = useState('');
   const [otherPreferenceText, setOtherPreferenceText] = useState('');
   const [showMap, setShowMap] = useState(false);
@@ -86,6 +87,7 @@ export default function LemonadeApp() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authResult, setAuthResult] = useState<AuthResult | null>(null);
   const [authQuestionText, setAuthQuestionText] = useState('请输入手机号获取验证码'); // 鉴权阶段的问题文本
+  const [isStateRestored, setIsStateRestored] = useState(false); // 新增：跟踪状态是否已恢复
   
   // 订单相关状态
   const [currentOrderId, setCurrentOrderId] = useState<string | null>(null);
@@ -93,6 +95,7 @@ export default function LemonadeApp() {
   const [currentUserSequenceNumber, setCurrentUserSequenceNumber] = useState<number | null>(null);
   const [isOrderSubmitting, setIsOrderSubmitting] = useState(false);
   const [isSearchingRestaurant, setIsSearchingRestaurant] = useState(false);
+  const [isOrderCompleted, setIsOrderCompleted] = useState(false); // 新增：订单完成状态
 
   // 用户菜单相关状态
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -164,6 +167,7 @@ export default function LemonadeApp() {
     setCurrentUserSequenceNumber(null);
     setIsOrderSubmitting(false);
     setIsSearchingRestaurant(false);
+    setIsOrderCompleted(false); // 重置订单完成状态
     setInputError('');
     
     // 重置UI相关状态
@@ -206,24 +210,44 @@ export default function LemonadeApp() {
     changeEmotion 
   } = useAnimations();
 
+  // // 监听关键状态变化，添加调试信息
+  // useEffect(() => {
+  //   console.log('=== 状态变化 ===');
+  //   console.log('isStateRestored:', isStateRestored);
+  //   console.log('isAuthenticated:', isAuthenticated);
+  //   console.log('currentStep:', currentStep);
+  //   console.log('displayedText:', displayedText);
+  // }, [isStateRestored, isAuthenticated, currentStep, displayedText]);
+
   // Effects
   // 组件加载时检查Cookie登录状态
   useEffect(() => {
-    const savedSession = CookieManager.getUserSession();
-    if (savedSession) {
-      // 自动登录
+    console.log('检查登录状态...');
+    
+    // 首先检查开发模式
+    if (DEV_CONFIG.SKIP_AUTH) {
+      console.log('开发模式：跳过认证');
       setIsAuthenticated(true);
       setAuthResult({
-        userId: savedSession.userId,
-        phoneNumber: savedSession.phoneNumber,
-        isNewUser: savedSession.isNewUser
+        userId: DEV_CONFIG.MOCK_USER.user_id,
+        phoneNumber: DEV_CONFIG.MOCK_USER.phone_number,
+        isNewUser: DEV_CONFIG.MOCK_USER.is_new_user
       });
       
-      // 恢复对话状态
+      // 添加手机号作为第一个完成的答案
+      const phoneAnswer = { type: 'phone', value: DEV_CONFIG.MOCK_USER.phone_number };
+      setCompletedAnswers({ [-1]: phoneAnswer });
+      
+      // 开发模式下也需要恢复对话状态
       const savedConversation = CookieManager.getConversationState();
+      console.log('开发模式-获取到的对话状态:', savedConversation);
+      
       if (savedConversation) {
         setCurrentStep(savedConversation.currentStep || 0);
-        setCompletedAnswers(savedConversation.completedAnswers || {});
+        setCompletedAnswers(prev => ({
+          ...prev,
+          ...savedConversation.completedAnswers
+        }));
         setAddress(savedConversation.address || '');
         setBudget(savedConversation.budget || '');
         setSelectedAllergies(savedConversation.selectedAllergies || []);
@@ -238,31 +262,136 @@ export default function LemonadeApp() {
         if (savedConversation.showMap) {
           mapAnimation.setValue(1);
         }
+        
+        // 立即设置正确的问题文本和动画状态
+        const stepData = STEP_CONTENT[savedConversation.currentStep || 0];
+        if (stepData) {
+          setDisplayedText(stepData.message);
+          inputSectionAnimation.setValue(1);
+          currentQuestionAnimation.setValue(1);
+        }
+      } else {
+        // 开发模式下没有保存的对话状态，使用默认状态
+        setDisplayedText(STEP_CONTENT[0].message);
+        inputSectionAnimation.setValue(1);
+        currentQuestionAnimation.setValue(1);
       }
       
+      // 开发模式状态恢复完成
+      setIsStateRestored(true);
+      return; // 开发模式下直接返回
+    }
+    
+    const savedSession = CookieManager.getUserSession();
+    console.log('获取到的会话数据:', savedSession);
+    
+    if (savedSession) {
+      // 自动登录
       console.log('自动登录成功:', savedSession);
+      setIsAuthenticated(true);
+      setAuthResult({
+        userId: savedSession.userId,
+        phoneNumber: savedSession.phoneNumber,
+        isNewUser: savedSession.isNewUser
+      });
+      
+      // 添加手机号作为第一个完成的答案
+      const phoneAnswer = { type: 'phone', value: savedSession.phoneNumber };
+      setCompletedAnswers({ [-1]: phoneAnswer });
+      
+      // 恢复对话状态
+      const savedConversation = CookieManager.getConversationState();
+      console.log('获取到的对话状态:', savedConversation);
+      
+      if (savedConversation) {
+        setCurrentStep(savedConversation.currentStep || 0);
+        setCompletedAnswers(prev => ({
+          ...prev,
+          ...savedConversation.completedAnswers
+        }));
+        setAddress(savedConversation.address || '');
+        setBudget(savedConversation.budget || '');
+        setSelectedAllergies(savedConversation.selectedAllergies || []);
+        setSelectedPreferences(savedConversation.selectedPreferences || []);
+        setSelectedFoodType(savedConversation.selectedFoodType || []);
+        setOtherAllergyText(savedConversation.otherAllergyText || '');
+        setOtherPreferenceText(savedConversation.otherPreferenceText || '');
+        setIsAddressConfirmed(savedConversation.isAddressConfirmed || false);
+        setShowMap(savedConversation.showMap || false);
+        
+        // 恢复地图动画状态
+        if (savedConversation.showMap) {
+          mapAnimation.setValue(1);
+        }
+        
+        // 立即设置正确的问题文本和动画状态
+        const stepData = STEP_CONTENT[savedConversation.currentStep || 0];
+        if (stepData) {
+          setDisplayedText(stepData.message);
+          inputSectionAnimation.setValue(1);
+          currentQuestionAnimation.setValue(1);
+        }
+      }
+      
+      // 生产模式状态恢复完成
+      setIsStateRestored(true);
+    } else {
+      console.log('没有找到有效的会话数据');
+      // 没有会话数据时也要设置状态恢复完成
+      setIsStateRestored(true);
     }
   }, []);
 
   useEffect(() => {
+    // 只在状态恢复完成后才处理打字机效果
+    if (!isStateRestored) return;
+    
     // 未认证状态下的打字机效果
     if (editingStep === null && !isAuthenticated && !isTyping) {
       inputSectionAnimation.setValue(0);
       currentQuestionAnimation.setValue(1);
       typeText(authQuestionText, TIMING.TYPING_SPEED);
+      return;
     }
     
     // 已认证状态下的打字机效果
     if (editingStep === null && isAuthenticated && currentStep < STEP_CONTENT.length && !completedAnswers[currentStep] && !isTyping) {
       const stepData = getCurrentStepData();
       
-      inputSectionAnimation.setValue(0);
-      currentQuestionAnimation.setValue(1);
+      // 检查当前步骤是否已有用户输入，如果有则不重新触发打字机效果
+      let hasUserInput = false;
+      switch (stepData.inputType) {
+        case 'address':
+          hasUserInput = !!address.trim();
+          break;
+        case 'foodType':
+          hasUserInput = selectedFoodType.length > 0;
+          break;
+        case 'allergy':
+          hasUserInput = selectedAllergies.length > 0;
+          break;
+        case 'preference':
+          hasUserInput = selectedPreferences.length > 0;
+          break;
+        case 'budget':
+          hasUserInput = !!budget.trim();
+          break;
+      }
       
-      const newMessage = stepData.message;
-      typeText(newMessage, TIMING.TYPING_SPEED);
+      if (!hasUserInput) {
+        // 没有用户输入时触发打字机效果
+        inputSectionAnimation.setValue(0);
+        currentQuestionAnimation.setValue(1);
+        const newMessage = stepData.message;
+        typeText(newMessage, TIMING.TYPING_SPEED);
+      } else {
+        // 如果已有用户输入，直接设置正确的问题文本
+        console.log('用户已有输入，直接设置正确的问题文本:', stepData.message);
+        setDisplayedText(stepData.message);
+        inputSectionAnimation.setValue(1);
+      }
     }
-  }, [currentStep, editingStep, isAuthenticated, selectedFoodType, authQuestionText]); // 添加authQuestionText依赖
+  }, [currentStep, editingStep, isAuthenticated, selectedFoodType, authQuestionText, isStateRestored]); // 添加isStateRestored依赖
 
   // Handle editing mode - skip typewriter effect and set up immediately
   useEffect(() => {
@@ -282,7 +411,7 @@ export default function LemonadeApp() {
           toValue: 1,
           tension: 60,
           friction: 8,
-          useNativeDriver: true,
+          useNativeDriver: false, // Web环境下设为false
         }).start();
       }, TIMING.ANIMATION_DELAY);
     }
@@ -343,6 +472,11 @@ export default function LemonadeApp() {
     }
   };
 
+  // 监控 selectedFoodType 变化
+  useEffect(() => {
+    console.log('selectedFoodType 状态更新:', selectedFoodType);
+  }, [selectedFoodType]);
+
   // 监听状态变化，自动保存对话状态
   useEffect(() => {
     if (isAuthenticated) {
@@ -363,7 +497,18 @@ export default function LemonadeApp() {
 
   // Helper functions
   const getCurrentStepData = () => {
+    
+    // 如果状态还没有恢复完成，返回空数据避免显示错误问题
+    if (!isStateRestored) {
+      console.log('状态未恢复，返回loading');
+      return {
+        message: '',
+        inputType: 'loading'
+      };
+    }
+    
     if (!isAuthenticated) {
+      console.log('未认证，返回手机号问题');
       // 未鉴权时显示动态的鉴权问题文本
       return {
         message: authQuestionText,
@@ -488,6 +633,7 @@ export default function LemonadeApp() {
       case 'address':
         return !!address.trim() && address.trim().length >= 5;
       case 'foodType':
+        console.log('正常模式验证 foodType:', selectedFoodType.length > 0, selectedFoodType);
         return selectedFoodType.length > 0;
       case 'allergy':
       case 'preference':
@@ -559,7 +705,7 @@ export default function LemonadeApp() {
       toValue: 1,
       tension: 60,
       friction: 8,
-      useNativeDriver: true,
+      useNativeDriver: false, // Web环境下设为false
     }).start(() => {
       // 减少延迟以避免闪烁
       setTimeout(() => {
@@ -572,9 +718,9 @@ export default function LemonadeApp() {
           
           if (isSelectedDrink) {
             if (isFreeOrder) {
-              // 免单模式：直接跳过忌口、偏好、预算，进入支付
+              // 免单模式：直接跳过忌口、偏好，预算设为0，完成流程
               setBudget('0'); // 自动设置预算为0
-              nextStep = 5; // 直接跳到支付步骤
+              // 已经是最后一步，不需要进入下一步
             } else {
               // 选择了喝奶茶，跳过忌口(2)和偏好(3)，直接到预算(4)
               nextStep = 4;
@@ -583,10 +729,11 @@ export default function LemonadeApp() {
           // 选择了吃饭，正常进入忌口步骤(2)
         }
         
-        // 如果是免单模式且在预算步骤，自动设置为0并跳到支付
+        // 如果是免单模式且在预算步骤，自动设置为0，完成流程
         if (isFreeOrder && currentStep === 4) {
           setBudget('0');
-          nextStep = 5;
+          // 已经是最后一步，不需要进入下一步
+          nextStep = currentStep; // 保持在当前步骤
         }
         
         if (nextStep < STEP_CONTENT.length) {
@@ -702,8 +849,9 @@ export default function LemonadeApp() {
       // 模拟搜索过程，5秒后显示完成
       setTimeout(() => {
         setIsSearchingRestaurant(false);
+        setIsOrderCompleted(true); // 设置订单完成状态
         changeEmotion('🎉');
-        typeText('🎊 完美！已为您找到最合适的餐厅，订单已提交！', TIMING.TYPING_SPEED_FAST);
+        typeText('我去下单，记得保持手机畅通，不要错过外卖员电话哦', TIMING.TYPING_SPEED_FAST);
       }, 5000);
     } catch (error) {
       setIsSearchingRestaurant(false);
@@ -1009,14 +1157,26 @@ export default function LemonadeApp() {
       const budgetOptions = isSelectedDrink ? BUDGET_OPTIONS_DRINK : BUDGET_OPTIONS_FOOD;
       
       return (
-        <BudgetInput
-          value={budget}
-          onChangeText={setBudget}
-          animationValue={inputSectionAnimation}
-          onSubmitEditing={editingStep === 4 ? handleFinishEditing : undefined}
-          errorMessage={inputError}
-          budgetOptions={budgetOptions}
-        />
+        <View>
+          <BudgetInput
+            value={budget}
+            onChangeText={setBudget}
+            animationValue={inputSectionAnimation}
+            onSubmitEditing={editingStep === 4 ? handleFinishEditing : undefined}
+            errorMessage={inputError}
+            budgetOptions={budgetOptions}
+          />
+          {/* 在预算选择后显示支付组件 */}
+          {budget && (
+            <PaymentComponent
+              budget={budget}
+              animationValue={inputSectionAnimation}
+              onConfirmOrder={handleConfirmOrder}
+              isTyping={isTyping}
+              isFreeOrder={isFreeOrder}
+            />
+          )}
+        </View>
       );
     }
     
@@ -1041,18 +1201,6 @@ export default function LemonadeApp() {
           animationValue={inputSectionAnimation}
           singleSelect={true}
           onOtherTextChange={setOtherPreferenceText}
-        />
-      );
-    }
-    
-    if (stepData.showPayment) {
-      return (
-        <PaymentComponent
-          budget={budget}
-          animationValue={inputSectionAnimation}
-          onConfirmOrder={handleConfirmOrder}
-          isTyping={isTyping}
-          isFreeOrder={isFreeOrder}
         />
       );
     }
@@ -1083,8 +1231,6 @@ export default function LemonadeApp() {
       );
     }
     
-    // 手机号步骤的按钮逻辑已移动到AuthComponent
-    
     // 正常流程的按钮 - 地址输入直接使用确认按钮（步骤0）
     if (currentStep === 0) {
       return (
@@ -1099,16 +1245,10 @@ export default function LemonadeApp() {
     }
     
     if (canProceed()) {
-      // 支付步骤不显示额外的按钮，因为PaymentComponent内部已经有按钮
-      const stepData = getCurrentStepData();
-      if (stepData.showPayment) {
-        return null;
-      }
-      
       return (
         <ActionButton
           onPress={handleNext}
-          title={currentStep === STEP_CONTENT.length - 1 ? '确认订单' : '确认'}
+          title={currentStep === STEP_CONTENT.length - 1 ? '确认' : '确认'}
           variant="next"
           animationValue={inputSectionAnimation}
         />
@@ -1188,7 +1328,7 @@ export default function LemonadeApp() {
                       isEditing={isCurrentlyEditing}
                       editingInput={isCurrentlyEditing ? renderCurrentInput() : undefined}
                       editingButtons={isCurrentlyEditing ? renderActionButton() : undefined}
-                      canEdit={index >= 0} // 手机号（index: -1）不可编辑
+                      canEdit={index >= 0 && !(isOrderCompleted && index === 4)} // 手机号（index: -1）不可编辑，订单完成后预算步骤（index: 4）不可编辑
                     />
                   );
                 })}
@@ -1218,10 +1358,10 @@ export default function LemonadeApp() {
                 </CurrentQuestion>
               )}
 
-              {/* Current Question - 正常流程、搜索状态显示 */}
+              {/* Current Question - 正常流程、搜索状态、订单完成状态显示 */}
               {isAuthenticated && editingStep === null && (
-                // 如果正在搜索餐厅，只显示搜索文本，不显示其他内容
-                isSearchingRestaurant ? (
+                // 如果正在搜索餐厅或订单已完成，只显示相应文本，不显示其他内容
+                (isSearchingRestaurant || isOrderCompleted) ? (
                   <CurrentQuestion
                     displayedText={displayedText}
                     isTyping={isTyping}
@@ -1232,7 +1372,7 @@ export default function LemonadeApp() {
                     emotionAnimation={emotionAnimation}
                     shakeAnimation={shakeAnimation}
                   >
-                    {/* 搜索状态时不显示任何输入组件或按钮 */}
+                    {/* 搜索状态或订单完成状态时不显示任何输入组件或按钮 */}
                   </CurrentQuestion>
                 ) : (
                   (currentStep < STEP_CONTENT.length && !completedAnswers[currentStep]) && (

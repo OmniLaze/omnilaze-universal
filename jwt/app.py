@@ -44,7 +44,12 @@ else:
     supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 def generate_verification_code():
-    return ''.join(random.choices(string.digits, k=6))
+    if DEVELOPMENT_MODE:
+        # 开发模式：始终返回固定验证码
+        return '100000'
+    else:
+        # 生产模式：生成随机验证码
+        return ''.join(random.choices(string.digits, k=6))
 
 # 开发模式的内存存储
 dev_verification_codes = {}
@@ -85,9 +90,9 @@ def send_verification_code(phone_number):
     store_result = store_verification_code(phone_number, code)
     
     if DEVELOPMENT_MODE:
-        # 开发模式：模拟发送成功，并在控制台显示验证码
-        print(f"📱 开发模式 - 验证码已生成: {phone_number} -> {code}")
-        return {"success": True, "message": "验证码发送成功（开发模式）", "dev_code": code}
+        # 开发模式：不发送真实短信，在控制台显示验证码
+        print(f"🔧 开发模式 - 固定验证码: {phone_number} -> {code} (开发测试请使用: 100000)")
+        return {"success": True, "message": "验证码发送成功（开发模式，请使用验证码: 100000）", "dev_code": code}
     else:
         # 生产模式：真实发送短信
         body = {'name': '验证码', 'code': code, 'targets': phone_number}

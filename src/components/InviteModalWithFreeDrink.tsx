@@ -146,7 +146,7 @@ export const InviteModalWithFreeDrink: React.FC<InviteModalWithFreeDrinkProps> =
   };
 
   const inviteCode = inviteStats?.user_invite_code || generateInviteCode(userPhoneNumber);
-  const inviteText = `我在用懒得点外卖，体验非常棒！使用我的邀请码 ${inviteCode} 到order.omnilaze.co注册，一起享受智能点餐服务吧！🎉`;
+  const inviteText = `懒得点外卖？就用懒得！使用我的邀请码 ${inviteCode} 到order.omnilaze.co注册，邀请三位新用户注册可获得免费奶茶一杯哦！🧋`;
 
   // 复制功能
   const copyToClipboard = async (text: string) => {

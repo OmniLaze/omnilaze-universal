@@ -4,7 +4,7 @@ export const ENV_CONFIG = {
   AMAP_KEY: process.env.REACT_APP_AMAP_KEY || 'f5c712f69f486f3c20627dee943e0a32',
   
   // 后端API URL
-  API_URL: process.env.REACT_APP_API_URL || 'http://localhost:5002',
+  API_URL: process.env.REACT_APP_API_URL || 'http://localhost:5001', // 修改为5001端口
 };
 
 // 开发环境下的调试信息

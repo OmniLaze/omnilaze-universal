@@ -25,10 +25,5 @@ export const STEP_CONTENT: StepContent[] = [
     message: "好的，这一顿打算花多少钱？",
     showBudgetInput: true,
     inputType: "budget"
-  },
-  {
-    message: "请扫码下单，记得备注完整电话号哦",
-    showPayment: true,
-    inputType: "payment"
   }
 ];
