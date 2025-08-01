@@ -811,7 +811,7 @@ export default function LemonadeApp() {
         setTimeout(() => {
           changeEmotion('🍕');
           const sequenceText = currentUserSequenceNumber ? `（您的第${currentUserSequenceNumber}单）` : '';
-          typeText(`🎊 完美！订单已提交${sequenceText}，正在为您匹配餐厅...`, TIMING.TYPING_SPEED_FAST);
+          typeText(`🎊 订单已提交${sequenceText}，正在为您匹配餐厅...`, TIMING.TYPING_SPEED_FAST);
         }, TIMING.COMPLETION_DELAY);
       } else {
         setInputError(result.message);
@@ -1242,6 +1242,11 @@ export default function LemonadeApp() {
           animationValue={inputSectionAnimation}
         />
       );
+    }
+    
+    // 预算步骤特殊处理 - 选择了预算后不显示确认按钮，由PaymentComponent处理
+    if (currentStep === 4 && budget) {
+      return null; // 不显示确认按钮，让PaymentComponent处理下单逻辑
     }
     
     if (canProceed()) {
