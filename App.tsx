@@ -745,9 +745,8 @@ export default function LemonadeApp() {
             return option ? option.id : label;
           });
           setSelectedFoodType(ids);
-        } else {
-          setSelectedFoodType([]);
         }
+        // 不要在"未选择"时清空selectedFoodType，保持用户已有的选择
         break;
       case 'allergy':
         setAllergies(answerToEdit.value);
@@ -898,9 +897,8 @@ export default function LemonadeApp() {
               return option ? option.id : label;
             });
             setSelectedFoodType(ids);
-          } else {
-            setSelectedFoodType([]);
           }
+          // 不要在"未选择"时清空selectedFoodType，保持用户已有的选择
           break;
         case 'allergy':
           setAllergies(originalAnswerBeforeEdit.value);
