@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, Image, Animated, TextInput, Dimensions } from 'react-native';
 import { SimpleIcon } from './SimpleIcon';
 import { StyleSheet } from 'react-native';
@@ -35,9 +35,57 @@ export const ImageCheckbox: React.FC<ImageCheckboxProps> = ({
   const [otherText, setOtherText] = useState('');
   const [showOtherInput, setShowOtherInput] = useState(false);
   const [otherInputAnimation] = useState(new Animated.Value(0)); // 使用useState保持动画实例
+  
+  // 为每个选项创建独立的动画值
+  const cardAnimations = useRef<Animated.Value[]>([]);
+  
+  // 初始化每个卡片的动画值
+  useEffect(() => {
+    cardAnimations.current = options.map(() => new Animated.Value(0));
+  }, [options.length]);
+  
+  // 触发错开动画
+  useEffect(() => {
+    if (animationValue && cardAnimations.current.length > 0) {
+      const listener = animationValue.addListener(({ value }) => {
+        if (value > 0.5) { // 当主动画进行到一半时开始卡片动画
+          startStaggeredAnimation();
+          animationValue.removeListener(listener); // 只触发一次
+        }
+        setShouldRender(value > 0 || selectedIds.length > 0);
+      });
+
+      return () => {
+        animationValue.removeListener(listener);
+      };
+    } else if (!animationValue && cardAnimations.current.length > 0) {
+      // 如果没有主动画，延迟一点开始卡片动画，让组件先渲染
+      const timer = setTimeout(() => {
+        startStaggeredAnimation();
+      }, 100);
+      setShouldRender(true);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [animationValue, selectedIds.length, options.length]);
+  
+  const startStaggeredAnimation = () => {
+    if (cardAnimations.current.length === 0) return;
+    
+    const animations = cardAnimations.current.map((anim, index) => {
+      return Animated.timing(anim, {
+        toValue: 1,
+        duration: 500,
+        delay: index * 120, // 每个卡片延迟120ms
+        useNativeDriver: false,
+      });
+    });
+    
+    Animated.stagger(120, animations).start();
+  };
 
   useEffect(() => {
-    // 检查是否已经选中了“其他”选项，如果是则显示输入框
+    // 检查是否已经选中了"其他"选项，如果是则显示输入框
     const hasOtherSelected = selectedIds.some(id => id.includes('other'));
     if (hasOtherSelected && !showOtherInput) {
       setShowOtherInput(true);
@@ -46,23 +94,6 @@ export const ImageCheckbox: React.FC<ImageCheckboxProps> = ({
       hideOtherInput();
     }
   }, [selectedIds]);
-
-  useEffect(() => {
-    if (animationValue) {
-      // 监听动画值变化
-      const listener = animationValue.addListener(({ value }) => {
-        // 修复：一旦动画开始就应该渲染，不要因为动画值变为0就停止渲染
-        setShouldRender(value > 0 || selectedIds.length > 0);
-      });
-
-      return () => {
-        animationValue.removeListener(listener);
-      };
-    } else {
-      // 如果没有动画值，总是渲染
-      setShouldRender(true);
-    }
-  }, [animationValue, selectedIds.length]);
 
   const toggleOption = (optionId: string) => {
     // 如果组件被禁用，不允许切换选择
@@ -169,28 +200,48 @@ export const ImageCheckbox: React.FC<ImageCheckboxProps> = ({
   return (
     <WrapperComponent {...wrapperProps}>
       <View style={styles.grid}>
-        {options.map((option) => {
+        {options.map((option, index) => {
           const isSelected = selectedIds.includes(option.id);
+          const cardAnimation = cardAnimations.current[index] || new Animated.Value(0);
           
           return (
-            <TouchableOpacity
+            <Animated.View
               key={option.id}
               style={[
-                styles.optionCard,
-                isSelected && styles.selectedCard,
-                disabled && styles.disabledCard
+                {
+                  width: width > 768 ? '31%' : '100%',
+                  aspectRatio: width > 768 ? 0.66 : undefined,
+                  height: width > 768 ? undefined : 68,
+                },
+                {
+                  opacity: cardAnimation,
+                  transform: [{
+                    translateY: cardAnimation.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [30, 0], // 从下方向上移动
+                    }),
+                  }],
+                }
               ]}
-              onPress={() => toggleOption(option.id)}
-              activeOpacity={disabled ? 1 : 0.7}
-              disabled={disabled}
             >
-              <View style={styles.imageContainer}>
-                <Image 
-                  source={option.image} 
-                  style={styles.optionImage}
-                  resizeMode="contain"
-                />
-              </View>
+              <TouchableOpacity
+                style={[
+                  styles.optionCard,
+                  isSelected && styles.selectedCard,
+                  disabled && styles.disabledCard,
+                  { width: '100%', height: '100%' } // 填满父容器
+                ]}
+                onPress={() => toggleOption(option.id)}
+                activeOpacity={disabled ? 1 : 0.7}
+                disabled={disabled}
+              >
+                <View style={styles.imageContainer}>
+                  <Image 
+                    source={option.image} 
+                    style={styles.optionImage}
+                    resizeMode="contain"
+                  />
+                </View>
               
               {/* 文本标签容器 - Safari 兼容性 */}
               <View style={styles.labelContainer}>
@@ -221,6 +272,7 @@ export const ImageCheckbox: React.FC<ImageCheckboxProps> = ({
                 )}
               </View>
             </TouchableOpacity>
+            </Animated.View>
           );
         })}
       </View>
@@ -268,9 +320,6 @@ const styles = StyleSheet.create({
     justifyContent: width > 768 ? 'center' : 'flex-start',
   },
   optionCard: {
-    width: width > 768 ? '31%' : '100%',
-    aspectRatio: width > 768 ? 0.66 : undefined,
-    height: width > 768 ? undefined : 68,
     backgroundColor: COLORS.WHITE,
     borderRadius: width > 768 ? 12 : 8,
     borderWidth: 2,
