@@ -205,7 +205,6 @@ async function handleSendVerificationCode(request, env) {
 
   // 开发模式：返回验证码，生产模式：发送短信
   if (env.ENVIRONMENT === 'development') {
-    console.log(`📱 开发模式 - 验证码: ${phoneNumber} -> ${code}`);
     return new Response(JSON.stringify({
       success: true,
       message: '验证码发送成功（开发模式）',

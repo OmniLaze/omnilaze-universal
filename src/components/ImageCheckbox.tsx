@@ -70,7 +70,6 @@ export const ImageCheckbox: React.FC<ImageCheckboxProps> = ({
     
     const isSelected = selectedIds.includes(optionId);
     const isOtherOption = optionId.includes('other');
-    console.log(`点击选项: ${optionId}, 是否已选中: ${isSelected}, 是否为其他选项: ${isOtherOption}`); // 调试日志
     let newSelection: string[];
     
     if (singleSelect) {
@@ -109,14 +108,10 @@ export const ImageCheckbox: React.FC<ImageCheckboxProps> = ({
       }
     }
     
-    console.log('=== 即将调用 onSelectionChange ===', newSelection);
-    console.log('当前选择状态:', selectedIds, '-> 新选择状态:', newSelection);
     onSelectionChange(newSelection);
-    console.log('=== onSelectionChange 调用完成 ===');
   };
 
   const showOtherInputAnimated = () => {
-    console.log('显示其他输入框'); // 调试日志
     setShowOtherInput(true);
     Animated.spring(otherInputAnimation, {
       toValue: 1,
@@ -127,7 +122,6 @@ export const ImageCheckbox: React.FC<ImageCheckboxProps> = ({
   };
 
   const hideOtherInput = () => {
-    console.log('隐藏其他输入框'); // 调试日志
     Animated.spring(otherInputAnimation, {
       toValue: 0,
       tension: 80,

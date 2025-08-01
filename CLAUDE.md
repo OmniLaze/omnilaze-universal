@@ -116,6 +116,9 @@ Currently no automated tests are configured. Manual testing through:
 - `python jwt/test_api.py` for backend API testing
 - Manual UI testing through the development server
 
+### Linting and Type Checking
+This project uses TypeScript for type safety. While no specific lint/typecheck commands are configured in package.json, ensure your IDE has TypeScript checking enabled.
+
 ### Common Development Tasks
 - **Address Component Testing**: Use dev mode with `DEV_CONFIG.SKIP_AUTH = true`
 - **API Testing**: Use Flask dev server with in-memory storage

@@ -141,7 +141,7 @@ export async function sendVerificationCode(phoneNumber: string): Promise<ApiResp
 
     return data;
   } catch (error) {
-    console.error('发送验证码错误:', error);
+    // 发送验证码失败时静默处理
     return {
       success: false,
       message: error instanceof Error ? error.message : '网络错误，请重试'
@@ -173,7 +173,7 @@ export async function verifyCodeAndLogin(phoneNumber: string, code: string): Pro
 
     return data;
   } catch (error) {
-    console.error('验证码验证错误:', error);
+    // 验证码验证失败时静默处理
     return {
       success: false,
       message: error instanceof Error ? error.message : '网络错误，请重试'
@@ -205,7 +205,7 @@ export async function verifyInviteCodeAndCreateUser(phoneNumber: string, inviteC
 
     return data;
   } catch (error) {
-    console.error('邀请码验证错误:', error);
+    // 邀请码验证失败时静默处理
     return {
       success: false,
       message: error instanceof Error ? error.message : '网络错误，请重试'
@@ -257,10 +257,8 @@ export async function searchAddresses(query: string): Promise<AddressSearchRespo
     // 使用配置的API Key
     const AMAP_KEY = ENV_CONFIG.AMAP_KEY;
 
-    console.log('高德API Key状态:', AMAP_KEY ? '已配置' : '未配置');
-
     if (!AMAP_KEY) {
-      console.warn('高德地图API Key未配置，使用模拟数据');
+      // 高德地图API Key未配置，使用模拟数据
       return getFallbackResults(keywords);
     }
 
@@ -274,7 +272,7 @@ export async function searchAddresses(query: string): Promise<AddressSearchRespo
 
     // 检查高德API返回状态
     if (data.status !== '1') {
-      console.error('高德API错误:', data.info);
+      // 高德API返回错误，使用模拟数据
       return getFallbackResults(keywords);
     }
 
@@ -313,7 +311,7 @@ export async function searchAddresses(query: string): Promise<AddressSearchRespo
     };
 
   } catch (error) {
-    console.error('地址搜索错误:', error);
+    // 地址搜索失败时静默处理
 
     // 降级处理：返回模拟数据
     return getFallbackResults(query.trim());
@@ -382,7 +380,7 @@ export async function createOrder(userId: string, phoneNumber: string, formData:
 
     return data;
   } catch (error) {
-    console.error('创建订单错误:', error);
+    // 创建订单失败时静默处理
     return {
       success: false,
       message: error instanceof Error ? error.message : '网络错误，请重试'
@@ -413,7 +411,7 @@ export async function submitOrder(orderId: string): Promise<SubmitOrderResponse>
 
     return data;
   } catch (error) {
-    console.error('提交订单错误:', error);
+    // 提交订单失败时静默处理
     return {
       success: false,
       message: error instanceof Error ? error.message : '网络错误，请重试'
@@ -446,7 +444,7 @@ export async function submitOrderFeedback(orderId: string, rating: number, feedb
 
     return data;
   } catch (error) {
-    console.error('提交反馈错误:', error);
+    // 提交反馈失败时静默处理
     return {
       success: false,
       message: error instanceof Error ? error.message : '网络错误，请重试'
@@ -474,7 +472,7 @@ export async function getUserOrders(userId: string): Promise<OrdersResponse> {
 
     return data;
   } catch (error) {
-    console.error('获取订单列表错误:', error);
+    // 获取订单列表失败时静默处理
     return {
       success: false,
       orders: [],
@@ -504,7 +502,7 @@ export async function getUserInviteStats(userId: string): Promise<UserInviteStat
 
     return data;
   } catch (error) {
-    console.error('获取邀请统计错误:', error);
+    // 获取邀请统计失败时静默处理
     return {
       success: false,
       message: error instanceof Error ? error.message : '网络错误，请重试'
@@ -532,7 +530,7 @@ export async function getInviteProgress(userId: string): Promise<InviteProgressR
 
     return data;
   } catch (error) {
-    console.error('获取邀请进度错误:', error);
+    // 获取邀请进度失败时静默处理
     return {
       success: false,
       message: error instanceof Error ? error.message : '网络错误，请重试'
@@ -573,7 +571,7 @@ export async function claimFreeDrink(userId: string): Promise<FreeDrinkResponse>
 
     return data;
   } catch (error) {
-    console.error('领取免单错误:', error);
+    // 领取免单失败时静默处理
     return {
       success: false,
       message: error instanceof Error ? error.message : '网络错误，请重试'
@@ -601,7 +599,7 @@ export async function getFreeDrinksRemaining(): Promise<FreeDrinkResponse> {
 
     return data;
   } catch (error) {
-    console.error('获取免单信息错误:', error);
+    // 获取免单信息失败时静默处理
     return {
       success: false,
       message: error instanceof Error ? error.message : '网络错误，请重试'

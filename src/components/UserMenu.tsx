@@ -29,31 +29,27 @@ export const UserMenu: React.FC<UserMenuProps> = ({
   };
 
   const toggleDropdown = () => {
-    console.log('Toggle dropdown clicked, current state:', showDropdown);
     setShowDropdown(!showDropdown);
   };
 
   const handleLogout = () => {
-    console.log('Logout clicked');
     setShowDropdown(false);
     onLogout();
   };
 
   const handleInvite = () => {
-    console.log('Invite clicked');
     setShowDropdown(false);
     setShowBubble(false); // 点击邀请后隐藏气泡
     onInvite();
   };
 
   const handleAbout = () => {
-    console.log('About clicked');
     setShowDropdown(false);
     setShowAboutModal(true);
   };
 
   const handleOpenWebsite = () => {
-    Linking.openURL('https://omnilaze.co').catch(err => console.error('Failed to open website:', err));
+    Linking.openURL('https://omnilaze.co').catch(err => {});
   };
 
   const handleBubbleClick = () => {

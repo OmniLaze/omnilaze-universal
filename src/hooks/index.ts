@@ -188,3 +188,8 @@ export const useAnimations = () => {
     changeEmotion,
   };
 };
+
+// Export new hooks
+export { useAppState } from './useAppState';
+export { useFormSteps } from './useFormSteps';
+export { useOrderManagement } from './useOrderManagement';

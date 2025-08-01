@@ -122,7 +122,7 @@ export const AuthComponent: React.FC<AuthComponentProps> = ({
       const errorMessage = '发送验证码失败，请重试';
       setInputError(errorMessage);
       triggerShake();
-      console.error('发送验证码错误:', error);
+      // 发送验证码失败时静默处理
     } finally {
       setIsLoading(false);
     }
@@ -169,7 +169,7 @@ export const AuthComponent: React.FC<AuthComponentProps> = ({
       const errorMessage = '验证失败，请重试';
       setInputError(errorMessage);
       triggerShake();
-      console.error('验证码验证错误:', error);
+      // 验证码验证失败时静默处理
     }
   };
 
@@ -202,7 +202,7 @@ export const AuthComponent: React.FC<AuthComponentProps> = ({
       const errorMessage = '验证邀请码失败，请重试';
       setInputError(errorMessage);
       triggerShake();
-      console.error('邀请码验证错误:', error);
+      // 邀请码验证失败时静默处理
     }
   };
 

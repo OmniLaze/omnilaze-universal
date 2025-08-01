@@ -45,7 +45,7 @@ export const InviteModal: React.FC<InviteModalProps> = ({
         setInviteProgress(progressResponse);
       }
     } catch (error) {
-      console.error('加载邀请数据失败:', error);
+      // 加载邀请数据失败
     } finally {
       setLoading(false);
     }
@@ -87,7 +87,7 @@ export const InviteModal: React.FC<InviteModalProps> = ({
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (error) {
-      console.error('复制失败:', error);
+      // 复制失败时静默处理
       // 即使复制失败也显示提示
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);

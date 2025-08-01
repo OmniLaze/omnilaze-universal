@@ -12,7 +12,7 @@
  * <AddressAutocomplete
  *   value={address}
  *   onChangeText={setAddress}
- *   onSelectAddress={(suggestion) => console.log(suggestion)}
+ *   onSelectAddress={(suggestion) => handleSelect(suggestion)}
  *   placeholder="请输入您的地址"
  * />
  */
@@ -93,7 +93,6 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
           setShowSuggestions(false);
         }
       } catch (error) {
-        console.error('Address search error:', error);
         setSuggestions([]);
         setShowSuggestions(false);
       } finally {
@@ -103,8 +102,6 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
   };
 
   const handleSelectSuggestion = (suggestion: AddressSuggestion) => {
-    console.log('建议项被选择:', suggestion.description); // 调试日志
-    
     // 先隐藏建议列表
     setShowSuggestions(false);
     setSuggestions([]);
@@ -175,10 +172,7 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
   const renderSuggestion = ({ item }: { item: AddressSuggestion }) => (
     <TouchableOpacity
       style={addressAutocompleteStyles.suggestionItem}
-      onPress={() => {
-        console.log('建议项被点击:', item.description); // 调试日志
-        handleSelectSuggestion(item);
-      }}
+      onPress={() => handleSelectSuggestion(item)}
       activeOpacity={0.7}
     >
       <MaterialIcons 

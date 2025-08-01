@@ -85,7 +85,7 @@ export const InviteModalWithFreeDrink: React.FC<InviteModalWithFreeDrinkProps> =
         setFreeDrinksRemaining(freeDrinksResponse.free_drinks_remaining);
       }
     } catch (error) {
-      console.error('加载数据失败:', error);
+      // 加载数据失败时静默处理
     } finally {
       setLoading(false);
     }
@@ -132,7 +132,7 @@ export const InviteModalWithFreeDrink: React.FC<InviteModalWithFreeDrinkProps> =
         onClose();
       }
     } catch (error) {
-      console.error('领取免单失败:', error);
+      // 领取失败时静默处理
     }
   };
 
@@ -166,7 +166,7 @@ export const InviteModalWithFreeDrink: React.FC<InviteModalWithFreeDrinkProps> =
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (error) {
-      console.error('复制失败:', error);
+      // 复制失败时静默处理
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
