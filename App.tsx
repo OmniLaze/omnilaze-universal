@@ -749,7 +749,11 @@ export default function LemonadeApp() {
 
   // 创建订单
   const handleCreateOrder = async () => {
+    console.log('=== handleCreateOrder 开始 ===');
+    console.log('authResult:', authResult);
+    
     if (!authResult?.userId || !authResult?.phoneNumber) {
+      console.log('❌ 用户信息缺失');
       setInputError('用户信息缺失，请重新登录');
       return;
     }
@@ -765,26 +769,36 @@ export default function LemonadeApp() {
       freeOrderType: isFreeOrder ? 'invite_reward' : undefined
     };
 
+    console.log('=== 准备发送订单数据 ===');
+    console.log('用户ID:', authResult.userId);
+    console.log('手机号:', authResult.phoneNumber);
+    console.log('订单数据:', orderData);
+
     try {
       setIsOrderSubmitting(true);
       changeEmotion('📝');
       
+      console.log('=== 调用 createOrder API ===');
       const result = await createOrder(authResult.userId, authResult.phoneNumber, orderData);
+      console.log('=== API 响应 ===', result);
       
       if (result.success) {
         setCurrentOrderId(result.order_id || null);
         setCurrentOrderNumber(result.order_number || null);
         setCurrentUserSequenceNumber(result.user_sequence_number || null);
-        console.log('订单创建成功:', result.order_number, '用户序号:', result.user_sequence_number);
+        console.log('✅ 订单创建成功:', result.order_number, '用户序号:', result.user_sequence_number);
         
         // 立即提交订单
+        console.log('=== 立即提交订单 ===', result.order_id);
         handleSubmitOrder(result.order_id!);
       } else {
+        console.log('❌ 订单创建失败:', result.message);
         setInputError(result.message);
         triggerShake();
         changeEmotion('😰');
       }
     } catch (error) {
+      console.log('❌ 创建订单异常:', error);
       setInputError('创建订单失败，请重试');
       triggerShake();
       changeEmotion('😰');

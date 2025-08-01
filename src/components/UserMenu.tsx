@@ -190,6 +190,9 @@ export const UserMenu: React.FC<UserMenuProps> = ({
                 resizeMode="contain"
               />
               
+              {/* 品牌口号 */}
+              <Text style={styles.brandSlogan}>懒得，一种全新的生活方式</Text>
+              
               {/* 联系信息 */}
               <View style={styles.contactInfo}>
                 <TouchableOpacity
@@ -400,7 +403,16 @@ const styles = StyleSheet.create({
     width: '100%',
     height: Math.min(300, Dimensions.get('window').height * 0.4), // 响应式高度，最大300或屏幕高度的40%
     borderRadius: 12,
+    marginBottom: 16, // 减少底部间距，为品牌口号留出空间
+  },
+  brandSlogan: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: COLORS.TEXT_PRIMARY,
+    textAlign: 'center',
     marginBottom: 20,
+    fontStyle: 'italic', // 添加斜体效果
+    letterSpacing: 0.5, // 增加字母间距
   },
   contactInfo: {
     gap: 16,
