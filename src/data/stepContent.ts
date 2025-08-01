@@ -2,32 +2,32 @@ import { StepContent } from '../types';
 
 export const STEP_CONTENT: StepContent[] = [
   {
-    message: "你想在哪里收到你的外卖？",
+    message: "想在哪里收到你的外卖？",
     showAddressInput: true, 
     inputType: "address"
   },
   {
-    message: "你想要吃饭还是喝奶茶？",
+    message: "喝奶茶还是吃饭呢？",
     showFoodTypeInput: true,
     inputType: "foodType"
   },
   {
-    message: "你有什么忌口？",
+    message: "有忌口或者过敏源嘛？",
     showAllergyInput: true,
     inputType: "allergy"
   },
   {
-    message: "你有什么口味偏好？",
+    message: "想吃啥味儿的？",
     showPreferenceInput: true,
     inputType: "preference"
   },
   {
-    message: "我可以花多少钱帮你点外卖？",
+    message: "好的，这一顿打算花多少钱？",
     showBudgetInput: true,
     inputType: "budget"
   },
   {
-    message: "请扫码支付订单金额并确认下单",
+    message: "请扫码下单，记得备注完整电话号哦",
     showPayment: true,
     inputType: "payment"
   }
