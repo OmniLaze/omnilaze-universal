@@ -285,7 +285,10 @@ export const useFormSteps = (props: UseFormStepsProps) => {
         break;
       case 'foodType':
         if (answerToEdit.value !== '未选择') {
-          const labels = answerToEdit.value.split(', ');
+          // 处理数组或字符串格式的值
+          const labels = Array.isArray(answerToEdit.value) 
+            ? answerToEdit.value 
+            : answerToEdit.value.split(', ');
           const ids = labels.map(label => {
             const option = FOOD_TYPE_OPTIONS.find(opt => opt.label === label);
             return option ? option.id : label;
@@ -295,7 +298,10 @@ export const useFormSteps = (props: UseFormStepsProps) => {
         break;
       case 'allergy':
         if (answerToEdit.value !== '无忌口') {
-          const labels = answerToEdit.value.split(', ');
+          // 处理数组或字符串格式的值
+          const labels = Array.isArray(answerToEdit.value) 
+            ? answerToEdit.value 
+            : answerToEdit.value.split(', ');
           const ids = labels.map(label => {
             const option = ALLERGY_OPTIONS.find(opt => opt.label === label);
             return option ? option.id : label;
@@ -307,7 +313,10 @@ export const useFormSteps = (props: UseFormStepsProps) => {
         break;
       case 'preference':
         if (answerToEdit.value !== '无特殊偏好') {
-          const labels = answerToEdit.value.split(', ');
+          // 处理数组或字符串格式的值
+          const labels = Array.isArray(answerToEdit.value) 
+            ? answerToEdit.value 
+            : answerToEdit.value.split(', ');
           const ids = labels.map(label => {
             const option = PREFERENCE_OPTIONS.find(opt => opt.label === label);
             return option ? option.id : label;
@@ -408,7 +417,10 @@ export const useFormSteps = (props: UseFormStepsProps) => {
           break;
         case 'foodType':
           if (originalAnswerBeforeEdit.value !== '未选择') {
-            const labels = originalAnswerBeforeEdit.value.split(', ');
+            // 处理数组或字符串格式的值
+            const labels = Array.isArray(originalAnswerBeforeEdit.value) 
+              ? originalAnswerBeforeEdit.value 
+              : originalAnswerBeforeEdit.value.split(', ');
             const ids = labels.map(label => {
               const option = FOOD_TYPE_OPTIONS.find(opt => opt.label === label);
               return option ? option.id : label;
@@ -418,7 +430,10 @@ export const useFormSteps = (props: UseFormStepsProps) => {
           break;
         case 'allergy':
           if (originalAnswerBeforeEdit.value !== '无忌口') {
-            const labels = originalAnswerBeforeEdit.value.split(', ');
+            // 处理数组或字符串格式的值
+            const labels = Array.isArray(originalAnswerBeforeEdit.value) 
+              ? originalAnswerBeforeEdit.value 
+              : originalAnswerBeforeEdit.value.split(', ');
             const ids = labels.map(label => {
               const option = ALLERGY_OPTIONS.find(opt => opt.label === label);
               return option ? option.id : label;
@@ -430,7 +445,10 @@ export const useFormSteps = (props: UseFormStepsProps) => {
           break;
         case 'preference':
           if (originalAnswerBeforeEdit.value !== '无特殊偏好') {
-            const labels = originalAnswerBeforeEdit.value.split(', ');
+            // 处理数组或字符串格式的值
+            const labels = Array.isArray(originalAnswerBeforeEdit.value) 
+              ? originalAnswerBeforeEdit.value 
+              : originalAnswerBeforeEdit.value.split(', ');
             const ids = labels.map(label => {
               const option = PREFERENCE_OPTIONS.find(opt => opt.label === label);
               return option ? option.id : label;

@@ -22,6 +22,7 @@ import { UserMenu } from './src/components/UserMenu';
 import { InviteModalWithFreeDrink } from './src/components/InviteModalWithFreeDrink';
 import { FormInputContainer, FormActionButtonContainer } from './src/components/FormContainers';
 // import { QuickOrderSummary } from './src/components/QuickOrderSummary'; // 已移除快速下单卡片
+import { convertToChineseDisplay } from './src/data/checkboxOptions';
 
 // API Services
 import { checkPreferencesCompleteness, getPreferencesAsFormData } from './src/services/api';
@@ -66,7 +67,7 @@ export default function LemonadeApp() {
     selectedAddressSuggestion, currentStep, completedAnswers, editingStep,
     originalAnswerBeforeEdit, currentOrderId, currentOrderNumber,
     currentUserSequenceNumber, isOrderSubmitting, isSearchingRestaurant,
-    isOrderCompleted, showInviteModal, isFreeOrder, showFreeDrinkModal,
+    isOrderCompleted, orderMessage, showInviteModal, isFreeOrder, showFreeDrinkModal,
     isQuickOrderMode,
     
     // 状态设置函数
@@ -76,7 +77,7 @@ export default function LemonadeApp() {
     setCurrentStep, setCompletedAnswers, setEditingStep,
     setOriginalAnswerBeforeEdit, setCurrentOrderId, setCurrentOrderNumber,
     setCurrentUserSequenceNumber, setIsOrderSubmitting, setIsSearchingRestaurant,
-    setIsOrderCompleted, setShowInviteModal, setIsFreeOrder, setShowFreeDrinkModal,
+    setIsOrderCompleted, setOrderMessage, setShowInviteModal, setIsFreeOrder, setShowFreeDrinkModal,
     setIsQuickOrderMode,
     
     // 工具函数
@@ -201,7 +202,7 @@ export default function LemonadeApp() {
     otherAllergyText, otherPreferenceText, selectedAddressSuggestion,
     setCurrentOrderId, setCurrentOrderNumber, setCurrentUserSequenceNumber,
     setIsOrderSubmitting, setIsSearchingRestaurant, setIsOrderCompleted,
-    setCurrentStep, setCompletedAnswers, setInputError,
+    setCurrentStep, setCompletedAnswers, setInputError, setOrderMessage,
     triggerShake, changeEmotion, typeText
   });
   
@@ -302,6 +303,12 @@ export default function LemonadeApp() {
   useEffect(() => {
     if (!isStateRestored) return;
     
+    // 如果有持久化的订单消息，优先显示
+    if (orderMessage && isOrderCompleted && !displayedText && !isTyping) {
+      setTextDirectly(orderMessage);
+      return;
+    }
+    
     // 未认证状态 - 显示认证问题
     if (editingStep === null && !isAuthenticated && !isTyping) {
       handleQuestionTransition(authQuestionText);
@@ -338,11 +345,13 @@ export default function LemonadeApp() {
 
   // 编辑模式效果 - 使用统一的问题管理
   useEffect(() => {
-    if (editingStep !== null) {
+    if (editingStep !== null && isStateRestored) {
       const stepData = STEP_CONTENT[editingStep];
-      handleQuestionTransition(stepData.message, true); // 编辑模式总是有用户输入
+      if (stepData) {
+        handleQuestionTransition(stepData.message, true); // 编辑模式总是有用户输入
+      }
     }
-  }, [editingStep]);
+  }, [editingStep, isStateRestored]);
 
   // 鉴权成功回调 - 集成偏好系统
   const handleAuthSuccess = async (result: AuthResult) => {
@@ -389,17 +398,20 @@ export default function LemonadeApp() {
             const completedAnswers = {
               [-1]: phoneAnswer,
               [0]: { type: 'address', value: formData.address },
-              [1]: { type: 'foodType', value: formData.selectedFoodType },
-              [2]: { type: 'allergy', value: formData.selectedAllergies },
-              [3]: { type: 'preference', value: formData.selectedPreferences }
+              [1]: { type: 'foodType', value: convertToChineseDisplay(formData.selectedFoodType) },
+              [2]: { type: 'allergy', value: convertToChineseDisplay(formData.selectedAllergies) },
+              [3]: { type: 'preference', value: convertToChineseDisplay(formData.selectedPreferences) }
               // 不包括预算步骤，让用户在预算步骤手动确认
             };
             
             setCompletedAnswers(completedAnswers);
             setCurrentStep(4); // 跳到预算步骤（第4步）
+            setIsQuickOrderMode(true); // 设置快速下单模式
             
-            // 显示快速下单成功的消息
-            setAuthQuestionText('偏好已自动填充，请确认预算并下单');
+            // 强制显示预算步骤的问题文本
+            setTimeout(() => {
+              handleQuestionTransition('好的，这一顿打算花多少钱？', !!budget.trim());
+            }, 100);
             
             return;
           }
@@ -562,7 +574,7 @@ export default function LemonadeApp() {
                       isEditing={isCurrentlyEditing}
                       editingInput={isCurrentlyEditing ? renderCurrentInput() : undefined}
                       editingButtons={isCurrentlyEditing ? renderActionButton() : undefined}
-                      canEdit={index >= 0 && !(isOrderCompleted && index === 4)} // 手机号（index: -1）不可编辑，订单完成后预算步骤（index: 4）不可编辑
+                      canEdit={index >= 0 && (isQuickOrderMode || !(isOrderCompleted && index === 4))} // 手机号（index: -1）不可编辑，快速下单模式下所有步骤可编辑，普通模式下订单完成后预算步骤不可编辑
                     />
                   );
                 })}

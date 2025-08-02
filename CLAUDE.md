@@ -297,6 +297,12 @@ Recent improvements to address user experience issues:
 - **Implementation**: `App.tsx:405-407` with 1-second delay for user feedback
 - **Result**: Streamlined quick order experience
 
+#### Persistent Order Completion Message
+- **Issue**: Order completion message disappeared on page refresh
+- **Solution**: Added `orderMessage` state to `useAppState.ts` with Cookie persistence
+- **Implementation**: Message persists through `CookieManager.saveConversationState()`
+- **Result**: "我去下单，记得保持手机畅通，不要错过外卖员电话哦" message survives refresh
+
 ## Database Migrations
 
 The project uses incremental SQL migrations for database schema management:
@@ -312,6 +318,48 @@ wrangler d1 execute omnilaze-orders --file=./migrations/007_user_preferences.sql
 
 # Run all migrations via deploy script
 ./deploy.sh
+```
+
+## Critical Development Patterns
+
+### State Management Debugging
+When working with this codebase, be aware of these critical patterns:
+
+#### Array vs String Value Handling
+The app handles values that can be either arrays or strings. **Always use this pattern when processing answer values**:
+```typescript
+// In handleEditAnswer and handleCancelEditing functions
+const labels = Array.isArray(answerValue) 
+  ? answerValue 
+  : answerValue.split(', ');
+```
+
+#### Animation Timing Management
+**CRITICAL**: Animation conflicts have been eliminated by setting `TIMING.ANIMATION_DELAY = 0`. All transitions are immediate to prevent UI flashing.
+
+#### Quick Order Mode Requirements
+- Set `isQuickOrderMode = true` when activating quick order
+- Use `convertToChineseDisplay()` for all completed answers
+- Force question text update with `setTimeout(() => handleQuestionTransition(...), 100)`
+
+### Common Bug Patterns to Avoid
+
+#### 1. Split Method Errors
+**Problem**: Calling `.split()` on array values from quick order mode
+**Solution**: Always check `Array.isArray()` before calling `.split()`
+
+#### 2. Question Text Caching
+**Problem**: Stale question text in quick order mode
+**Solution**: Force update with `handleQuestionTransition()` after state changes
+
+#### 3. React Native Web Style Issues
+**Problem**: Invalid CSS properties causing warnings
+**Solution**: Use platform-specific styles:
+```typescript
+...(Platform.OS === 'web' && {
+  outlineStyle: 'none',
+  textShadow: '0px 1px 2px rgba(0,0,0,0.5)',
+})
 ```
 
 ## Testing and Development

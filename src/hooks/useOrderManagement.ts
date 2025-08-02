@@ -28,6 +28,7 @@ interface UseOrderManagementProps {
   setCurrentStep: (value: number) => void;
   setCompletedAnswers: (value: any) => void;
   setInputError: (value: string) => void;
+  setOrderMessage: (value: string) => void;
   
   // Animation & UI functions
   triggerShake: () => void;
@@ -42,7 +43,7 @@ export const useOrderManagement = (props: UseOrderManagementProps) => {
     otherAllergyText, otherPreferenceText, selectedAddressSuggestion,
     setCurrentOrderId, setCurrentOrderNumber, setCurrentUserSequenceNumber,
     setIsOrderSubmitting, setIsSearchingRestaurant, setIsOrderCompleted,
-    setCurrentStep, setCompletedAnswers, setInputError,
+    setCurrentStep, setCompletedAnswers, setInputError, setOrderMessage,
     triggerShake, changeEmotion, typeText
   } = props;
 
@@ -127,13 +128,7 @@ export const useOrderManagement = (props: UseOrderManagementProps) => {
       
       if (result.success) {
         setCurrentStep(5);
-        changeEmotion('🎉');
-        
-        setTimeout(() => {
-          changeEmotion('🍕');
-          const sequenceText = currentUserSequenceNumber ? `（您的第${currentUserSequenceNumber}单）` : '';
-          typeText(`🎊 订单已提交${sequenceText}，正在为您匹配餐厅...`, TIMING.TYPING_SPEED_FAST);
-        }, TIMING.COMPLETION_DELAY);
+        // 订单提交成功，但不显示额外文本，因为handleConfirmOrder已经设置了最终消息
       } else {
         setInputError(result.message);
         triggerShake();
@@ -157,22 +152,19 @@ export const useOrderManagement = (props: UseOrderManagementProps) => {
       [4]: { type: 'payment', value: '已确认支付' } // 假设支付是第4步
     }));
     
-    // 显示搜索餐厅的文本
-    setTimeout(() => {
-      typeText('正在为你寻找合适外卖...', TIMING.TYPING_SPEED_FAST);
-    }, 500);
-    
     // 创建订单
     try {
       await handleCreateOrder();
       
-      // 模拟搜索过程，5秒后显示完成
+      // 1.5秒后显示完成消息并持久化
       setTimeout(() => {
         setIsSearchingRestaurant(false);
         setIsOrderCompleted(true);
         changeEmotion('🎉');
-        typeText('我去下单，记得保持手机畅通，不要错过外卖员电话哦', TIMING.TYPING_SPEED_FAST);
-      }, 5000);
+        const message = '我去下单，记得保持手机畅通，不要错过外卖员电话哦';
+        typeText(message, TIMING.TYPING_SPEED_FAST);
+        setOrderMessage(message); // 持久化消息
+      }, 1500);
     } catch (error) {
       setIsSearchingRestaurant(false);
       changeEmotion('😰');

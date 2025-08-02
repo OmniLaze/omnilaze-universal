@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Image, Animated, StyleSheet } from 'react-native';
+import { View, Text, Image, Animated, StyleSheet, Platform } from 'react-native';
 import { ActionButton } from './ActionButton';
 import { COLORS } from '../constants';
 
@@ -199,18 +199,26 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     marginBottom: 8,
     textAlign: 'center',
-    textShadowColor: 'rgba(0, 0, 0, 0.5)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
+    ...(Platform.OS === 'web' ? {
+      textShadow: '0px 1px 2px rgba(0, 0, 0, 0.5)',
+    } : {
+      textShadowColor: 'rgba(0, 0, 0, 0.5)',
+      textShadowOffset: { width: 0, height: 1 },
+      textShadowRadius: 2,
+    }),
   },
   freeOrderSubtitle: {
     fontSize: 16,
     color: '#FFFFFF',
     marginBottom: 20,
     textAlign: 'center',
-    textShadowColor: 'rgba(0, 0, 0, 0.3)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 1,
+    ...(Platform.OS === 'web' ? {
+      textShadow: '0px 1px 1px rgba(0, 0, 0, 0.3)',
+    } : {
+      textShadowColor: 'rgba(0, 0, 0, 0.3)',
+      textShadowOffset: { width: 0, height: 1 },
+      textShadowRadius: 1,
+    }),
   },
   freeOrderAmountContainer: {
     alignItems: 'center',
@@ -221,25 +229,37 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.9)',
     textDecorationLine: 'line-through',
     marginBottom: 4,
-    textShadowColor: 'rgba(0, 0, 0, 0.5)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 1,
+    ...(Platform.OS === 'web' ? {
+      textShadow: '0px 1px 1px rgba(0, 0, 0, 0.5)',
+    } : {
+      textShadowColor: 'rgba(0, 0, 0, 0.5)',
+      textShadowOffset: { width: 0, height: 1 },
+      textShadowRadius: 1,
+    }),
   },
   freePrice: {
     fontSize: 28,
     fontWeight: '700',
     color: '#FFFFFF',
-    textShadowColor: 'rgba(0, 0, 0, 0.6)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
+    ...(Platform.OS === 'web' ? {
+      textShadow: '0px 2px 4px rgba(0, 0, 0, 0.6)',
+    } : {
+      textShadowColor: 'rgba(0, 0, 0, 0.6)',
+      textShadowOffset: { width: 0, height: 2 },
+      textShadowRadius: 4,
+    }),
   },
   freeOrderNote: {
     fontSize: 12,
     color: '#FFFFFF',
     textAlign: 'center',
     fontStyle: 'italic',
-    textShadowColor: 'rgba(0, 0, 0, 0.3)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 1,
+    ...(Platform.OS === 'web' ? {
+      textShadow: '0px 1px 1px rgba(0, 0, 0, 0.3)',
+    } : {
+      textShadowColor: 'rgba(0, 0, 0, 0.3)',
+      textShadowOffset: { width: 0, height: 1 },
+      textShadowRadius: 1,
+    }),
   },
 });

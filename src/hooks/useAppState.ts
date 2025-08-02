@@ -44,6 +44,7 @@ export const useAppState = () => {
   const [isOrderSubmitting, setIsOrderSubmitting] = useState(false);
   const [isSearchingRestaurant, setIsSearchingRestaurant] = useState(false);
   const [isOrderCompleted, setIsOrderCompleted] = useState(false);
+  const [orderMessage, setOrderMessage] = useState<string>('');
   
   // UI状态
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -79,6 +80,7 @@ export const useAppState = () => {
     setIsOrderSubmitting(false);
     setIsSearchingRestaurant(false);
     setIsOrderCompleted(false);
+    setOrderMessage('');
     
     setShowInviteModal(false);
     setShowFreeDrinkModal(false);
@@ -101,7 +103,9 @@ export const useAppState = () => {
         otherAllergyText,
         otherPreferenceText,
         isAddressConfirmed,
-        showMap
+        showMap,
+        isOrderCompleted,
+        orderMessage
       };
       CookieManager.saveConversationState(conversationState);
     }
@@ -140,6 +144,8 @@ export const useAppState = () => {
         setOtherPreferenceText(savedConversation.otherPreferenceText || '');
         setIsAddressConfirmed(savedConversation.isAddressConfirmed || false);
         setShowMap(savedConversation.showMap || false);
+        setIsOrderCompleted(savedConversation.isOrderCompleted || false);
+        setOrderMessage(savedConversation.orderMessage || '');
       }
       
       setIsStateRestored(true);
@@ -176,6 +182,8 @@ export const useAppState = () => {
         setOtherPreferenceText(savedConversation.otherPreferenceText || '');
         setIsAddressConfirmed(savedConversation.isAddressConfirmed || false);
         setShowMap(savedConversation.showMap || false);
+        setIsOrderCompleted(savedConversation.isOrderCompleted || false);
+        setOrderMessage(savedConversation.orderMessage || '');
       }
       
       setIsStateRestored(true);
@@ -189,7 +197,7 @@ export const useAppState = () => {
     if (isAuthenticated) {
       saveConversationState();
     }
-  }, [currentStep, completedAnswers, address, budget, selectedAllergies, selectedPreferences, selectedFoodType, otherAllergyText, otherPreferenceText, isAddressConfirmed, showMap]);
+  }, [currentStep, completedAnswers, address, budget, selectedAllergies, selectedPreferences, selectedFoodType, otherAllergyText, otherPreferenceText, isAddressConfirmed, showMap, isOrderCompleted, orderMessage]);
 
   return {
     // 基础表单状态
@@ -231,6 +239,7 @@ export const useAppState = () => {
     isOrderSubmitting, setIsOrderSubmitting,
     isSearchingRestaurant, setIsSearchingRestaurant,
     isOrderCompleted, setIsOrderCompleted,
+    orderMessage, setOrderMessage,
     
     // UI状态
     showInviteModal, setShowInviteModal,
