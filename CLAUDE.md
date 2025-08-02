@@ -10,39 +10,6 @@ Key feature: **Address Autocomplete** - Integrated with Amap (高德地图) API 
 
 **Critical Architecture Note**: This project uses a unique dual-backend architecture where the Flask server is primarily for local development/testing, while Cloudflare Workers handles production traffic. The frontend automatically detects and adapts to both environments.
 
-## Architecture
-
-### Frontend (React Native/Expo)
-- **Main App**: `App.tsx` - Main application component with authentication flow and multi-step form
-- **Authentication**: `src/components/AuthComponent.tsx` - Modular authentication component handling:
-  - Phone number verification with SMS codes
-  - New user detection and invite code validation
-  - Dynamic question text updates with typewriter effect
-- **Components**: Located in `src/components/` - Reusable UI components including:
-  - `CurrentQuestion.tsx` - Displays current question with typewriter effect and avatar animations
-  - `CompletedQuestion.tsx` - Shows completed answers with edit functionality
-  - `BaseInput.tsx`, `BudgetInput.tsx` - Input components with validation
-  - `MapComponent.tsx` - Map display for address confirmation
-  - `ImageCheckbox.tsx` - Custom checkbox with images for preferences/allergies
-- **Services**: `src/services/api.ts` - API layer with three main endpoints
-- **Types**: `src/types/index.ts` - TypeScript interfaces for form data and authentication
-- **Data**: `src/data/` - Static data for checkbox options and step content
-- **Hooks**: Custom hooks for typewriter effect, validation, and complex animations
-- **Styles**: Global styling with React Native StyleSheet and theme management
-
-### Backend (Dual Architecture)
-- **Development**: Python Flask server (`jwt/app.py`) with in-memory storage
-- **Production**: Cloudflare Workers (`worker.js`) with D1 database and KV storage  
-- **Database**: Supabase (Flask dev mode) / D1 database (Workers production)
-- **Tables**: `users`, `invite_codes`, `orders` (see `migrations/001_initial.sql`)
-- **Dependencies**: Flask (`jwt/requirements.txt`) / Workers (no external deps)
-
-### Authentication Flow Architecture
-The app uses a sophisticated 3-stage authentication system:
-1. **Phone Verification**: SMS code sent and validated
-2. **User Type Detection**: System determines if user is new or returning
-3. **Invite Code Validation**: New users must provide valid invite code to register
-
 ## Development Commands
 
 ### Frontend (React Native/Expo)
@@ -109,67 +76,90 @@ psql -f jwt/supabase_setup.sql
 wrangler d1 execute omnilaze-orders --file=./migrations/001_initial.sql
 ```
 
-## Testing and Development
+## Architecture
 
-### Running Tests
-Currently no automated tests are configured. Manual testing through:
-- `python jwt/test_api.py` for backend API testing
-- Manual UI testing through the development server
+### Frontend (React Native/Expo)
+- **Main App**: `App.tsx` - Main application component with authentication flow and multi-step form
+- **Authentication**: `src/components/AuthComponent.tsx` - Modular authentication component handling:
+  - Phone number verification with SMS codes
+  - New user detection and invite code validation
+  - Dynamic question text updates with typewriter effect
+- **Components**: Located in `src/components/` - Reusable UI components including:
+  - `CurrentQuestion.tsx` - Displays current question with typewriter effect and avatar animations
+  - `CompletedQuestion.tsx` - Shows completed answers with edit functionality
+  - `BaseInput.tsx`, `BudgetInput.tsx` - Input components with validation
+  - `MapComponent.tsx` - Map display for address confirmation
+  - `ImageCheckbox.tsx` - Custom checkbox with images for preferences/allergies
+- **Services**: `src/services/api.ts` - API layer with authentication and order management endpoints
+- **Types**: `src/types/index.ts` - TypeScript interfaces for form data and authentication
+- **Data**: `src/data/` - Static data for checkbox options and step content
+- **Hooks**: Custom hooks for typewriter effect, validation, and complex animations
+- **Styles**: Global styling with React Native StyleSheet and theme management
 
-### Linting and Type Checking
-This project uses TypeScript for type safety. While no specific lint/typecheck commands are configured in package.json, ensure your IDE has TypeScript checking enabled.
+### Critical State Management Architecture
 
-### Common Development Tasks
-- **Address Component Testing**: Use dev mode with `DEV_CONFIG.SKIP_AUTH = true`
-- **API Testing**: Use Flask dev server with in-memory storage
-- **Production Testing**: Deploy to Cloudflare Workers staging environment
+The app uses a sophisticated hook-based state management system with several key patterns:
 
-### Debugging
-- **Frontend Logs**: Check browser console or React Native debugger
-- **Flask Backend**: Check terminal output where Flask server is running
-- **Workers**: Use `wrangler tail` for real-time logging
-- **Environment Issues**: Check `.env` file and environment variable configuration
+#### Unified State Management (`src/hooks/useAppState.ts`)
+Centralizes all application state including:
+- Authentication state (isAuthenticated, authResult, authQuestionText)
+- Form data (address, budget, allergies, preferences, selectedFoodType)
+- UI control state (currentStep, editingStep, completedAnswers)
+- Order management state (currentOrderId, isOrderSubmitting, isOrderCompleted)
+- Free order system state (isFreeOrder, showFreeDrinkModal)
+
+#### Unified Question & Answer Management (`App.tsx`)
+- **`handleQuestionTransition()`**: Manages all question display transitions with typewriter effects
+- **`handleAnswerSubmission()`**: Standardized answer processing with validation and animations
+- **`handleStepProgression()`**: Controls step advancement with special logic for drink vs food selections
+
+#### Form Steps Hook (`src/hooks/useFormSteps.ts`)
+Complex form flow management that handles:
+- Dynamic step content based on previous selections (food vs drink affects later steps)
+- Edit mode for completed answers with state restoration
+- Special handling for free order flow (auto-progression, limited options)
+- Cross-step dependencies (selecting drink skips allergy/preference steps)
+
+### Backend (Dual Architecture)
+- **Development**: Python Flask server (`jwt/app.py`) with in-memory storage
+- **Production**: Cloudflare Workers (`worker.js`) with D1 database and KV storage  
+- **Database**: Supabase (Flask dev mode) / D1 database (Workers production)
+- **Tables**: `users`, `invite_codes`, `orders` (see `migrations/001_initial.sql`)
+- **Dependencies**: Flask (`jwt/requirements.txt`) / Workers (no external deps)
+
+### Authentication Flow Architecture
+The app uses a sophisticated 3-stage authentication system:
+1. **Phone Verification**: SMS code sent and validated
+2. **User Type Detection**: System determines if user is new or returning
+3. **Invite Code Validation**: New users must provide valid invite code to register
 
 ## Key Features & Implementation Details
 
-1. **Dual Backend Architecture**: Flask for local development, Cloudflare Workers for production
-2. **Modular Authentication System**: Separate `AuthComponent` for reusable phone verification
-3. **Complete Order Management**: Order creation, submission, rating and feedback system
-4. **Dual-Mode Operation**: Development mode (in-memory) vs Production mode (D1/Supabase)
-5. **Invite Code System**: New user registration requires valid invite codes
-6. **Dynamic UI Updates**: Question text changes during authentication flow
-7. **Multi-step Form Flow**: Authentication → Address → Allergies → Preferences → Budget → Order
-8. **Interactive UI**: Typewriter effects, emoji animations, and smooth transitions
-9. **Edit Mode**: Users can edit previously completed answers
-10. **Map Integration**: Address confirmation with map display
-11. **CORS Configuration**: Supports multiple development server ports
-12. **Automated Deployment**: One-click deployment scripts for Cloudflare infrastructure
+### Critical Animation & Timing System
+The app uses React Native Animated API with carefully coordinated timing to avoid conflicts:
+- **Zero Animation Delays**: `TIMING.ANIMATION_DELAY = 0` to prevent timing conflicts
+- **Immediate Transitions**: Typewriter effects and input animations happen synchronously
+- **Unified Management**: All animations coordinated through central handlers to prevent flashing
 
-### Critical Implementation Notes
+### Free Order System Architecture
+Special mode that changes the entire app flow:
+- **Auto-selection**: Food type automatically set to 'drink'
+- **Modified Questions**: Different question text throughout flow
+- **Shortened Flow**: Skips allergy/preference steps
+- **Quota Management**: Integration with invite system for eligibility checking
 
-#### Authentication Flow (App.tsx:309-340)
-The app implements a sophisticated 3-stage auth system that switches between development and production modes:
-- Development: Uses predefined invite codes and in-memory storage
-- Production: Integrates with SMS service and persistent database
-
-#### State Management Architecture (App.tsx:58-106)
-Complex state coordination between:
-- Authentication state (managed by AuthComponent)
-- Form progression state (currentStep, editingStep)
-- Order state (currentOrderId, isOrderSubmitting)
-- UI animation state (various animation values)
-
-#### Address Autocomplete System (src/components/AddressAutocomplete.tsx)
+### Address Autocomplete System (`src/components/AddressAutocomplete.tsx`)
 - **API Integration**: Amap (高德地图) with intelligent caching
 - **Performance**: 5-minute cache reduces API calls by 70-85%
-- **Input Validation**: Minimum 4 Chinese characters required
+- **Input Validation**: Minimum 4 Chinese characters required using `/[\u4e00-\u9fff]/g`
 - **Cross-platform**: Different rendering for Web vs Native
 
-#### Component Architecture Patterns
-- **Conditional Rendering**: Heavy use of conditional components based on authentication state
-- **Animation Coordination**: Multiple Animated.Value instances managed centrally
-- **Form Validation**: Step-by-step validation with error handling
-- **State Persistence**: Cookie-based session management with automatic restoration
+### Invite & Free Drink System (`src/components/InviteModalWithFreeDrink.tsx`)
+Complex gamification system with:
+- **Progress Tracking**: Visual progress bars for invite milestones
+- **Animated Rewards**: Sophisticated animation sequences for free drink offers
+- **Quota Management**: Global free drink limits with real-time checking
+- **API Integration**: Multiple endpoints for stats, progress, and claiming
 
 ## Environment Setup
 
@@ -201,18 +191,6 @@ Complex state coordination between:
   - `SPUG_URL` - SMS service URL for production SMS sending
 - Uses D1 database for persistent storage and KV for temporary verification codes
 
-## State Management
-
-### Main App State
-- Authentication state: `isAuthenticated`, `authResult`, `authQuestionText`
-- Form data: `address`, `budget`, `allergies`, `preferences`
-- UI states: `currentStep`, `editingStep`, animation values
-
-### AuthComponent State
-- Phone verification: `phoneNumber`, `verificationCode`, `isVerificationCodeSent`
-- User flow: `isPhoneVerified`, `isNewUser`, `inviteCode`
-- UI feedback: `countdown`, `inputError`
-
 ## API Integration
 
 The backend provides authentication and order management endpoints:
@@ -227,6 +205,12 @@ The backend provides authentication and order management endpoints:
 - `POST /submit-order` - Submit order for processing
 - `POST /order-feedback` - Submit rating and feedback for completed order
 - `GET /orders/{user_id}` - Get user's order history
+
+### Invite System APIs
+- `GET /user-invite-stats/{user_id}` - Get user's invite statistics and eligibility
+- `GET /invite-progress/{user_id}` - Get detailed invite progress and history
+- `GET /free-drinks-remaining` - Get global free drink quota
+- `POST /claim-free-drink` - Claim free drink reward
 
 ### Health Check
 - `GET /health` - Service health status and environment info
@@ -261,6 +245,28 @@ export const DEV_CONFIG = {
 
 ### Default Invite Codes (Development)
 - `1234`, `WELCOME`, `LANDE`, `OMNILAZE`, `ADVX2025`
+
+## Testing and Development
+
+### Running Tests
+Currently no automated tests are configured. Manual testing through:
+- `python jwt/test_api.py` for backend API testing
+- Manual UI testing through the development server
+
+### Linting and Type Checking
+This project uses TypeScript for type safety. While no specific lint/typecheck commands are configured in package.json, ensure your IDE has TypeScript checking enabled.
+
+### Common Development Tasks
+- **Address Component Testing**: Use dev mode with `DEV_CONFIG.SKIP_AUTH = true`
+- **API Testing**: Use Flask dev server with in-memory storage
+- **Production Testing**: Deploy to Cloudflare Workers staging environment
+
+### Debugging
+- **Frontend Logs**: Check browser console or React Native debugger
+- **Flask Backend**: Check terminal output where Flask server is running
+- **Workers**: Use `wrangler tail` for real-time logging
+- **Environment Issues**: Check `.env` file and environment variable configuration
+- **Animation Issues**: All timing conflicts have been eliminated - animations should be smooth without flashing
 
 ## Address Autocomplete Implementation
 

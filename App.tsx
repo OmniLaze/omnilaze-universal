@@ -78,7 +78,7 @@ export default function LemonadeApp() {
   } = appState;
 
   // Custom hooks
-  const { displayedText, isTyping, showCursor, typeText, setDisplayedText } = useTypewriterEffect();
+  const { displayedText, isTyping, showCursor, typeText, setTextDirectly, clearText } = useTypewriterEffect();
   const { inputError, validateInput, validatePhoneNumber, setInputError } = useValidation();
   const { 
     questionAnimations,
@@ -91,6 +91,77 @@ export default function LemonadeApp() {
     triggerShake,
     changeEmotion 
   } = useAnimations();
+  
+  // 统一的回答管理函数 - 必须在 useFormSteps 之前定义
+  const handleAnswerSubmission = (
+    stepIndex: number, 
+    answer: any, 
+    options: {
+      isEditing?: boolean;
+      skipAnimation?: boolean;
+      onComplete?: () => void;
+    } = {}
+  ) => {
+    const { isEditing = false, skipAnimation = false, onComplete } = options;
+    
+    // 统一验证
+    if (!validateInput(stepIndex, answer?.value).isValid) {
+      triggerShake();
+      return false;
+    }
+    
+    // 统一表情变化（除非是编辑模式）
+    if (!isEditing) {
+      changeEmotion('🎉');
+    }
+    
+    // 统一保存答案
+    setCompletedAnswers(prev => ({
+      ...prev,
+      [stepIndex]: answer
+    }));
+    
+    // 统一动画处理
+    if (!skipAnimation && stepIndex >= 0) {
+      Animated.spring(answerAnimations[stepIndex], {
+        toValue: 1,
+        tension: 60,
+        friction: 8,
+        useNativeDriver: false,
+      }).start(() => {
+        onComplete?.();
+      });
+    } else {
+      onComplete?.();
+    }
+    
+    return true;
+  };
+
+  // 统一的步骤推进函数
+  const handleStepProgression = (currentStepIndex: number) => {
+    // 立即推进，无延迟
+    let nextStep = currentStepIndex + 1;
+    
+    // 特殊步骤逻辑
+    if (currentStepIndex === 1) {
+      const isSelectedDrink = selectedFoodType.includes('drink');
+      if (isSelectedDrink) {
+        // 不论免单还是普通模式，选择奶茶都跳到预算步骤
+        nextStep = 4;
+      }
+    }
+    
+    // 免单模式在预算步骤后结束流程
+    if (isFreeOrder && currentStepIndex === 4) {
+      // 免单流程完成，不再推进步骤
+      return;
+    }
+    
+    if (nextStep < STEP_CONTENT.length) {
+      setCurrentStep(nextStep);
+    }
+  };
   
   // 表单步骤管理hook
   const formSteps = useFormSteps({
@@ -110,6 +181,9 @@ export default function LemonadeApp() {
     // 动画值
     mapAnimation, answerAnimations,
     
+    // 统一管理函数
+    handleAnswerSubmission, handleStepProgression,
+    
     // 验证和动画函数
     validateInput, triggerShake, changeEmotion
   });
@@ -124,25 +198,41 @@ export default function LemonadeApp() {
     triggerShake, changeEmotion, typeText
   });
   
-  // 免单相关处理函数
+  // ===========================================
+  // 免单状态统一管理
+  // ===========================================
+  
+  // 统一的免单管理函数
   const handleFreeDrinkClaim = () => {
     setShowFreeDrinkModal(false);
     setIsFreeOrder(true);
-    setSelectedFoodType(['drink']);
-    setCurrentStep(0);
+    setSelectedFoodType(['drink']); // 免单只能选奶茶
+    setBudget('0'); // 立即设置预算为0
+    setCurrentStep(0); // 重新开始流程
     setEditingStep(null);
     setCompletedAnswers({});
+  };
+
+  // 免单状态重置函数
+  const resetFreeOrderState = () => {
+    setIsFreeOrder(false);
+    setShowFreeDrinkModal(false);
   };
 
   // 免单流程自动化处理
   useEffect(() => {
     if (isFreeOrder && currentStep === 1 && editingStep === null) {
+      // 在食物类型步骤自动推进（已选择奶茶）- 减少延迟
       const timer = setTimeout(() => {
         formSteps.handleNext();
-      }, 2200);
+      }, 1000); // 减少到1秒，减少等待时间和潜在的时序冲突
       return () => clearTimeout(timer);
     }
   }, [isFreeOrder, currentStep, editingStep]);
+
+  // ===========================================
+  // 免单状态管理结束
+  // ==========================================
 
   // 登出处理函数
   const handleLogout = () => {
@@ -152,8 +242,9 @@ export default function LemonadeApp() {
     localStorage.removeItem('phone_number');
     
     resetAllState();
+    resetFreeOrderState(); // 使用统一的免单重置
     setInputError('');
-    setDisplayedText('');
+    clearText(); // 使用简化的清空函数
     
     // 重置所有动画到初始状态  
     mapAnimation.setValue(0);
@@ -170,21 +261,51 @@ export default function LemonadeApp() {
 
   const scrollViewRef = useRef<any>(null);
 
+  // 统一的问题管理函数 - 简化版
+  const handleQuestionTransition = (questionText: string, hasUserInput: boolean = false) => {
+    // 重置动画状态
+    inputSectionAnimation.setValue(0);
+    currentQuestionAnimation.setValue(1);
+    
+    if (!hasUserInput) {
+      // 无用户输入：使用打字机效果
+      typeText(questionText, TIMING.TYPING_SPEED);
+    } else {
+      // 有用户输入：直接显示文本，然后显示输入框
+      setTextDirectly(questionText);
+      // 立即显示输入框，因为已经有用户输入
+      inputSectionAnimation.setValue(1);
+    }
+  };
 
-  // Effects - 打字机效果
+  // 当打字机效果完成后显示输入框 - 立即触发版本
+  useEffect(() => {
+    if (displayedText && !isTyping && editingStep === null && inputSectionAnimation._value === 0) {
+      // 打字机完成后立即显示输入框，无延迟
+      Animated.spring(inputSectionAnimation, {
+        toValue: 1,
+        tension: 60,
+        friction: 8,
+        useNativeDriver: false,
+      }).start();
+    }
+  }, [displayedText, isTyping, editingStep]);
+
+  // Effects - 统一的打字机效果管理
   useEffect(() => {
     if (!isStateRestored) return;
     
+    // 未认证状态 - 显示认证问题
     if (editingStep === null && !isAuthenticated && !isTyping) {
-      inputSectionAnimation.setValue(0);
-      currentQuestionAnimation.setValue(1);
-      typeText(authQuestionText, TIMING.TYPING_SPEED);
+      handleQuestionTransition(authQuestionText);
       return;
     }
     
+    // 已认证状态 - 显示表单问题
     if (editingStep === null && isAuthenticated && currentStep < STEP_CONTENT.length && !completedAnswers[currentStep] && !isTyping) {
       const stepData = formSteps.getCurrentStepData();
       
+      // 统一检查用户输入状态
       let hasUserInput = false;
       switch (stepData.inputType) {
         case 'address':
@@ -204,47 +325,23 @@ export default function LemonadeApp() {
           break;
       }
       
-      if (!hasUserInput) {
-        inputSectionAnimation.setValue(0);
-        currentQuestionAnimation.setValue(1);
-        const newMessage = stepData.message;
-        typeText(newMessage, TIMING.TYPING_SPEED);
-      } else {
-        setDisplayedText(stepData.message);
-        inputSectionAnimation.setValue(1);
-      }
+      handleQuestionTransition(stepData.message, hasUserInput);
     }
-  }, [currentStep, editingStep, isAuthenticated, selectedFoodType, authQuestionText, isStateRestored]);
+  }, [currentStep, editingStep, isAuthenticated, selectedFoodType, authQuestionText, isStateRestored, isFreeOrder]);
 
-  // 编辑模式效果
+  // 编辑模式效果 - 使用统一的问题管理
   useEffect(() => {
     if (editingStep !== null) {
       const stepData = STEP_CONTENT[editingStep];
-      setDisplayedText(stepData.message);
-      inputSectionAnimation.setValue(1);
-      currentQuestionAnimation.setValue(1);
+      handleQuestionTransition(stepData.message, true); // 编辑模式总是有用户输入
     }
   }, [editingStep]);
-
-  // 输入动画效果
-  useEffect(() => {
-    if (editingStep === null && displayedText && !isTyping) {
-      setTimeout(() => {
-        Animated.spring(inputSectionAnimation, {
-          toValue: 1,
-          tension: 60,
-          friction: 8,
-          useNativeDriver: false,
-        }).start();
-      }, TIMING.ANIMATION_DELAY);
-    }
-  }, [displayedText, isTyping, editingStep]);
 
   // 鉴权成功回调
   const handleAuthSuccess = (result: AuthResult) => {
     setIsAuthenticated(true);
     setAuthResult(result);
-    setIsFreeOrder(false);
+    // 移除自动重置免单状态，让用户可以在认证后继续免单流程
     
     CookieManager.clearConversationState();
     CookieManager.saveUserSession(result.userId!, result.phoneNumber, result.isNewUser || false);
@@ -255,11 +352,15 @@ export default function LemonadeApp() {
     }
     
     const phoneAnswer = { type: 'phone', value: result.phoneNumber };
-    setCompletedAnswers({ [-1]: phoneAnswer });
     
-    setTimeout(() => {
-      setCurrentStep(0);
-    }, 500);
+    // 使用统一的回答管理函数
+    handleAnswerSubmission(-1, phoneAnswer, {
+      skipAnimation: true, // 认证不需要动画
+      onComplete: () => {
+        // 立即推进到第一步，无延迟
+        setCurrentStep(0);
+      }
+    });
   };
   
   // 鉴权问题文本变化回调

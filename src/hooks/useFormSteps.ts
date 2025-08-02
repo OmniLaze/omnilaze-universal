@@ -49,6 +49,10 @@ interface UseFormStepsProps {
   mapAnimation: Animated.Value;
   answerAnimations: Animated.Value[];
   
+  // Unified functions
+  handleAnswerSubmission: (stepIndex: number, answer: any, options?: { isEditing?: boolean; skipAnimation?: boolean; onComplete?: () => void }) => boolean;
+  handleStepProgression: (currentStepIndex: number) => void;
+  
   // Validation & Animation functions
   validateInput: (step: number, value: any) => { isValid: boolean };
   triggerShake: () => void;
@@ -66,7 +70,9 @@ export const useFormSteps = (props: UseFormStepsProps) => {
     setEditingStep, setOriginalAnswerBeforeEdit, setIsAddressConfirmed, setShowMap,
     setSelectedAddressSuggestion, setCurrentOrderId, setCurrentOrderNumber,
     setCurrentUserSequenceNumber, setIsOrderSubmitting, setIsSearchingRestaurant,
-    mapAnimation, answerAnimations, validateInput, triggerShake, changeEmotion
+    mapAnimation, answerAnimations, 
+    handleAnswerSubmission, handleStepProgression,
+    validateInput, triggerShake, changeEmotion
   } = props;
 
   // 获取当前步骤数据
@@ -97,15 +103,23 @@ export const useFormSteps = (props: UseFormStepsProps) => {
       }
     }
     
-    // 特殊处理预算步骤，根据食物类型显示不同问题
-    if (stepData && stepData.inputType === 'budget' && !isFreeOrder) {
+    // 特殊处理预算步骤，根据食物类型和免单状态显示不同问题
+    if (stepData && stepData.inputType === 'budget') {
       const isSelectedDrink = selectedFoodType.includes('drink');
-      return {
-        ...stepData,
-        message: isSelectedDrink 
-          ? "我可以花多少钱帮你买奶茶？" 
-          : "我可以花多少钱帮你点外卖？"
-      };
+      
+      if (isFreeOrder) {
+        return {
+          ...stepData,
+          message: "恭喜！您的免单奶茶已经准备好了～"
+        };
+      } else {
+        return {
+          ...stepData,
+          message: isSelectedDrink 
+            ? "我可以花多少钱帮你买奶茶？" 
+            : "我可以花多少钱帮你点外卖？"
+        };
+      }
     }
     
     return stepData;
@@ -230,54 +244,18 @@ export const useFormSteps = (props: UseFormStepsProps) => {
     }, 300);
   };
 
-  // 处理下一步
+  // 处理下一步 - 使用统一的回答管理
   const handleNext = () => {
     const currentAnswer = getCurrentAnswer();
-    const inputValue = currentAnswer?.value;
     
-    if (!validateInput(currentStep, inputValue).isValid) {
-      triggerShake();
-      return;
-    }
-    
-    changeEmotion('🎉');
-    
-    setCompletedAnswers(prev => ({
-      ...prev,
-      [currentStep]: currentAnswer!
-    }));
-    
-    Animated.spring(answerAnimations[currentStep], {
-      toValue: 1,
-      tension: 60,
-      friction: 8,
-      useNativeDriver: false,
-    }).start(() => {
-      setTimeout(() => {
-        let nextStep = currentStep + 1;
-        
-        if (currentStep === 1) {
-          const isSelectedDrink = selectedFoodType.includes('drink');
-          
-          if (isSelectedDrink) {
-            if (isFreeOrder) {
-              setBudget('0');
-            } else {
-              nextStep = 4;
-            }
-          }
-        }
-        
-        if (isFreeOrder && currentStep === 4) {
-          setBudget('0');
-          nextStep = currentStep;
-        }
-        
-        if (nextStep < STEP_CONTENT.length) {
-          setCurrentStep(nextStep);
-        }
-      }, 200);
+    // 使用统一的回答提交函数
+    const success = handleAnswerSubmission(currentStep, currentAnswer, {
+      onComplete: () => handleStepProgression(currentStep)
     });
+    
+    if (success && currentStep === 0) {
+      setIsAddressConfirmed(true);
+    }
   };
 
   // 编辑地址
@@ -344,73 +322,76 @@ export const useFormSteps = (props: UseFormStepsProps) => {
     setEditingStep(stepIndex);
   };
 
-  // 完成编辑
+  // 完成编辑 - 使用统一的回答管理
   const handleFinishEditing = () => {
     const currentAnswer = getCurrentAnswer();
     if (currentAnswer && editingStep !== null) {
-      if (!validateInput(editingStep, currentAnswer.value).isValid) {
-        triggerShake();
-        return;
-      }
       
-      setCompletedAnswers(prev => ({
-        ...prev,
-        [editingStep]: currentAnswer
-      }));
-      
-      if (editingStep === 0) {
-        setIsAddressConfirmed(true);
-      }
-      
-      if (editingStep === 1) {
-        const isSelectedDrink = selectedFoodType.includes('drink');
-        
-        setBudget('');
-        
-        setCurrentOrderId(null);
-        setCurrentOrderNumber(null);
-        setCurrentUserSequenceNumber(null);
-        setIsOrderSubmitting(false);
-        setIsSearchingRestaurant(false);
-        
-        if (isSelectedDrink) {
-          const newCompletedAnswers = { ...completedAnswers };
-          delete newCompletedAnswers[2];
-          delete newCompletedAnswers[3];
-          delete newCompletedAnswers[4];
-          delete newCompletedAnswers[5];
-          setCompletedAnswers({
-            ...newCompletedAnswers,
-            [editingStep]: currentAnswer
-          });
-          
-          setSelectedAllergies([]);
-          setSelectedPreferences([]);
-          
-          if (currentStep >= 4) {
-            setCurrentStep(4);
-          } else if (currentStep > 1) {
-            setCurrentStep(4);
+      // 使用统一的回答提交函数
+      const success = handleAnswerSubmission(editingStep, currentAnswer, {
+        isEditing: true,
+        skipAnimation: true, // 编辑模式不需要动画
+        onComplete: () => {
+          // 编辑完成后的特殊处理
+          if (editingStep === 0) {
+            setIsAddressConfirmed(true);
           }
-        } else {
-          const newCompletedAnswers = { ...completedAnswers };
-          delete newCompletedAnswers[4];
-          delete newCompletedAnswers[5];
-          setCompletedAnswers({
-            ...newCompletedAnswers,
-            [editingStep]: currentAnswer
-          });
           
-          if (currentStep > 1 && currentStep < 4) {
-            // 保持当前步骤
-          } else if (currentStep >= 4) {
-            setCurrentStep(2);
+          if (editingStep === 1) {
+            const isSelectedDrink = selectedFoodType.includes('drink');
+            
+            setBudget('');
+            
+            setCurrentOrderId(null);
+            setCurrentOrderNumber(null);
+            setCurrentUserSequenceNumber(null);
+            setIsOrderSubmitting(false);
+            setIsSearchingRestaurant(false);
+            
+            if (isSelectedDrink) {
+              const newCompletedAnswers = { ...completedAnswers };
+              delete newCompletedAnswers[2];
+              delete newCompletedAnswers[3];
+              delete newCompletedAnswers[4];
+              delete newCompletedAnswers[5];
+              setCompletedAnswers({
+                ...newCompletedAnswers,
+                [editingStep]: currentAnswer
+              });
+              
+              setSelectedAllergies([]);
+              setSelectedPreferences([]);
+              
+              if (currentStep >= 4) {
+                setCurrentStep(4);
+              } else if (currentStep > 1) {
+                setCurrentStep(4);
+              }
+            } else {
+              const newCompletedAnswers = { ...completedAnswers };
+              delete newCompletedAnswers[4];
+              delete newCompletedAnswers[5];
+              setCompletedAnswers({
+                ...newCompletedAnswers,
+                [editingStep]: currentAnswer
+              });
+              
+              if (currentStep > 1 && currentStep < 4) {
+                // 保持当前步骤
+              } else if (currentStep >= 4) {
+                setCurrentStep(2);
+              }
+            }
           }
+          
+          setEditingStep(null);
+          setOriginalAnswerBeforeEdit(null);
         }
-      }
+      });
       
-      setEditingStep(null);
-      setOriginalAnswerBeforeEdit(null);
+      if (!success) {
+        return; // 验证失败，不继续处理
+      }
     }
   };
 

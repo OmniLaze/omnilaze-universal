@@ -407,7 +407,6 @@ const styles = StyleSheet.create({
     color: COLORS.TEXT_PRIMARY,
     textAlign: 'center',
     marginBottom: 20,
-    fontStyle: 'italic', // 添加斜体效果
     letterSpacing: 0.5, // 增加字母间距
   },
   contactInfo: {

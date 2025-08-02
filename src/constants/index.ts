@@ -15,7 +15,7 @@ export const TIMING = {
   TYPING_SPEED: 60,          // 主要问题的打字速度
   TYPING_SPEED_FAST: 40,     // 快速文本的打字速度（成功消息等）
   CURSOR_BLINK: 500,
-  ANIMATION_DELAY: 300,
+  ANIMATION_DELAY: 0,        // 移除动画延迟以消除与打字机效果的冲突
   SCROLL_DELAY: 400,
   EMOTION_DURATION: 150,
   SHAKE_DURATION: 100,

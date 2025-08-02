@@ -76,7 +76,7 @@ export const ImageCheckbox: React.FC<ImageCheckboxProps> = ({
       return Animated.timing(anim, {
         toValue: 1,
         duration: 500,
-        delay: index * 120, // 每个卡片延迟120ms
+        delay: index * 80, // 每个卡片延迟120ms
         useNativeDriver: false,
       });
     });

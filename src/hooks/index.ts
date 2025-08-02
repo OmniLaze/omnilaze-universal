@@ -10,7 +10,7 @@ export const useTypewriterEffect = () => {
   const [isTyping, setIsTyping] = useState(false);
   const [showCursor, setShowCursor] = useState(true);
   const [currentTimer, setCurrentTimer] = useState<NodeJS.Timeout | null>(null);
-  const lastTextRef = useRef<string>(''); // 记录上次的文本
+  const lastTextRef = useRef<string>('');
 
   useEffect(() => {
     const cursorInterval = setInterval(() => {
@@ -22,7 +22,7 @@ export const useTypewriterEffect = () => {
 
   const typeText = (text: string, speed: number = TIMING.TYPING_SPEED) => {
     // 如果文本相同，不重复触发
-    if (lastTextRef.current === text && (isTyping || displayedText === text)) {
+    if (lastTextRef.current === text && displayedText === text) {
       return;
     }
     
@@ -36,7 +36,7 @@ export const useTypewriterEffect = () => {
     }
     
     setIsTyping(true);
-    setDisplayedText(''); // 清空当前文本
+    setDisplayedText(''); // 立即清空开始打字
     
     if (!text || text.length === 0) {
       setIsTyping(false);
@@ -59,6 +59,28 @@ export const useTypewriterEffect = () => {
     return timer;
   };
 
+  // 直接设置文本（不使用打字机效果）
+  const setTextDirectly = (text: string) => {
+    if (currentTimer) {
+      clearInterval(currentTimer);
+      setCurrentTimer(null);
+    }
+    setIsTyping(false);
+    setDisplayedText(text);
+    lastTextRef.current = text;
+  };
+
+  // 清空文本
+  const clearText = () => {
+    if (currentTimer) {
+      clearInterval(currentTimer);
+      setCurrentTimer(null);
+    }
+    setIsTyping(false);
+    setDisplayedText('');
+    lastTextRef.current = '';
+  };
+
   // 清理函数
   useEffect(() => {
     return () => {
@@ -73,7 +95,8 @@ export const useTypewriterEffect = () => {
     isTyping,
     showCursor,
     typeText,
-    setDisplayedText,
+    setTextDirectly,
+    clearText,
   };
 };
 
