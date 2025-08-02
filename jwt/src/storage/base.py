@@ -77,3 +77,24 @@ class BaseStorage(ABC):
     def get_free_drinks_remaining(self) -> int:
         """获取剩余免单数量"""
         pass
+    
+    # 新增用户偏好相关方法
+    @abstractmethod
+    def get_user_preferences(self, user_id: str) -> Optional[Dict[str, Any]]:
+        """获取用户偏好设置"""
+        pass
+    
+    @abstractmethod
+    def save_user_preferences(self, user_id: str, preferences: Dict[str, Any]) -> Dict[str, Any]:
+        """保存用户偏好设置"""
+        pass
+    
+    @abstractmethod
+    def update_user_preferences(self, user_id: str, updates: Dict[str, Any]) -> Dict[str, Any]:
+        """更新用户偏好设置"""
+        pass
+    
+    @abstractmethod
+    def delete_user_preferences(self, user_id: str) -> Dict[str, Any]:
+        """删除用户偏好设置"""
+        pass

@@ -99,9 +99,9 @@ export interface OrdersResponse {
 
 // API 基础 URL 配置
 const getApiBaseUrl = () => {
-  // 生产环境：优先使用自定义域名
+  // 生产环境：优先使用设置的URL，否则使用正确的Workers URL
   if (process.env.NODE_ENV === 'production') {
-    return process.env.REACT_APP_API_URL || 'https://api.omnilaze.co';
+    return process.env.REACT_APP_API_URL || 'https://omnilaze-universal-api.stevenxxzg.workers.dev';
   }
   
   // 开发环境：检查本地服务器或使用线上地址
@@ -548,6 +548,50 @@ export interface FreeDrinkResponse {
   free_drinks_remaining?: number;
 }
 
+// 用户偏好相关接口
+export interface UserPreferences {
+  default_address: string;
+  default_food_type: string[];
+  default_allergies: string[];
+  default_preferences: string[];
+  default_budget: string;
+  other_allergy_text?: string;
+  other_preference_text?: string;
+  address_suggestion?: any;
+}
+
+export interface PreferencesResponse {
+  success: boolean;
+  message?: string;
+  preferences?: UserPreferences;
+  has_preferences?: boolean;
+}
+
+export interface PreferencesCompletenessResponse {
+  success: boolean;
+  has_preferences: boolean;
+  is_complete: boolean;
+  can_quick_order: boolean;
+  preferences?: UserPreferences;
+  message?: string;
+}
+
+export interface FormDataFromPreferencesResponse {
+  success: boolean;
+  has_preferences: boolean;
+  form_data: {
+    address: string;
+    selectedFoodType: string[];
+    selectedAllergies: string[];
+    selectedPreferences: string[];
+    budget: string;
+    otherAllergyText: string;
+    otherPreferenceText: string;
+    selectedAddressSuggestion: any;
+  };
+  can_quick_order?: boolean;
+}
+
 /**
  * 领取免单奶茶资格
  */
@@ -602,6 +646,191 @@ export async function getFreeDrinksRemaining(): Promise<FreeDrinkResponse> {
     // 获取免单信息失败时静默处理
     return {
       success: false,
+      message: error instanceof Error ? error.message : '网络错误，请重试'
+    };
+  }
+}
+
+/**
+ * 用户偏好相关API函数
+ */
+
+/**
+ * 获取用户偏好设置
+ */
+export async function getUserPreferences(userId: string): Promise<PreferencesResponse> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/preferences/${userId}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || '获取用户偏好失败');
+    }
+
+    return data;
+  } catch (error) {
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : '网络错误，请重试'
+    };
+  }
+}
+
+/**
+ * 保存用户偏好设置
+ */
+export async function saveUserPreferences(userId: string, formData: any): Promise<PreferencesResponse> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/preferences`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        user_id: userId,
+        form_data: formData
+      })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || '保存用户偏好失败');
+    }
+
+    return data;
+  } catch (error) {
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : '网络错误，请重试'
+    };
+  }
+}
+
+/**
+ * 更新用户偏好设置
+ */
+export async function updateUserPreferences(userId: string, updates: Partial<UserPreferences>): Promise<PreferencesResponse> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/preferences/${userId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(updates)
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || '更新用户偏好失败');
+    }
+
+    return data;
+  } catch (error) {
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : '网络错误，请重试'
+    };
+  }
+}
+
+/**
+ * 删除用户偏好设置
+ */
+export async function deleteUserPreferences(userId: string): Promise<PreferencesResponse> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/preferences/${userId}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || '删除用户偏好失败');
+    }
+
+    return data;
+  } catch (error) {
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : '网络错误，请重试'
+    };
+  }
+}
+
+/**
+ * 检查用户偏好是否完整（用于判断是否可以快速下单）
+ */
+export async function checkPreferencesCompleteness(userId: string): Promise<PreferencesCompletenessResponse> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/preferences/${userId}/complete`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || '检查偏好完整性失败');
+    }
+
+    return data;
+  } catch (error) {
+    return {
+      success: false,
+      has_preferences: false,
+      is_complete: false,
+      can_quick_order: false,
+      message: error instanceof Error ? error.message : '网络错误，请重试'
+    };
+  }
+}
+
+/**
+ * 获取用户偏好并转换为表单数据格式
+ */
+export async function getPreferencesAsFormData(userId: string): Promise<FormDataFromPreferencesResponse> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/preferences/${userId}/form-data`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || '获取偏好表单数据失败');
+    }
+
+    return data;
+  } catch (error) {
+    return {
+      success: false,
+      has_preferences: false,
+      form_data: {
+        address: '',
+        selectedFoodType: [],
+        selectedAllergies: [],
+        selectedPreferences: [],
+        budget: '',
+        otherAllergyText: '',
+        otherPreferenceText: '',
+        selectedAddressSuggestion: null
+      },
       message: error instanceof Error ? error.message : '网络错误，请重试'
     };
   }

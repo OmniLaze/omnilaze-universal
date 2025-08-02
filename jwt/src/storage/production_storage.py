@@ -180,3 +180,72 @@ class ProductionStorage(BaseStorage):
         """获取剩余免单数量"""
         # TODO: 实现Supabase查询逻辑
         return 0
+    
+    # 新增：用户偏好相关方法
+    def get_user_preferences(self, user_id: str) -> Optional[Dict[str, Any]]:
+        """获取用户偏好设置"""
+        try:
+            result = self.supabase.table('user_preferences').select('*').eq(
+                'user_id', user_id
+            ).execute()
+            return result.data[0] if result.data else None
+        except Exception:
+            return None
+    
+    def save_user_preferences(self, user_id: str, preferences: Dict[str, Any]) -> Dict[str, Any]:
+        """保存用户偏好设置"""
+        try:
+            preferences['user_id'] = user_id
+            preferences['created_at'] = datetime.now(timezone.utc).isoformat()
+            preferences['updated_at'] = datetime.now(timezone.utc).isoformat()
+            
+            result = self.supabase.table('user_preferences').upsert(preferences).execute()
+            
+            print(f"✅ 生产模式 - 用户偏好保存成功: {user_id}")
+            return {
+                "success": True,
+                "message": "偏好设置保存成功",
+                "preferences": result.data[0] if result.data else preferences
+            }
+        except Exception as e:
+            print(f"❌ 用户偏好保存失败: {str(e)}")
+            return {"success": False, "message": f"偏好设置保存失败: {str(e)}"}
+    
+    def update_user_preferences(self, user_id: str, updates: Dict[str, Any]) -> Dict[str, Any]:
+        """更新用户偏好设置"""
+        try:
+            updates['updated_at'] = datetime.now(timezone.utc).isoformat()
+            
+            result = self.supabase.table('user_preferences').update(updates).eq(
+                'user_id', user_id
+            ).execute()
+            
+            if not result.data:
+                # 如果不存在，创建新的偏好设置
+                return self.save_user_preferences(user_id, updates)
+            
+            print(f"✅ 生产模式 - 用户偏好更新成功: {user_id}")
+            return {
+                "success": True,
+                "message": "偏好设置更新成功",
+                "preferences": result.data[0]
+            }
+        except Exception as e:
+            print(f"❌ 用户偏好更新失败: {str(e)}")
+            return {"success": False, "message": f"偏好设置更新失败: {str(e)}"}
+    
+    def delete_user_preferences(self, user_id: str) -> Dict[str, Any]:
+        """删除用户偏好设置"""
+        try:
+            result = self.supabase.table('user_preferences').delete().eq(
+                'user_id', user_id
+            ).execute()
+            
+            if result.data:
+                print(f"✅ 生产模式 - 用户偏好删除成功: {user_id}")
+                return {"success": True, "message": "偏好设置删除成功"}
+            else:
+                return {"success": False, "message": "偏好设置不存在"}
+        except Exception as e:
+            print(f"❌ 用户偏好删除失败: {str(e)}")
+            return {"success": False, "message": f"偏好设置删除失败: {str(e)}"}

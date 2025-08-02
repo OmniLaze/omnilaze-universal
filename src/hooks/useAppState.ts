@@ -50,6 +50,9 @@ export const useAppState = () => {
   const [isFreeOrder, setIsFreeOrder] = useState(false);
   const [showFreeDrinkModal, setShowFreeDrinkModal] = useState(false);
   const [authResetTrigger, setAuthResetTrigger] = useState(0);
+  
+  // 快速下单模式状态
+  const [isQuickOrderMode, setIsQuickOrderMode] = useState(false);
 
   // 重置所有状态到初始状态的函数
   const resetAllState = () => {
@@ -80,6 +83,7 @@ export const useAppState = () => {
     setShowInviteModal(false);
     setShowFreeDrinkModal(false);
     setIsFreeOrder(false);
+    setIsQuickOrderMode(false);
     setAuthQuestionText('请输入手机号获取验证码');
   };
 
@@ -233,6 +237,9 @@ export const useAppState = () => {
     isFreeOrder, setIsFreeOrder,
     showFreeDrinkModal, setShowFreeDrinkModal,
     authResetTrigger, setAuthResetTrigger,
+    
+    // 快速下单模式状态
+    isQuickOrderMode, setIsQuickOrderMode,
     
     // 工具函数
     resetAllState,

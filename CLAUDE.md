@@ -62,8 +62,12 @@ python test_api.py
 # Manual deployment steps
 wrangler d1 create omnilaze-orders
 wrangler kv:namespace create VERIFICATION_KV
-wrangler d1 execute omnilaze-orders --file=./migrations/001_initial.sql
+wrangler d1 execute omnilaze-orders --file=./migrations/001_initial.sql --remote
+wrangler d1 execute omnilaze-orders --file=./migrations/007_user_preferences.sql --remote
 wrangler deploy
+
+# Monitor deployment
+wrangler tail
 ```
 
 ### Database Setup
@@ -161,6 +165,14 @@ Complex gamification system with:
 - **Quota Management**: Global free drink limits with real-time checking
 - **API Integration**: Multiple endpoints for stats, progress, and claiming
 
+### Quick Order System Architecture
+Advanced user experience optimization for returning users:
+- **Preference Detection**: System checks if user has complete preferences via `/preferences-completeness/{user_id}`
+- **Auto-fill Flow**: If preferences exist, automatically fills all form fields and skips to payment
+- **Streamlined UX**: Quick order mode bypasses confirmation cards and goes directly to order submission
+- **Fallback Handling**: New users or users without complete preferences follow normal flow
+- **Implementation**: Located in `handleAuthSuccess()` in `App.tsx:347-425`
+
 ## Environment Setup
 
 ### Frontend
@@ -221,6 +233,12 @@ The backend provides authentication and order management endpoints:
 
 The API base URL is configurable via `REACT_APP_API_URL` environment variable (defaults to `localhost:5001` for Flask, or Workers URL for production).
 
+### Current Production Deployment
+- **Frontend**: https://4f47009e.omnilaze-universal-frontend.pages.dev (Cloudflare Pages)
+- **Backend**: https://omnilaze-universal-api.stevenxxzg.workers.dev (Cloudflare Workers)
+- **Database**: D1 database with ID `37fb6011-73ef-49f9-a189-312c69a098db`
+- **KV Storage**: Verification codes with namespace ID `9c43c4f6c5d348afb5ff54b7784d9ba1`
+
 ## Development Mode
 
 The project supports a development mode that bypasses authentication for easier testing:
@@ -246,6 +264,56 @@ export const DEV_CONFIG = {
 ### Default Invite Codes (Development)
 - `1234`, `WELCOME`, `LANDE`, `OMNILAZE`, `ADVX2025`
 
+### Preferences System APIs
+- `POST /preferences` - Save user preferences (address, food type, allergies, preferences, budget)
+- `GET /preferences/{user_id}` - Get user preferences
+- `PUT /preferences/{user_id}` - Update user preferences  
+- `DELETE /preferences/{user_id}` - Delete user preferences
+- `GET /preferences-completeness/{user_id}` - Check if user has complete preferences for quick ordering
+
+### Data Translation System
+The app includes a sophisticated English-to-Chinese translation system for UI display:
+- **VALUE_MAPPING**: Maps internal English values ('seafood', 'meal') to Chinese display ('海鲜类', '吃饭')
+- **convertToChineseDisplay()**: Function that handles both single values and arrays for consistent Chinese output  
+- **Implementation**: Used in `formatAnswerDisplay()` to ensure all user answers display in Chinese
+- **Location**: `src/data/checkboxOptions.ts:85-126` for mapping definitions and conversion logic
+
+### Critical UI/UX Fixes Implemented
+Recent improvements to address user experience issues:
+
+#### Answer Display Language Fix
+- **Issue**: Completed answers were displaying in English ('seafood', 'meal') instead of Chinese
+- **Solution**: Implemented VALUE_MAPPING and convertToChineseDisplay() in `src/data/checkboxOptions.ts`
+- **Result**: All answers now display properly in Chinese ('海鲜类', '吃饭')
+
+#### Question-Answer Alignment Fix  
+- **Issue**: Question-answer mismatch due to phone number question handling
+- **Solution**: Special index handling for phone question (-1) in `App.tsx:552-555`
+- **Result**: Proper alignment between questions and answers throughout flow
+
+#### Quick Order Flow Optimization
+- **Issue**: Users wanted to skip confirmation card and go directly to payment
+- **Solution**: Removed QuickOrderSummary component usage, direct execution of handleConfirmOrder()
+- **Implementation**: `App.tsx:405-407` with 1-second delay for user feedback
+- **Result**: Streamlined quick order experience
+
+## Database Migrations
+
+The project uses incremental SQL migrations for database schema management:
+- **001_initial.sql**: Core tables (users, invite_codes, orders)
+- **002_invite_system.sql**: Invite system enhancements 
+- **003-006**: User sequence and free drink system
+- **007_user_preferences.sql**: User preferences table for quick ordering
+
+Migration execution:
+```bash
+# Apply specific migration
+wrangler d1 execute omnilaze-orders --file=./migrations/007_user_preferences.sql --remote
+
+# Run all migrations via deploy script
+./deploy.sh
+```
+
 ## Testing and Development
 
 ### Running Tests
@@ -260,6 +328,8 @@ This project uses TypeScript for type safety. While no specific lint/typecheck c
 - **Address Component Testing**: Use dev mode with `DEV_CONFIG.SKIP_AUTH = true`
 - **API Testing**: Use Flask dev server with in-memory storage
 - **Production Testing**: Deploy to Cloudflare Workers staging environment
+- **Database Testing**: Use `wrangler d1` commands to inspect D1 database
+- **Real-time Monitoring**: Use `wrangler tail` for production debugging
 
 ### Debugging
 - **Frontend Logs**: Check browser console or React Native debugger
@@ -267,6 +337,7 @@ This project uses TypeScript for type safety. While no specific lint/typecheck c
 - **Workers**: Use `wrangler tail` for real-time logging
 - **Environment Issues**: Check `.env` file and environment variable configuration
 - **Animation Issues**: All timing conflicts have been eliminated - animations should be smooth without flashing
+- **Database Issues**: Use `wrangler d1 execute omnilaze-orders --command="SELECT * FROM table_name" --remote` to inspect data
 
 ## Address Autocomplete Implementation
 

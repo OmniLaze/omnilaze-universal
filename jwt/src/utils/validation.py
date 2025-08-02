@@ -2,6 +2,7 @@
 输入验证工具函数
 """
 import re
+from typing import Dict, Any, List
 
 def validate_phone_number(phone_number: str) -> bool:
     """验证手机号格式"""
@@ -36,4 +37,23 @@ def validate_required_fields(**fields) -> tuple[bool, str]:
     for field_name, field_value in fields.items():
         if not field_value:
             return False, f"{field_name}不能为空"
+    return True, ""
+
+def validate_request_data(data: Dict[str, Any], required_fields: List[str]) -> tuple[bool, str]:
+    """验证请求数据
+    
+    Args:
+        data: 请求数据字典
+        required_fields: 必填字段列表
+    
+    Returns:
+        tuple: (is_valid, error_message)
+    """
+    if not data:
+        return False, "请求数据不能为空"
+    
+    for field in required_fields:
+        if field not in data or data[field] is None or data[field] == "":
+            return False, f"缺少必填字段: {field}"
+    
     return True, ""

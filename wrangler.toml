@@ -26,5 +26,5 @@ id = "9c43c4f6c5d348afb5ff54b7784d9ba1"
 # CORS origins
 [vars]
 ENVIRONMENT = "production"
-ALLOWED_ORIGINS = '["https://a979c9a2.omnilaze-universal-frontend.pages.dev", "https://omnilaze-universal-frontend.pages.dev", "https://order.omnilaze.co", "https://6ac00518.omnilaze-universal-frontend.pages.dev", "http://localhost:8081", "http://localhost:3000"]'
+ALLOWED_ORIGINS = '["https://ef25e51a.omnilaze-universal-frontend.pages.dev", "https://53f7bc4f.omnilaze-universal-frontend.pages.dev", "https://9b1a51e5.omnilaze-universal-frontend.pages.dev", "https://a979c9a2.omnilaze-universal-frontend.pages.dev", "https://omnilaze-universal-frontend.pages.dev", "https://order.omnilaze.co", "https://6ac00518.omnilaze-universal-frontend.pages.dev", "http://localhost:8081", "http://localhost:3000"]'
 SPUG_URL = "https://push.spug.cc/send/61k3njZJqLjM4Dv9"

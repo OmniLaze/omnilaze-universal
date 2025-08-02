@@ -56,10 +56,31 @@ export default {
         case '/free-drinks-remaining':
           response = await handleFreeDrinksRemaining(request, env);
           break;
+        case '/preferences':
+          response = await handleSaveUserPreferences(request, env);
+          break;
         default:
           if (url.pathname.startsWith('/orders/')) {
             const userId = url.pathname.split('/')[2];
             response = await handleGetUserOrders(userId, env);
+          } else if (url.pathname.startsWith('/preferences/')) {
+            const pathParts = url.pathname.split('/');
+            const userId = pathParts[2];
+            const action = pathParts[3];
+            
+            if (request.method === 'GET' && action === 'complete') {
+              response = await handleCheckPreferencesCompleteness(userId, env);
+            } else if (request.method === 'GET' && action === 'form-data') {
+              response = await handleGetPreferencesAsFormData(userId, env);
+            } else if (request.method === 'GET' && !action) {
+              response = await handleGetUserPreferences(userId, env);
+            } else if (request.method === 'PUT' && !action) {
+              response = await handleUpdateUserPreferences(request, userId, env);
+            } else if (request.method === 'DELETE' && !action) {
+              response = await handleDeleteUserPreferences(userId, env);
+            } else {
+              response = new Response('Not Found', { status: 404 });
+            }
           } else {
             response = new Response('Not Found', { status: 404 });
           }
@@ -1075,6 +1096,489 @@ async function handleFreeDrinksRemaining(request, env) {
     return new Response(JSON.stringify({
       success: false,
       message: '获取免单剩余数量失败'
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+}
+
+// 用户偏好设置处理函数
+
+// 获取用户偏好设置
+async function handleGetUserPreferences(userId, env) {
+  if (!userId) {
+    return new Response(JSON.stringify({
+      success: false,
+      message: '用户ID不能为空'
+    }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
+  try {
+    const query = `SELECT * FROM user_preferences WHERE user_id = ?`;
+    const result = await env.DB.prepare(query).bind(userId).first();
+
+    if (result) {
+      // 转换JSON字段
+      const preferences = {
+        ...result,
+        default_food_type: JSON.parse(result.default_food_type || '[]'),
+        default_allergies: JSON.parse(result.default_allergies || '[]'),
+        default_preferences: JSON.parse(result.default_preferences || '[]'),
+        address_suggestion: result.address_suggestion ? JSON.parse(result.address_suggestion) : null
+      };
+
+      return new Response(JSON.stringify({
+        success: true,
+        preferences: preferences,
+        has_preferences: true
+      }), {
+        headers: { 'Content-Type': 'application/json' }
+      });
+    } else {
+      return new Response(JSON.stringify({
+        success: true,
+        preferences: null,
+        has_preferences: false,
+        message: '用户暂无保存的偏好设置'
+      }), {
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+  } catch (error) {
+    console.error('Get user preferences error:', error);
+    return new Response(JSON.stringify({
+      success: false,
+      message: '获取偏好设置失败'
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+}
+
+// 保存用户偏好设置
+async function handleSaveUserPreferences(request, env) {
+  if (request.method !== 'POST') {
+    return new Response('Method not allowed', { status: 405 });
+  }
+
+  const data = await request.json();
+  const { user_id: userId, form_data: formData } = data;
+
+  if (!userId || !formData) {
+    return new Response(JSON.stringify({
+      success: false,
+      message: '用户ID和表单数据不能为空'
+    }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
+  if (!formData.address) {
+    return new Response(JSON.stringify({
+      success: false,
+      message: '配送地址不能为空'
+    }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
+  try {
+    const now = new Date().toISOString();
+    
+    // 构建偏好数据
+    const preferences = {
+      user_id: userId,
+      default_address: formData.address || '',
+      default_food_type: JSON.stringify(formData.selectedFoodType || []),
+      default_allergies: JSON.stringify(formData.selectedAllergies || []),
+      default_preferences: JSON.stringify(formData.selectedPreferences || []),
+      default_budget: formData.budget || '',
+      other_allergy_text: formData.otherAllergyText || '',
+      other_preference_text: formData.otherPreferenceText || '',
+      address_suggestion: formData.selectedAddressSuggestion ? JSON.stringify(formData.selectedAddressSuggestion) : '',
+      created_at: now,
+      updated_at: now
+    };
+
+    // 首先检查是否已存在记录
+    const existingQuery = `SELECT id FROM user_preferences WHERE user_id = ?`;
+    const existing = await env.DB.prepare(existingQuery).bind(userId).first();
+
+    let query;
+    let bindValues;
+    
+    if (existing) {
+      // 更新现有记录
+      query = `
+        UPDATE user_preferences SET 
+        default_address = ?, default_food_type = ?, default_allergies = ?, 
+        default_preferences = ?, default_budget = ?, other_allergy_text = ?, 
+        other_preference_text = ?, address_suggestion = ?, updated_at = ?
+        WHERE user_id = ?
+      `;
+      bindValues = [
+        preferences.default_address,
+        preferences.default_food_type,
+        preferences.default_allergies,
+        preferences.default_preferences,
+        preferences.default_budget,
+        preferences.other_allergy_text,
+        preferences.other_preference_text,
+        preferences.address_suggestion,
+        preferences.updated_at,
+        preferences.user_id
+      ];
+    } else {
+      // 插入新记录
+      query = `
+        INSERT INTO user_preferences (
+          user_id, default_address, default_food_type, default_allergies, 
+          default_preferences, default_budget, other_allergy_text, 
+          other_preference_text, address_suggestion, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `;
+      bindValues = [
+        preferences.user_id,
+        preferences.default_address,
+        preferences.default_food_type,
+        preferences.default_allergies,
+        preferences.default_preferences,
+        preferences.default_budget,
+        preferences.other_allergy_text,
+        preferences.other_preference_text,
+        preferences.address_suggestion,
+        preferences.created_at,
+        preferences.updated_at
+      ];
+    }
+
+    await env.DB.prepare(query).bind(...bindValues).run();
+
+    return new Response(JSON.stringify({
+      success: true,
+      message: '偏好设置保存成功',
+      preferences: {
+        ...preferences,
+        default_food_type: JSON.parse(preferences.default_food_type),
+        default_allergies: JSON.parse(preferences.default_allergies),
+        default_preferences: JSON.parse(preferences.default_preferences),
+        address_suggestion: preferences.address_suggestion ? JSON.parse(preferences.address_suggestion) : null
+      }
+    }), {
+      headers: { 'Content-Type': 'application/json' }
+    });
+  } catch (error) {
+    console.error('Save user preferences error:', error);
+    return new Response(JSON.stringify({
+      success: false,
+      message: '保存偏好设置失败'
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+}
+
+// 更新用户偏好设置
+async function handleUpdateUserPreferences(request, userId, env) {
+  if (request.method !== 'PUT') {
+    return new Response('Method not allowed', { status: 405 });
+  }
+
+  const updates = await request.json();
+
+  if (!userId) {
+    return new Response(JSON.stringify({
+      success: false,
+      message: '用户ID不能为空'
+    }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
+  if (!updates || Object.keys(updates).length === 0) {
+    return new Response(JSON.stringify({
+      success: false,
+      message: '没有有效的更新数据'
+    }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
+  try {
+    // 构建更新SQL
+    const updateFields = [];
+    const values = [];
+
+    Object.keys(updates).forEach(key => {
+      if (updates[key] !== null && updates[key] !== undefined) {
+        updateFields.push(`${key} = ?`);
+        
+        // 处理JSON字段
+        if (['default_food_type', 'default_allergies', 'default_preferences', 'address_suggestion'].includes(key)) {
+          values.push(typeof updates[key] === 'string' ? updates[key] : JSON.stringify(updates[key]));
+        } else {
+          values.push(updates[key]);
+        }
+      }
+    });
+
+    if (updateFields.length === 0) {
+      return new Response(JSON.stringify({
+        success: false,
+        message: '没有有效的更新数据'
+      }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    updateFields.push('updated_at = ?');
+    values.push(new Date().toISOString());
+    values.push(userId);
+
+    const query = `UPDATE user_preferences SET ${updateFields.join(', ')} WHERE user_id = ?`;
+    const result = await env.DB.prepare(query).bind(...values).run();
+
+    if (result.changes === 0) {
+      return new Response(JSON.stringify({
+        success: false,
+        message: '用户偏好不存在'
+      }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // 获取更新后的数据
+    const getQuery = `SELECT * FROM user_preferences WHERE user_id = ?`;
+    const updatedResult = await env.DB.prepare(getQuery).bind(userId).first();
+
+    const preferences = {
+      ...updatedResult,
+      default_food_type: JSON.parse(updatedResult.default_food_type || '[]'),
+      default_allergies: JSON.parse(updatedResult.default_allergies || '[]'),
+      default_preferences: JSON.parse(updatedResult.default_preferences || '[]'),
+      address_suggestion: updatedResult.address_suggestion ? JSON.parse(updatedResult.address_suggestion) : null
+    };
+
+    return new Response(JSON.stringify({
+      success: true,
+      message: '偏好设置更新成功',
+      preferences: preferences
+    }), {
+      headers: { 'Content-Type': 'application/json' }
+    });
+  } catch (error) {
+    console.error('Update user preferences error:', error);
+    return new Response(JSON.stringify({
+      success: false,
+      message: '更新偏好设置失败'
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+}
+
+// 删除用户偏好设置
+async function handleDeleteUserPreferences(userId, env) {
+  if (!userId) {
+    return new Response(JSON.stringify({
+      success: false,
+      message: '用户ID不能为空'
+    }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
+  try {
+    const query = `DELETE FROM user_preferences WHERE user_id = ?`;
+    const result = await env.DB.prepare(query).bind(userId).run();
+
+    if (result.changes === 0) {
+      return new Response(JSON.stringify({
+        success: false,
+        message: '用户偏好不存在'
+      }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    return new Response(JSON.stringify({
+      success: true,
+      message: '偏好设置删除成功'
+    }), {
+      headers: { 'Content-Type': 'application/json' }
+    });
+  } catch (error) {
+    console.error('Delete user preferences error:', error);
+    return new Response(JSON.stringify({
+      success: false,
+      message: '删除偏好设置失败'
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+}
+
+// 检查偏好完整性
+async function handleCheckPreferencesCompleteness(userId, env) {
+  if (!userId) {
+    return new Response(JSON.stringify({
+      success: false,
+      message: '用户ID不能为空'
+    }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
+  try {
+    const query = `SELECT * FROM user_preferences WHERE user_id = ?`;
+    const result = await env.DB.prepare(query).bind(userId).first();
+
+    if (!result) {
+      return new Response(JSON.stringify({
+        success: true,
+        has_preferences: false,
+        is_complete: false,
+        can_quick_order: false,
+        message: '用户暂无保存的偏好设置'
+      }), {
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // 检查完整性
+    const isComplete = !!(
+      result.default_address &&
+      result.default_budget &&
+      result.default_food_type && JSON.parse(result.default_food_type).length > 0
+    );
+
+    const preferences = {
+      ...result,
+      default_food_type: JSON.parse(result.default_food_type || '[]'),
+      default_allergies: JSON.parse(result.default_allergies || '[]'),
+      default_preferences: JSON.parse(result.default_preferences || '[]'),
+      address_suggestion: result.address_suggestion ? JSON.parse(result.address_suggestion) : null
+    };
+
+    return new Response(JSON.stringify({
+      success: true,
+      has_preferences: true,
+      is_complete: isComplete,
+      can_quick_order: isComplete,
+      preferences: preferences
+    }), {
+      headers: { 'Content-Type': 'application/json' }
+    });
+  } catch (error) {
+    console.error('Check preferences completeness error:', error);
+    return new Response(JSON.stringify({
+      success: false,
+      has_preferences: false,
+      is_complete: false,
+      can_quick_order: false,
+      message: '检查偏好完整性失败'
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+}
+
+// 获取偏好作为表单数据
+async function handleGetPreferencesAsFormData(userId, env) {
+  if (!userId) {
+    return new Response(JSON.stringify({
+      success: false,
+      message: '用户ID不能为空'
+    }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
+  try {
+    const query = `SELECT * FROM user_preferences WHERE user_id = ?`;
+    const result = await env.DB.prepare(query).bind(userId).first();
+
+    if (!result) {
+      return new Response(JSON.stringify({
+        success: true,
+        has_preferences: false,
+        form_data: {
+          address: '',
+          selectedFoodType: [],
+          selectedAllergies: [],
+          selectedPreferences: [],
+          budget: '',
+          otherAllergyText: '',
+          otherPreferenceText: '',
+          selectedAddressSuggestion: null
+        }
+      }), {
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // 转换为表单数据格式
+    const formData = {
+      address: result.default_address || '',
+      selectedFoodType: JSON.parse(result.default_food_type || '[]'),
+      selectedAllergies: JSON.parse(result.default_allergies || '[]'),
+      selectedPreferences: JSON.parse(result.default_preferences || '[]'),
+      budget: result.default_budget || '',
+      otherAllergyText: result.other_allergy_text || '',
+      otherPreferenceText: result.other_preference_text || '',
+      selectedAddressSuggestion: result.address_suggestion ? JSON.parse(result.address_suggestion) : null
+    };
+
+    // 检查完整性
+    const canQuickOrder = !!(
+      formData.address &&
+      formData.budget &&
+      formData.selectedFoodType.length > 0
+    );
+
+    return new Response(JSON.stringify({
+      success: true,
+      has_preferences: true,
+      form_data: formData,
+      can_quick_order: canQuickOrder
+    }), {
+      headers: { 'Content-Type': 'application/json' }
+    });
+  } catch (error) {
+    console.error('Get preferences as form data error:', error);
+    return new Response(JSON.stringify({
+      success: false,
+      has_preferences: false,
+      form_data: {
+        address: '',
+        selectedFoodType: [],
+        selectedAllergies: [],
+        selectedPreferences: [],
+        budget: '',
+        otherAllergyText: '',
+        otherPreferenceText: '',
+        selectedAddressSuggestion: null
+      },
+      message: '获取偏好表单数据失败'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

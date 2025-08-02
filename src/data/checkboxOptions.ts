@@ -80,3 +80,47 @@ export const FOOD_TYPE_OPTIONS = [
     image: require('../../assets/food/饮品.png'),
   },
 ];
+
+// 英文值到中文显示的映射
+export const VALUE_MAPPING: Record<string, string> = {
+  // 忌口映射
+  'seafood': '海鲜类',
+  'nuts': '坚果类',
+  'eggs': '蛋类',
+  'soy': '大豆类',
+  'dairy': '乳制品类',
+  'other-allergy': '其他',
+  
+  // 偏好映射
+  'spicy': '香辣',
+  'mild': '清淡',
+  'sweet': '甜口',
+  'sour-spicy': '酸辣',
+  'salty': '咸鲜',
+  'other-preference': '其他',
+  
+  // 食物类型映射
+  'meal': '吃饭',
+  'drink': '喝奶茶',
+};
+
+// 将英文值数组转换为中文显示的函数
+export const convertToChineseDisplay = (values: string | string[]): string => {
+  if (!values) return '';
+  
+  if (Array.isArray(values)) {
+    if (values.length === 0) return '';
+    return values.map(value => VALUE_MAPPING[value] || value).join('、');
+  }
+  
+  // 如果是单个值，检查是否为逗号分隔的字符串
+  if (typeof values === 'string') {
+    if (values.includes(',')) {
+      const valuesArray = values.split(',').map(v => v.trim());
+      return valuesArray.map(value => VALUE_MAPPING[value] || value).join('、');
+    }
+    return VALUE_MAPPING[values] || values;
+  }
+  
+  return values.toString();
+};

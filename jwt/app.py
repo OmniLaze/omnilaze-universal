@@ -4,7 +4,7 @@
 """
 from flask import Flask
 from flask_cors import CORS
-from src import config, auth_bp, order_bp, invite_bp, common_bp
+from src import config, auth_bp, order_bp, invite_bp, common_bp, preferences_bp
 
 def create_app():
     """应用工厂函数"""
@@ -25,6 +25,7 @@ def create_app():
     app.register_blueprint(order_bp)
     app.register_blueprint(invite_bp)
     app.register_blueprint(common_bp)
+    app.register_blueprint(preferences_bp)
     
     return app
 
@@ -54,6 +55,13 @@ def main():
     print("     GET  /get-invite-progress")
     print("     POST /claim-free-drink")
     print("     GET  /free-drinks-remaining")
+    print("   偏好相关:")
+    print("     GET  /preferences/<user_id>")
+    print("     POST /preferences")
+    print("     PUT  /preferences/<user_id>")
+    print("     DELETE /preferences/<user_id>")
+    print("     GET  /preferences/<user_id>/complete")
+    print("     GET  /preferences/<user_id>/form-data")
     print("   通用:")
     print("     GET  /health")
     

@@ -72,7 +72,7 @@ fi
 
 echo ""
 echo "🔧 环境变量配置："
-echo "REACT_APP_API_URL=https://omnilaze-universal-api.steven-wu.workers.dev"
+echo "REACT_APP_API_URL=https://omnilaze-universal-api.stevenxxzg.workers.dev"
 echo ""
 echo "📱 测试你的应用："
 echo "访问部署后的 URL 并测试完整的注册和下单流程"

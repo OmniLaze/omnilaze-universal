@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { Animated } from 'react-native';
 import { STEP_CONTENT } from '../data/stepContent';
-import { ALLERGY_OPTIONS, PREFERENCE_OPTIONS, FOOD_TYPE_OPTIONS } from '../data/checkboxOptions';
+import { ALLERGY_OPTIONS, PREFERENCE_OPTIONS, FOOD_TYPE_OPTIONS, convertToChineseDisplay } from '../data/checkboxOptions';
 import type { Answer, AddressSuggestion, CompletedAnswers } from '../types';
 
 interface UseFormStepsProps {
@@ -169,9 +169,12 @@ export const useFormSteps = (props: UseFormStepsProps) => {
       case 'address': return answer.value;
       case 'phone': return answer.value;
       case 'budget': return `¥${answer.value}`;
-      case 'allergy': return answer.value || '无忌口';
-      case 'preference': return answer.value || '无特殊偏好';
-      case 'foodType': return answer.value || '未选择';
+      case 'allergy': 
+        return answer.value ? convertToChineseDisplay(answer.value) : '无忌口';
+      case 'preference': 
+        return answer.value ? convertToChineseDisplay(answer.value) : '无特殊偏好';
+      case 'foodType': 
+        return answer.value ? convertToChineseDisplay(answer.value) : '未选择';
       default: return answer.value;
     }
   };

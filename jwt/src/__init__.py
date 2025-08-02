@@ -3,11 +3,11 @@
 """
 from .config import config, db_config
 from .storage import storage
-from .services import auth_service, order_service, invite_service
-from .routes import auth_bp, order_bp, invite_bp, common_bp
+from .services import auth_service, order_service, invite_service, preferences_service
+from .routes import auth_bp, order_bp, invite_bp, common_bp, preferences_bp
 
 __all__ = [
     'config', 'db_config', 'storage',
-    'auth_service', 'order_service', 'invite_service',
-    'auth_bp', 'order_bp', 'invite_bp', 'common_bp'
+    'auth_service', 'order_service', 'invite_service', 'preferences_service',
+    'auth_bp', 'order_bp', 'invite_bp', 'common_bp', 'preferences_bp'
 ]

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { createOrder, submitOrder } from '../services/api';
+import { createOrder, submitOrder, saveUserPreferences } from '../services/api';
 import { TIMING } from '../constants';
 import type { AuthResult } from '../types';
 
@@ -12,6 +12,11 @@ interface UseOrderManagementProps {
   selectedFoodType: string[];
   isFreeOrder: boolean;
   currentUserSequenceNumber: number | null;
+  
+  // 新增偏好相关数据
+  otherAllergyText: string;
+  otherPreferenceText: string;
+  selectedAddressSuggestion: any;
   
   // State setters
   setCurrentOrderId: (value: string | null) => void;
@@ -34,6 +39,7 @@ export const useOrderManagement = (props: UseOrderManagementProps) => {
   const {
     authResult, address, selectedAllergies, selectedPreferences, budget,
     selectedFoodType, isFreeOrder, currentUserSequenceNumber,
+    otherAllergyText, otherPreferenceText, selectedAddressSuggestion,
     setCurrentOrderId, setCurrentOrderNumber, setCurrentUserSequenceNumber,
     setIsOrderSubmitting, setIsSearchingRestaurant, setIsOrderCompleted,
     setCurrentStep, setCompletedAnswers, setInputError,
@@ -67,6 +73,35 @@ export const useOrderManagement = (props: UseOrderManagementProps) => {
         setCurrentOrderId(result.order_id || null);
         setCurrentOrderNumber(result.order_number || null);
         setCurrentUserSequenceNumber(result.user_sequence_number || null);
+        
+        // 订单创建成功后，保存用户偏好（异步进行，不阻塞订单流程）
+        if (!authResult.isNewUser) {
+          // 仅为老用户保存偏好，新用户在首次下单时总是保存
+          try {
+            const formData = {
+              address: address,
+              selectedFoodType: selectedFoodType,
+              selectedAllergies: selectedAllergies,
+              selectedPreferences: selectedPreferences,
+              budget: budget,
+              otherAllergyText: otherAllergyText,
+              otherPreferenceText: otherPreferenceText,
+              selectedAddressSuggestion: selectedAddressSuggestion
+            };
+            
+            console.log('💾 保存用户偏好以便下次快速下单...');
+            const preferencesResult = await saveUserPreferences(authResult.userId, formData);
+            
+            if (preferencesResult.success) {
+              console.log('✅ 用户偏好保存成功，下次登录可快速下单');
+            } else {
+              console.warn('⚠️ 偏好保存失败:', preferencesResult.message);
+            }
+          } catch (preferencesError) {
+            console.warn('⚠️ 保存偏好时出错:', preferencesError);
+            // 偏好保存失败不影响订单流程
+          }
+        }
         
         handleSubmitOrder(result.order_id!);
       } else {

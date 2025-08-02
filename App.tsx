@@ -21,6 +21,10 @@ import { AuthComponent } from './src/components/AuthComponent';
 import { UserMenu } from './src/components/UserMenu';
 import { InviteModalWithFreeDrink } from './src/components/InviteModalWithFreeDrink';
 import { FormInputContainer, FormActionButtonContainer } from './src/components/FormContainers';
+// import { QuickOrderSummary } from './src/components/QuickOrderSummary'; // 已移除快速下单卡片
+
+// API Services
+import { checkPreferencesCompleteness, getPreferencesAsFormData } from './src/services/api';
 
 // Utils
 import { CookieManager } from './src/utils/cookieManager';
@@ -63,6 +67,7 @@ export default function LemonadeApp() {
     originalAnswerBeforeEdit, currentOrderId, currentOrderNumber,
     currentUserSequenceNumber, isOrderSubmitting, isSearchingRestaurant,
     isOrderCompleted, showInviteModal, isFreeOrder, showFreeDrinkModal,
+    isQuickOrderMode,
     
     // 状态设置函数
     setAddress, setBudget, setSelectedAllergies, setSelectedPreferences,
@@ -72,6 +77,7 @@ export default function LemonadeApp() {
     setOriginalAnswerBeforeEdit, setCurrentOrderId, setCurrentOrderNumber,
     setCurrentUserSequenceNumber, setIsOrderSubmitting, setIsSearchingRestaurant,
     setIsOrderCompleted, setShowInviteModal, setIsFreeOrder, setShowFreeDrinkModal,
+    setIsQuickOrderMode,
     
     // 工具函数
     resetAllState
@@ -192,6 +198,7 @@ export default function LemonadeApp() {
   const orderManagement = useOrderManagement({
     authResult, address, selectedAllergies, selectedPreferences, budget,
     selectedFoodType, isFreeOrder, currentUserSequenceNumber,
+    otherAllergyText, otherPreferenceText, selectedAddressSuggestion,
     setCurrentOrderId, setCurrentOrderNumber, setCurrentUserSequenceNumber,
     setIsOrderSubmitting, setIsSearchingRestaurant, setIsOrderCompleted,
     setCurrentStep, setCompletedAnswers, setInputError,
@@ -337,11 +344,10 @@ export default function LemonadeApp() {
     }
   }, [editingStep]);
 
-  // 鉴权成功回调
-  const handleAuthSuccess = (result: AuthResult) => {
+  // 鉴权成功回调 - 集成偏好系统
+  const handleAuthSuccess = async (result: AuthResult) => {
     setIsAuthenticated(true);
     setAuthResult(result);
-    // 移除自动重置免单状态，让用户可以在认证后继续免单流程
     
     CookieManager.clearConversationState();
     CookieManager.saveUserSession(result.userId!, result.phoneNumber, result.isNewUser || false);
@@ -353,7 +359,57 @@ export default function LemonadeApp() {
     
     const phoneAnswer = { type: 'phone', value: result.phoneNumber };
     
-    // 使用统一的回答管理函数
+    // 检查用户偏好以决定是否启用快速下单
+    try {
+      if (result.userId && !result.isNewUser) {
+        // 仅对老用户检查偏好
+        const preferencesCheck = await checkPreferencesCompleteness(result.userId);
+        
+        if (preferencesCheck.success && preferencesCheck.can_quick_order) {
+          // 用户有完整偏好，可以快速下单
+          console.log('🚀 启用快速下单模式');
+          
+          // 获取偏好数据并填充表单
+          const formDataResponse = await getPreferencesAsFormData(result.userId);
+          
+          if (formDataResponse.success && formDataResponse.has_preferences) {
+            const formData = formDataResponse.form_data;
+            
+            // 自动填充所有表单数据
+            setAddress(formData.address);
+            setSelectedFoodType(formData.selectedFoodType);
+            setSelectedAllergies(formData.selectedAllergies);
+            setSelectedPreferences(formData.selectedPreferences);
+            setBudget(formData.budget);
+            setOtherAllergyText(formData.otherAllergyText || '');
+            setOtherPreferenceText(formData.otherPreferenceText || '');
+            setSelectedAddressSuggestion(formData.selectedAddressSuggestion);
+            
+            // 标记前面步骤为已完成，但不包括预算步骤
+            const completedAnswers = {
+              [-1]: phoneAnswer,
+              [0]: { type: 'address', value: formData.address },
+              [1]: { type: 'foodType', value: formData.selectedFoodType },
+              [2]: { type: 'allergy', value: formData.selectedAllergies },
+              [3]: { type: 'preference', value: formData.selectedPreferences }
+              // 不包括预算步骤，让用户在预算步骤手动确认
+            };
+            
+            setCompletedAnswers(completedAnswers);
+            setCurrentStep(4); // 跳到预算步骤（第4步）
+            
+            // 显示快速下单成功的消息
+            setAuthQuestionText('偏好已自动填充，请确认预算并下单');
+            
+            return;
+          }
+        }
+      }
+    } catch (error) {
+      console.warn('检查用户偏好时出错，使用常规流程:', error);
+    }
+    
+    // 常规流程：新用户或没有完整偏好的老用户
     handleAnswerSubmission(-1, phoneAnswer, {
       skipAnimation: true, // 认证不需要动画
       onComplete: () => {
@@ -371,6 +427,16 @@ export default function LemonadeApp() {
   // 鉴权错误回调
   const handleAuthError = (error: string) => {
     setInputError(error);
+  };
+
+  // 处理偏好编辑
+  const handleEditPreferences = () => {
+    setIsQuickOrderMode(false);
+    setCurrentStep(0); // 重新开始表单流程
+    
+    // 保留用户数据，但让用户可以编辑
+    const phoneAnswer = { type: 'phone', value: authResult?.phoneNumber || '' };
+    setCompletedAnswers({ [-1]: phoneAnswer });
   };
 
   // Render current step input

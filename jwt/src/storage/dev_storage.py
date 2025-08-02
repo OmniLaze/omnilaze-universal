@@ -2,6 +2,7 @@
 开发模式内存存储实现
 """
 import uuid
+import json
 from datetime import datetime, timedelta, timezone
 from typing import Dict, Any, Optional, List
 from .base import BaseStorage
@@ -19,6 +20,9 @@ class DevStorage(BaseStorage):
         self.user_invite_stats = {}
         self.invite_progress = {}
         self.free_drinks_remaining = 100
+        
+        # 新增：用户偏好存储
+        self.user_preferences = {}
         
         # 预定义的有效邀请码
         self.valid_invite_codes = set(config.DEV_INVITE_CODES)
@@ -198,3 +202,61 @@ class DevStorage(BaseStorage):
     def get_free_drinks_remaining(self) -> int:
         """获取剩余免单数量"""
         return self.free_drinks_remaining
+    
+    # 新增：用户偏好相关方法
+    def get_user_preferences(self, user_id: str) -> Optional[Dict[str, Any]]:
+        """获取用户偏好设置"""
+        return self.user_preferences.get(user_id)
+    
+    def save_user_preferences(self, user_id: str, preferences: Dict[str, Any]) -> Dict[str, Any]:
+        """保存用户偏好设置"""
+        try:
+            preferences['user_id'] = user_id
+            preferences['created_at'] = datetime.now(timezone.utc).isoformat()
+            preferences['updated_at'] = datetime.now(timezone.utc).isoformat()
+            
+            self.user_preferences[user_id] = preferences
+            
+            print(f"✅ 开发模式 - 用户偏好保存成功: {user_id}")
+            return {
+                "success": True,
+                "message": "偏好设置保存成功",
+                "preferences": preferences
+            }
+        except Exception as e:
+            print(f"❌ 用户偏好保存失败: {str(e)}")
+            return {"success": False, "message": f"偏好设置保存失败: {str(e)}"}
+    
+    def update_user_preferences(self, user_id: str, updates: Dict[str, Any]) -> Dict[str, Any]:
+        """更新用户偏好设置"""
+        try:
+            if user_id not in self.user_preferences:
+                # 如果不存在，创建新的偏好设置
+                return self.save_user_preferences(user_id, updates)
+            
+            # 更新现有偏好设置
+            self.user_preferences[user_id].update(updates)
+            self.user_preferences[user_id]['updated_at'] = datetime.now(timezone.utc).isoformat()
+            
+            print(f"✅ 开发模式 - 用户偏好更新成功: {user_id}")
+            return {
+                "success": True,
+                "message": "偏好设置更新成功",
+                "preferences": self.user_preferences[user_id]
+            }
+        except Exception as e:
+            print(f"❌ 用户偏好更新失败: {str(e)}")
+            return {"success": False, "message": f"偏好设置更新失败: {str(e)}"}
+    
+    def delete_user_preferences(self, user_id: str) -> Dict[str, Any]:
+        """删除用户偏好设置"""
+        try:
+            if user_id in self.user_preferences:
+                del self.user_preferences[user_id]
+                print(f"✅ 开发模式 - 用户偏好删除成功: {user_id}")
+                return {"success": True, "message": "偏好设置删除成功"}
+            else:
+                return {"success": False, "message": "偏好设置不存在"}
+        except Exception as e:
+            print(f"❌ 用户偏好删除失败: {str(e)}")
+            return {"success": False, "message": f"偏好设置删除失败: {str(e)}"}
