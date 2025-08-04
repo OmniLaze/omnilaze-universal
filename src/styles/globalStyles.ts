@@ -92,8 +92,7 @@ export const progressStyles = StyleSheet.create({
 
 export const questionStyles = StyleSheet.create({
   completedQuestionContainer: {
-    marginBottom: 10,
-    minHeight: 120,
+    marginBottom: 2,
   },
   currentQuestionCard: {
     backgroundColor: 'transparent',
@@ -115,9 +114,10 @@ export const questionStyles = StyleSheet.create({
   },
   questionText: {
     fontSize: 24,
-    color: COLORS.TEXT_PRIMARY,
+    color: COLORS.TEXT_SECONDARY, // 改为灰色
     lineHeight: 32,
     flex: 1,
+    opacity: 0.7, // 添加透明度让已完成问题更淡
   },
   currentQuestionText: {
     fontSize: 24,
@@ -165,13 +165,15 @@ export const answerStyles = StyleSheet.create({
     marginTop: 2,
     paddingLeft: 16,
     borderLeftWidth: 2,
-    borderLeftColor: COLORS.BORDER,
+    borderLeftColor: '#E0E0E0', // 更淡的灰色边框
+    opacity: 0.8, // 整体降低透明度
   },
   answerValue: {
     fontSize: 24,
-    color: COLORS.TEXT_PRIMARY,
+    color: COLORS.TEXT_SECONDARY, // 改为灰色
     fontWeight: '400',
     lineHeight: 36,
+    opacity: 0.7, // 添加透明度让已完成答案更淡
   },
   answerWithEdit: {
     flexDirection: 'row',

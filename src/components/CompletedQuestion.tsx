@@ -54,12 +54,8 @@ export const CompletedQuestion: React.FC<CompletedQuestionProps> = ({
     >
       <View style={questionStyles.completedQuestionRow}>
         <View style={questionStyles.questionHeader}>
-          <View style={avatarStyles.avatarSimple}>
-            <Image 
-              source={require('../../assets/icon.png')} 
-              style={avatarStyles.avatarImage}
-            />
-          </View>
+          {/* 已完成问题不显示头像，使用占位空间保持对齐 */}
+          <View style={{ width: avatarStyles.avatarSimple.width, height: avatarStyles.avatarSimple.height }} />
           <Text style={questionStyles.questionText}>
             {question}
           </Text>

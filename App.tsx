@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -8,7 +8,13 @@ import {
   ScrollView,
   View,
   Animated,
+  TouchableOpacity,
+  Text,
+  Dimensions,
+  PanResponder,
 } from 'react-native';
+
+const { height } = Dimensions.get('window');
 
 // 导入全局CSS样式来移除焦点边框
 import './src/styles/global.css';
@@ -95,8 +101,11 @@ export default function LemonadeApp() {
     emotionAnimation,
     shakeAnimation,
     inputSectionAnimation,
+    completedQuestionsContainerAnimation,
+    newQuestionSlideInAnimation,
     triggerShake,
-    changeEmotion 
+    changeEmotion,
+    triggerPushUpAnimation 
   } = useAnimations();
   
   // 统一的回答管理函数 - 必须在 useFormSteps 之前定义
@@ -130,12 +139,14 @@ export default function LemonadeApp() {
     
     // 统一动画处理
     if (!skipAnimation && stepIndex >= 0) {
+      // 首先播放答案出现动画
       Animated.spring(answerAnimations[stepIndex], {
         toValue: 1,
         tension: 60,
         friction: 8,
         useNativeDriver: false,
       }).start(() => {
+        // 答案动画完成后，直接完成
         onComplete?.();
       });
     } else {
@@ -144,6 +155,8 @@ export default function LemonadeApp() {
     
     return true;
   };
+
+  // 移除页面状态管理，改为流动式布局
 
   // 统一的步骤推进函数
   const handleStepProgression = (currentStepIndex: number) => {
@@ -238,6 +251,25 @@ export default function LemonadeApp() {
     }
   }, [isFreeOrder, currentStep, editingStep]);
 
+  // 快速订单模式状态管理
+  useEffect(() => {
+    if (isQuickOrderMode && currentStep === 4 && isAuthenticated && !isOrderCompleted && !isSearchingRestaurant) {
+      console.log('=== 快速订单模式激活 ===', {
+        currentStep,
+        isAuthenticated,
+        completedAnswersKeys: Object.keys(completedAnswers),
+        budget
+      });
+      
+      // 触发预算步骤的问题显示
+      const timer = setTimeout(() => {
+        handleQuestionTransition('好的，这一顿打算花多少钱？', !!budget.trim());
+      }, 100);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isQuickOrderMode, currentStep, isAuthenticated, isOrderCompleted, isSearchingRestaurant]);
+
   // ===========================================
   // 免单状态管理结束
   // ==========================================
@@ -258,6 +290,8 @@ export default function LemonadeApp() {
     mapAnimation.setValue(0);
     inputSectionAnimation.setValue(0);
     currentQuestionAnimation.setValue(1);
+    completedQuestionsContainerAnimation.setValue(0);
+    newQuestionSlideInAnimation.setValue(0); // 重置到下方位置
     
     setAuthResetTrigger(prev => prev + 1);
   };
@@ -267,7 +301,169 @@ export default function LemonadeApp() {
     setShowFreeDrinkModal(true);
   };
 
-  const scrollViewRef = useRef<any>(null);
+  // 移除ScrollView引用，不再需要
+  
+  // 状态管理：聚焦模式
+  const [focusMode, setFocusMode] = useState<'current' | 'completed'>('current'); // 聚焦模式：当前问题或已完成问题
+  const [focusTransition] = useState(new Animated.Value(0)); // 0=聚焦当前问题, 1=聚焦已完成问题
+  
+  // 切换聚焦模式
+  const switchToCurrentQuestion = () => {
+    setFocusMode('current');
+    Animated.spring(focusTransition, {
+      toValue: 0,
+      tension: 60,
+      friction: 8,
+      useNativeDriver: false,
+    }).start();
+  };
+  
+  const switchToCompletedQuestions = () => {
+    setFocusMode('completed');
+    Animated.spring(focusTransition, {
+      toValue: 1,
+      tension: 60,
+      friction: 8,
+      useNativeDriver: false,
+    }).start();
+  };
+  
+  // 移除滚动处理函数，不再需要
+  
+  // 处理聚焦切换手势
+  const handleFocusGesture = (direction: 'up' | 'down') => {
+    if (direction === 'up' && focusMode === 'current' && Object.keys(completedAnswers).length > 0) {
+      console.log('✅ 检测到上滑手势，切换到已完成问题');
+      switchToCompletedQuestions();
+    } else if (direction === 'down' && focusMode === 'completed') {
+      console.log('✅ 检测到下滑手势，切换回当前问题');
+      switchToCurrentQuestion();
+    }
+  };
+  
+  // 处理滚轮事件（Web特有）
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    
+    const handleWheel = (event: WheelEvent) => {
+      // 检测快速滚动来触发聚焦切换
+      const isQuickScroll = Math.abs(event.deltaY) > 10;
+      
+      if (isQuickScroll && Object.keys(completedAnswers).length > 0) {
+        console.log('滚轮聚焦控制:', event.deltaY, '当前聚焦:', focusMode);
+        
+        if (event.deltaY < 0 && focusMode === 'current') {
+          // 向上快速滚动且聚焦在当前问题
+          handleFocusGesture('up');
+          event.preventDefault();
+        } else if (event.deltaY > 0 && focusMode === 'completed') {
+          // 向下快速滚动且聚焦在已完成问题
+          handleFocusGesture('down');
+          event.preventDefault();
+        }
+      }
+    };
+    
+    document.addEventListener('wheel', handleWheel, { passive: false });
+    
+    return () => {
+      document.removeEventListener('wheel', handleWheel);
+    };
+  }, [focusMode, completedAnswers]);
+  
+  // 添加原生触摸事件处理（Web专用）
+  const [touchStartY, setTouchStartY] = useState<number | null>(null);
+  
+  const handleTouchStart = (event: any) => {
+    const touch = event.touches[0];
+    setTouchStartY(touch.clientY);
+    console.log('🟢 原生触摸开始:', touch.clientY);
+  };
+  
+  const handleTouchMove = (event: any) => {
+    if (touchStartY === null) return;
+    
+    const touch = event.touches[0];
+    const deltaY = touchStartY - touch.clientY; // 向上滑动为正值，向下滑动为负值
+    console.log('🔵 原生触摸移动:', deltaY, '当前聚焦:', focusMode);
+    
+    // 检测快速滑动手势
+    const isQuickSwipe = Math.abs(deltaY) > 50;
+    
+    if (isQuickSwipe) {
+      if (deltaY > 0 && focusMode === 'current') {
+        // 向上快速滑动且聚焦在当前问题
+        handleFocusGesture('up');
+        event.preventDefault();
+      } else if (deltaY < 0 && focusMode === 'completed') {
+        // 向下快速滑动且聚焦在已完成问题
+        handleFocusGesture('down');
+        event.preventDefault();
+      }
+    }
+  };
+  
+  const handleTouchEnd = () => {
+    console.log('🔴 原生触摸结束');
+    setTouchStartY(null);
+  };
+  
+  // 创建手势识别器用于处理滑动
+  const panResponder = PanResponder.create({
+    onStartShouldSetPanResponder: (evt, gestureState) => {
+      console.log('onStartShouldSetPanResponder 被调用', '当前聚焦:', focusMode);
+      // 当有已完成问题时才响应触摸
+      return Object.keys(completedAnswers).length > 0;
+    },
+    onMoveShouldSetPanResponder: (evt, gestureState) => {
+      // 手势检测：垂直滑动距离大于水平滑动距离
+      const hasVerticalMovement = Math.abs(gestureState.dy) > Math.abs(gestureState.dx) && Math.abs(gestureState.dy) > 5;
+      console.log('onMoveShouldSetPanResponder 手势检测:', { 
+        dy: gestureState.dy, 
+        dx: gestureState.dx, 
+        hasVerticalMovement,
+        focusMode 
+      });
+      return hasVerticalMovement;
+    },
+    onPanResponderMove: (evt, gestureState) => {
+      console.log('onPanResponderMove:', gestureState.dy, 'dx:', gestureState.dx, '当前聚焦:', focusMode);
+      
+      // 检测快速手势
+      const isQuickGesture = Math.abs(gestureState.dy) > 15;
+      
+      if (isQuickGesture) {
+        if (gestureState.dy < 0 && focusMode === 'current') {
+          // 向上快速滑动且聚焦在当前问题
+          handleFocusGesture('up');
+        } else if (gestureState.dy > 0 && focusMode === 'completed') {
+          // 向下快速滑动且聚焦在已完成问题
+          handleFocusGesture('down');
+        }
+      }
+    },
+    onPanResponderGrant: (evt, gestureState) => {
+      console.log('✋ 开始触摸区域', gestureState);
+    },
+    onPanResponderRelease: (evt, gestureState) => {
+      console.log('🔚 结束触摸，最终手势:', gestureState.dy, 'dx:', gestureState.dx);
+      
+      // 如果是向上滑动且聚焦在当前问题，切换到已完成问题
+      if (gestureState.dy < -10 && focusMode === 'current') {
+        console.log('✅ 释放时检测到上滑，切换到已完成问题');
+        switchToCompletedQuestions();
+      }
+      // 如果是向下滑动且聚焦在已完成问题，切换回当前问题
+      else if (gestureState.dy > 10 && focusMode === 'completed') {
+        console.log('✅ 释放时检测到下滑，切换回当前问题');
+        switchToCurrentQuestion();
+      }
+    },
+    onPanResponderTerminationRequest: () => {
+      console.log('onPanResponderTerminationRequest');
+      return false; // 不允许其他组件接管手势
+    },
+  });
 
   // 统一的问题管理函数 - 简化版
   const handleQuestionTransition = (questionText: string, hasUserInput: boolean = false) => {
@@ -288,16 +484,29 @@ export default function LemonadeApp() {
 
   // 当打字机效果完成后显示输入框 - 立即触发版本
   useEffect(() => {
-    if (displayedText && !isTyping && editingStep === null && inputSectionAnimation._value === 0) {
-      // 打字机完成后立即显示输入框，无延迟
-      Animated.spring(inputSectionAnimation, {
-        toValue: 1,
-        tension: 60,
-        friction: 8,
-        useNativeDriver: false,
-      }).start();
+    if (displayedText && !isTyping && editingStep === null) {
+      // 检查动画值是否为0，然后显示输入框
+      let currentInputValue = 0;
+      const listener = inputSectionAnimation.addListener(({ value }) => {
+        currentInputValue = value;
+      });
+      
+      if (currentInputValue === 0) {
+        // 打字机完成后立即显示输入框，无延迟
+        Animated.spring(inputSectionAnimation, {
+          toValue: 1,
+          tension: 60,
+          friction: 8,
+          useNativeDriver: false,
+        }).start();
+      }
+      
+      // 清理监听器
+      inputSectionAnimation.removeListener(listener);
     }
   }, [displayedText, isTyping, editingStep]);
+
+  // 不再需要初始化动画，问题直接显示在顶部
 
   // Effects - 统一的打字机效果管理
   useEffect(() => {
@@ -349,9 +558,15 @@ export default function LemonadeApp() {
       const stepData = STEP_CONTENT[editingStep];
       if (stepData) {
         handleQuestionTransition(stepData.message, true); // 编辑模式总是有用户输入
+        // 编辑时自动切换到当前问题聚焦模式，让编辑在当前问题区域进行
+        if (focusMode !== 'current') {
+          switchToCurrentQuestion();
+        }
       }
     }
   }, [editingStep, isStateRestored]);
+
+  // 移除自动切换回当前问题的逻辑 - 只有用户手动下滑才切换
 
   // 鉴权成功回调 - 集成偏好系统
   const handleAuthSuccess = async (result: AuthResult) => {
@@ -404,14 +619,17 @@ export default function LemonadeApp() {
               // 不包括预算步骤，让用户在预算步骤手动确认
             };
             
-            setCompletedAnswers(completedAnswers);
-            setCurrentStep(4); // 跳到预算步骤（第4步）
-            setIsQuickOrderMode(true); // 设置快速下单模式
+            // 显式清除步骤4及之后的答案，确保预算步骤显示
+            const currentCompletedAnswers = { ...completedAnswers };
+            delete currentCompletedAnswers[4];
+            delete currentCompletedAnswers[5];
             
-            // 强制显示预算步骤的问题文本
-            setTimeout(() => {
-              handleQuestionTransition('好的，这一顿打算花多少钱？', !!budget.trim());
-            }, 100);
+            // 批量状态更新
+            setCompletedAnswers(currentCompletedAnswers);
+            setIsQuickOrderMode(true); // 设置快速下单模式
+            setIsOrderCompleted(false);
+            setIsSearchingRestaurant(false);
+            setCurrentStep(4); // 跳到预算步骤（第4步）
             
             return;
           }
@@ -537,135 +755,171 @@ export default function LemonadeApp() {
         <ProgressSteps currentStep={currentStep} />
       )}  
 
-      <ScrollView 
-        ref={scrollViewRef}
-        style={globalStyles.scrollView} 
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={[
-          globalStyles.scrollContent
+      <Animated.View 
+        style={[
+          globalStyles.container, 
+          { 
+            position: 'relative',
+            transform: [{
+              translateY: focusTransition.interpolate({
+                inputRange: [0, 1],
+                outputRange: [0, -(height * 0.3)], // 进一步减少移动距离
+              })
+            }]
+          }
         ]}
+        {...(Platform.OS === 'web' && {
+          onTouchStart: handleTouchStart,
+          onTouchMove: handleTouchMove,
+          onTouchEnd: handleTouchEnd
+        })}
+        {...panResponder.panHandlers}
       >
-        <View style={globalStyles.mainContent}>
-          <View style={globalStyles.contentContainer}>
-            <View style={rightContentStyles.rightContent}>
-              {/* Completed Questions */}
-              {Object.keys(completedAnswers)
-                .sort((a, b) => parseInt(a) - parseInt(b))
-                .map((stepIndex) => {
-                  const index = parseInt(stepIndex);
-                  const answer = completedAnswers[index];
-                  const isCurrentlyEditing = editingStep === index;
-                  
-                  // 为手机号问题（index: -1）提供特殊处理
-                  const questionText = index === -1 ? 
-                    '你的手机号码是多少？' : 
-                    STEP_CONTENT[index]?.message || '';
-                  
-                  return (
-                    <CompletedQuestion
-                      key={index}
-                      question={questionText}
-                      answer={answer}
-                      index={index}
-                      questionAnimation={questionAnimations[Math.max(0, index)] || new Animated.Value(1)}
-                      answerAnimation={answerAnimations[Math.max(0, index)] || new Animated.Value(1)}
-                      onEdit={() => formSteps.handleEditAnswer(index)}
-                      formatAnswerDisplay={formSteps.formatAnswerDisplay}
-                      isEditing={isCurrentlyEditing}
-                      editingInput={isCurrentlyEditing ? renderCurrentInput() : undefined}
-                      editingButtons={isCurrentlyEditing ? renderActionButton() : undefined}
-                      canEdit={index >= 0 && (isQuickOrderMode || !(isOrderCompleted && index === 4))} // 手机号（index: -1）不可编辑，快速下单模式下所有步骤可编辑，普通模式下订单完成后预算步骤不可编辑
-                    />
-                  );
-                })}
+        {/* ========== 已完成问题区域（在上方，紧凑布局） ========== */}
+        <View style={{
+          paddingTop: 60,
+          paddingBottom: 10,
+          paddingHorizontal: 16,
+        }}>
+          <View style={{
+            width: '100%',
+            maxWidth: 500,
+            alignSelf: 'center',
+          }}>
+            {Object.keys(completedAnswers).length > 0 && (
+              <>
+                {/* 已完成问题列表 */}
+                {Object.keys(completedAnswers)
+                  .sort((a, b) => parseInt(a) - parseInt(b))
+                  .map((stepIndex) => {
+                    const index = parseInt(stepIndex);
+                    const answer = completedAnswers[index];
+                    const isCurrentlyEditing = editingStep === index;
+                    
+                    // 为手机号问题（index: -1）提供特殊处理
+                    const questionText = index === -1 ? 
+                      '你的手机号码是多少？' : 
+                      STEP_CONTENT[index]?.message || '';
+                    
+                    return (
+                      <CompletedQuestion
+                        key={index}
+                        question={questionText}
+                        answer={answer}
+                        index={index}
+                        questionAnimation={questionAnimations[Math.max(0, index)] || new Animated.Value(1)}
+                        answerAnimation={answerAnimations[Math.max(0, index)] || new Animated.Value(1)}
+                        onEdit={() => formSteps.handleEditAnswer(index)}
+                        formatAnswerDisplay={formSteps.formatAnswerDisplay}
+                        isEditing={false} // 已完成问题区域不显示编辑表单
+                        canEdit={index >= 0 && (isQuickOrderMode || !(isOrderCompleted && index === 4))}
+                      />
+                    );
+                  })}
+              </>
+            )}
+          </View>
+        </View>
 
-              {/* 鉴权组件 - 未鉴权时显示 */}
-              {!isAuthenticated && (
+        {/* ========== 当前问题区域（在下方，始终可见） ========== */}
+        <View style={{
+          flex: 1,
+          justifyContent: 'flex-start',
+          alignItems: 'center',
+          paddingHorizontal: 16,
+          paddingTop: 10,
+          paddingBottom: 40,
+        }}>
+          <View style={{
+            width: '100%',
+            maxWidth: 500,
+          }}>
+            {/* 当前问题内容 */}
+            {/* 鉴权组件 - 未鉴权时显示 */}
+            {!isAuthenticated && (
+              <CurrentQuestion
+                displayedText={displayedText}
+                isTyping={isTyping}
+                showCursor={showCursor}
+                inputError={inputError}
+                currentStep={0}
+                currentQuestionAnimation={currentQuestionAnimation}
+                emotionAnimation={emotionAnimation}
+                shakeAnimation={shakeAnimation}
+              >
+                <AuthComponent
+                  onAuthSuccess={handleAuthSuccess}
+                  onError={handleAuthError}
+                  onQuestionChange={handleAuthQuestionChange}
+                  animationValue={inputSectionAnimation}
+                  validatePhoneNumber={validatePhoneNumber}
+                  triggerShake={triggerShake}
+                  changeEmotion={changeEmotion}
+                  resetTrigger={authResetTrigger}
+                />
+              </CurrentQuestion>
+            )}
+
+            {/* Current Question - 正常流程、搜索状态、订单完成状态显示 */}
+            {isAuthenticated && editingStep === null && (
+              // 如果正在搜索餐厅或订单已完成，只显示相应文本，不显示其他内容
+              (isSearchingRestaurant || isOrderCompleted) ? (
                 <CurrentQuestion
                   displayedText={displayedText}
                   isTyping={isTyping}
                   showCursor={showCursor}
                   inputError={inputError}
-                  currentStep={0}
+                  currentStep={currentStep}
                   currentQuestionAnimation={currentQuestionAnimation}
                   emotionAnimation={emotionAnimation}
                   shakeAnimation={shakeAnimation}
                 >
-                  <AuthComponent
-                    onAuthSuccess={handleAuthSuccess}
-                    onError={handleAuthError}
-                    onQuestionChange={handleAuthQuestionChange}
-                    animationValue={inputSectionAnimation}
-                    validatePhoneNumber={validatePhoneNumber}
-                    triggerShake={triggerShake}
-                    changeEmotion={changeEmotion}
-                    resetTrigger={authResetTrigger}
-                  />
+                  {/* 搜索状态或订单完成状态时不显示任何输入组件或按钮 */}
                 </CurrentQuestion>
-              )}
-
-              {/* Current Question - 正常流程、搜索状态、订单完成状态显示 */}
-              {isAuthenticated && editingStep === null && (
-                // 如果正在搜索餐厅或订单已完成，只显示相应文本，不显示其他内容
-                (isSearchingRestaurant || isOrderCompleted) ? (
+              ) : (
+                (currentStep < STEP_CONTENT.length && !completedAnswers[currentStep]) && (
                   <CurrentQuestion
                     displayedText={displayedText}
                     isTyping={isTyping}
                     showCursor={showCursor}
                     inputError={inputError}
-                    currentStep={currentStep}
+                    currentStep={editingStep !== null ? editingStep : currentStep}
                     currentQuestionAnimation={currentQuestionAnimation}
                     emotionAnimation={emotionAnimation}
                     shakeAnimation={shakeAnimation}
                   >
-                    {/* 搜索状态或订单完成状态时不显示任何输入组件或按钮 */}
+                    {/* Input Section */}
+                    {renderCurrentInput()}
+
+                    {/* Action Button */}
+                    {renderActionButton()}
                   </CurrentQuestion>
-                ) : (
-                  (currentStep < STEP_CONTENT.length && !completedAnswers[currentStep]) && (
-                    <CurrentQuestion
-                      displayedText={displayedText}
-                      isTyping={isTyping}
-                      showCursor={showCursor}
-                      inputError={inputError}
-                      currentStep={editingStep !== null ? editingStep : currentStep}
-                      currentQuestionAnimation={currentQuestionAnimation}
-                      emotionAnimation={emotionAnimation}
-                      shakeAnimation={shakeAnimation}
-                    >
-                      {/* Map Container - 地址确认时显示（现在是第0步） - 已注释 */}
-                      {/* {showMap && (currentStep === 0 || editingStep === 0) && editingStep === null && (
-                        <Animated.View 
-                          style={[
-                            {
-                              opacity: mapAnimation,
-                              transform: [{
-                                translateY: mapAnimation.interpolate({
-                                  inputRange: [0, 1],
-                                  outputRange: [16, 0],
-                                }),
-                              }],
-                            },
-                          ]}
-                        >
-                          <View style={{ backgroundColor: '#ffffff', borderRadius: 8, overflow: 'hidden', marginBottom: 24 }}>
-                            <MapComponent showMap={showMap} mapAnimation={mapAnimation} />
-                          </View>
-                        </Animated.View>
-                      )} */}
-
-                      {/* Input Section */}
-                      {renderCurrentInput()}
-
-                      {/* Action Button */}
-                      {renderActionButton()}
-                    </CurrentQuestion>
-                  )
                 )
-              )}
-            </View>
+              )
+            )}
+
+            {/* 编辑模式 - 当有编辑步骤时显示 */}
+            {editingStep !== null && (
+              <CurrentQuestion
+                displayedText={displayedText}
+                isTyping={isTyping}
+                showCursor={showCursor}
+                inputError={inputError}
+                currentStep={editingStep}
+                currentQuestionAnimation={currentQuestionAnimation}
+                emotionAnimation={emotionAnimation}
+                shakeAnimation={shakeAnimation}
+              >
+                {/* Input Section */}
+                {renderCurrentInput()}
+
+                {/* Action Button */}
+                {renderActionButton()}
+              </CurrentQuestion>
+            )}
           </View>
         </View>
-      </ScrollView>
+      </Animated.View>
     </KeyboardAvoidingView>
   );
 }
