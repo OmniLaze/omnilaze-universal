@@ -92,6 +92,7 @@ export const BaseInput: React.FC<BaseInputProps> = ({
             { outline: 'none', outlineWidth: 0 }
           ] as any}
           placeholder={placeholder}
+          placeholderTextColor="#000000"
           value={value}
           onChangeText={onChangeText}
           onFocus={onFocus}

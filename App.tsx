@@ -1095,7 +1095,7 @@ function LemonadeAppContent() {
           // 添加基于焦点模式的透明度效果（互换：已完成问题页时当前问题为黑色）
           opacity: focusTransition.interpolate({
             inputRange: [0, 1],
-            outputRange: [0.4, 1.0], // 新问题模式(0)时透明度0.4（灰色），已完成问题模式(1)时透明度1.0（黑色）
+            outputRange: [0.4, 1.0], // 新问题模式(0)时透明度1.0（黑色），已完成问题模式(1)时透明度0.4（灰色）
           }),
         }}>
           <View style={{
