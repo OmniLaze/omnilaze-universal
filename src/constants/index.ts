@@ -76,4 +76,6 @@ export const DEV_CONFIG = {
   },
   // 开发模式固定验证码
   DEV_VERIFICATION_CODE: '100000',
+  // 调色板调试工具开关
+  ENABLE_COLOR_PALETTE: true, // 设置为true开启调色板功能，false完全禁用
 } as const;

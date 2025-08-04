@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Animated } from 'react-native';
 import { BaseInput } from './BaseInput';
-import { budgetStyles } from '../styles/inputStyles';
+import { createBudgetStyles } from '../styles/inputStyles';
+import { useTheme } from '../contexts/ColorThemeContext';
 import { BUDGET_OPTIONS } from '../constants';
 
 interface BudgetInputProps {
@@ -21,6 +22,9 @@ export const BudgetInput: React.FC<BudgetInputProps> = ({
   errorMessage,
   budgetOptions = BUDGET_OPTIONS, // 默认使用标准预算选项
 }) => {
+  const { theme } = useTheme();
+  const budgetStyles = createBudgetStyles(theme);
+  
   const WrapperComponent = animationValue ? Animated.View : View;
   const wrapperProps = animationValue 
     ? {

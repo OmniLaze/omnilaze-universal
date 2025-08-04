@@ -3,10 +3,11 @@ import { COLORS, LAYOUT } from '../constants';
 
 const { width, height } = Dimensions.get('window');
 
-export const globalStyles = StyleSheet.create({
+// 创建动态样式函数
+export const createGlobalStyles = (theme: any = COLORS) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.BACKGROUND,
+    backgroundColor: theme.BACKGROUND,
   },
   scrollView: {
     flex: 1,
@@ -30,7 +31,10 @@ export const globalStyles = StyleSheet.create({
   },
 });
 
-export const progressStyles = StyleSheet.create({
+// 保持默认导出以向后兼容
+export const globalStyles = createGlobalStyles();
+
+export const createProgressStyles = (theme: any = COLORS) => StyleSheet.create({
   progressContainer: {
     position: width > 768 ? 'absolute' : 'relative',
     top: width > 768 ? 130 : 0,
@@ -39,10 +43,10 @@ export const progressStyles = StyleSheet.create({
     width: width > 768 ? 120 : '100%',
     marginBottom: width > 768 ? 0 : 16,
     paddingHorizontal: width > 768 ? 0 : 16,
-    backgroundColor: width > 768 ? 'transparent' : COLORS.WHITE,
+    backgroundColor: width > 768 ? 'transparent' : theme.WHITE,
     paddingVertical: width > 768 ? 0 : 12,
     borderBottomWidth: width > 768 ? 0 : 1,
-    borderBottomColor: width > 768 ? 'transparent' : COLORS.BORDER,
+    borderBottomColor: width > 768 ? 'transparent' : theme.BORDER,
   },
   progressSteps: {
     gap: width > 768 ? 16 : 12,
@@ -59,7 +63,7 @@ export const progressStyles = StyleSheet.create({
   activeStep: {
     width: 12,
     height: 12,
-    backgroundColor: COLORS.PRIMARY,
+    backgroundColor: theme.PRIMARY,
     borderRadius: 6,
     alignItems: 'center',
     justifyContent: 'center',
@@ -67,30 +71,33 @@ export const progressStyles = StyleSheet.create({
   activeStepInner: {
     width: 6,
     height: 6,
-    backgroundColor: COLORS.WHITE,
+    backgroundColor: theme.WHITE,
     borderRadius: 3,
   },
   inactiveStep: {
     width: 12,
     height: 12,
     borderWidth: 2,
-    borderColor: COLORS.BORDER,
+    borderColor: theme.BORDER,
     borderRadius: 6,
   },
   activeStepText: {
     fontSize: width > 768 ? 14 : 12,
     fontWeight: '500',
-    color: COLORS.PRIMARY,
+    color: theme.PRIMARY,
     textAlign: 'center',
   },
   inactiveStepText: {
     fontSize: width > 768 ? 14 : 12,
-    color: COLORS.TEXT_MUTED,
+    color: theme.TEXT_MUTED,
     textAlign: 'center',
   },
 });
 
-export const questionStyles = StyleSheet.create({
+// 保持默认导出以向后兼容
+export const progressStyles = createProgressStyles();
+
+export const createQuestionStyles = (theme: any = COLORS) => StyleSheet.create({
   completedQuestionContainer: {
     marginBottom: 2,
   },
@@ -114,14 +121,14 @@ export const questionStyles = StyleSheet.create({
   },
   questionText: {
     fontSize: 24,
-    color: COLORS.TEXT_SECONDARY, // 改为灰色
+    color: theme.TEXT_SECONDARY, // 改为灰色
     lineHeight: 32,
     flex: 1,
     opacity: 0.7, // 添加透明度让已完成问题更淡
   },
   currentQuestionText: {
     fontSize: 24,
-    color: COLORS.TEXT_PRIMARY,
+    color: theme.TEXT_PRIMARY,
     lineHeight: 32,
     flex: 1,
     fontWeight: '500',
@@ -130,22 +137,25 @@ export const questionStyles = StyleSheet.create({
     flex: 1,
   },
   cursor: {
-    color: COLORS.PRIMARY,
+    color: theme.PRIMARY,
     fontWeight: 'bold',
   },
   errorText: {
-    color: COLORS.ERROR,
+    color: theme.ERROR,
     fontSize: 28,
     marginTop: 4,
     marginLeft: 16,
   },
 });
 
-export const avatarStyles = StyleSheet.create({
+// 保持默认导出以向后兼容
+export const questionStyles = createQuestionStyles();
+
+export const createAvatarStyles = (theme: any = COLORS) => StyleSheet.create({
   avatarSimple: {
     width: LAYOUT.AVATAR_SIZE,
     height: LAYOUT.AVATAR_SIZE,
-    backgroundColor: COLORS.BORDER,
+    backgroundColor: theme.BORDER,
     borderRadius: LAYOUT.AVATAR_SIZE / 2,
     alignItems: 'center',
     justifyContent: 'center',
@@ -159,18 +169,19 @@ export const avatarStyles = StyleSheet.create({
   },
 });
 
-export const answerStyles = StyleSheet.create({
+// 保持默认导出以向后兼容
+export const avatarStyles = createAvatarStyles();
+
+export const createAnswerStyles = (theme: any = COLORS) => StyleSheet.create({
   completedAnswerText: {
-    marginLeft: 27,
+    marginLeft: 28,
     marginTop: 2,
-    paddingLeft: 16,
-    borderLeftWidth: 2,
-    borderLeftColor: '#E0E0E0', // 更淡的灰色边框
+    paddingLeft: 16, // 保留左侧padding作为空格
     opacity: 0.8, // 整体降低透明度
   },
   answerValue: {
     fontSize: 24,
-    color: COLORS.TEXT_SECONDARY, // 改为灰色
+    color: theme.TEXT_SECONDARY, // 改为灰色
     fontWeight: '400',
     lineHeight: 36,
     opacity: 0.7, // 添加透明度让已完成答案更淡
@@ -189,6 +200,9 @@ export const answerStyles = StyleSheet.create({
     
   },
 });
+
+// 保持默认导出以向后兼容
+export const answerStyles = createAnswerStyles();
 
 export const rightContentStyles = StyleSheet.create({
   rightContent: {

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Modal, Platform, ScrollView, Animated, Easing } from 'react-native';
 import { SimpleIcon } from './SimpleIcon';
 import { COLORS } from '../constants';
+import { useTheme } from '../contexts/ColorThemeContext';
 import { 
   getUserInviteStats, 
   getInviteProgress, 
@@ -26,6 +27,8 @@ export const InviteModalWithFreeDrink: React.FC<InviteModalWithFreeDrinkProps> =
   userPhoneNumber,
   userId,
 }) => {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   const [copied, setCopied] = useState(false);
   const [inviteStats, setInviteStats] = useState<UserInviteStatsResponse | null>(null);
   const [inviteProgress, setInviteProgress] = useState<InviteProgressResponse | null>(null);
@@ -202,7 +205,7 @@ export const InviteModalWithFreeDrink: React.FC<InviteModalWithFreeDrinkProps> =
               onPress={onClose}
               activeOpacity={0.7}
             >
-              <SimpleIcon name="close" size={20} color={COLORS.TEXT_SECONDARY} />
+              <SimpleIcon name="close" size={20} color={theme.TEXT_SECONDARY} />
             </TouchableOpacity>
           </View>
 
@@ -231,7 +234,7 @@ export const InviteModalWithFreeDrink: React.FC<InviteModalWithFreeDrinkProps> =
                       <SimpleIcon 
                         name={copied ? "check" : "copy"} 
                         size={16} 
-                        color={copied ? "#10b981" : COLORS.PRIMARY} 
+                        color={copied ? theme.SUCCESS : theme.PRIMARY} 
                       />
                     </TouchableOpacity>
                   </View>
@@ -255,7 +258,7 @@ export const InviteModalWithFreeDrink: React.FC<InviteModalWithFreeDrinkProps> =
                               styles.progressFill, 
                               { 
                                 width: `${(currentUses / maxUses) * 100}%`,
-                                backgroundColor: isCompleted ? '#10b981' : COLORS.PRIMARY
+                                backgroundColor: isCompleted ? theme.SUCCESS : theme.PRIMARY
                               }
                             ]} 
                           />
@@ -329,7 +332,7 @@ export const InviteModalWithFreeDrink: React.FC<InviteModalWithFreeDrinkProps> =
                     {inviteProgress.invitations.map((invitation, index) => (
                       <View key={index} style={styles.invitationCard}>
                         <View style={styles.invitationHeader}>
-                          <SimpleIcon name="person" size={16} color={COLORS.PRIMARY} />
+                          <SimpleIcon name="person" size={16} color={theme.PRIMARY} />
                           <Text style={styles.invitationPhone}>{invitation.masked_phone}</Text>
                         </View>
                         <Text style={styles.invitationDate}>
@@ -355,7 +358,7 @@ export const InviteModalWithFreeDrink: React.FC<InviteModalWithFreeDrinkProps> =
                     onPress={handleCopyInviteText}
                     activeOpacity={0.7}
                   >
-                    <SimpleIcon name="copy" size={16} color={COLORS.WHITE} />
+                    <SimpleIcon name="copy" size={16} color={theme.WHITE} />
                     <Text style={styles.copyTextButtonText}>复制邀请文本</Text>
                   </TouchableOpacity>
                 </View>
@@ -368,12 +371,12 @@ export const InviteModalWithFreeDrink: React.FC<InviteModalWithFreeDrinkProps> =
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: any) => StyleSheet.create({
   overlay: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: theme.OVERLAY,
   },
   backdrop: {
     position: 'absolute',
@@ -383,7 +386,7 @@ const styles = StyleSheet.create({
     bottom: 0,
   },
   modal: {
-    backgroundColor: COLORS.WHITE,
+    backgroundColor: theme.WHITE,
     borderRadius: 16,
     width: '90%',
     maxWidth: 400,
@@ -401,7 +404,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: '600',
-    color: COLORS.TEXT_PRIMARY,
+    color: theme.TEXT_PRIMARY,
   },
   closeButton: {
     width: 32,
@@ -409,14 +412,14 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#f8f9fa',
+    backgroundColor: theme.CARD_BACKGROUND,
   },
   content: {
     padding: 20,
   },
   description: {
     fontSize: 16,
-    color: COLORS.TEXT_SECONDARY,
+    color: theme.TEXT_SECONDARY,
     marginBottom: 20,
     lineHeight: 24,
   },
@@ -426,7 +429,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
-    color: COLORS.TEXT_SECONDARY,
+    color: theme.TEXT_SECONDARY,
   },
   inviteCodeContainer: {
     marginBottom: 24,
@@ -434,24 +437,24 @@ const styles = StyleSheet.create({
   inviteCodeLabel: {
     fontSize: 16,
     fontWeight: '600',
-    color: COLORS.TEXT_PRIMARY,
+    color: theme.TEXT_PRIMARY,
     marginBottom: 8,
   },
   inviteCodeBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f8f9fa',
+    backgroundColor: theme.CARD_BACKGROUND,
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    borderWidth: 2,
-    borderColor: COLORS.PRIMARY,
+    borderWidth: 1,
+    borderColor: theme.PRIMARY,
   },
   inviteCodeText: {
     flex: 1,
     fontSize: 18,
     fontWeight: '700',
-    color: COLORS.PRIMARY,
+    color: theme.PRIMARY,
     fontFamily: 'monospace',
   },
   copyButton: {
@@ -466,7 +469,7 @@ const styles = StyleSheet.create({
   },
   statsText: {
     fontSize: 14,
-    color: COLORS.TEXT_SECONDARY,
+    color: theme.TEXT_SECONDARY,
     marginBottom: 8,
   },
   progressBar: {
@@ -477,19 +480,19 @@ const styles = StyleSheet.create({
   },
   progressFill: {
     height: '100%',
-    backgroundColor: COLORS.PRIMARY,
+    backgroundColor: theme.PRIMARY,
     borderRadius: 3,
   },
   completedText: {
     fontSize: 14,
-    color: '#10b981',
+    color: theme.SUCCESS,
     fontWeight: '600',
     marginTop: 8,
     textAlign: 'center',
   },
   quotaEndedText: {
     fontSize: 12,
-    color: '#f59e0b',
+    color: theme.WARNING,
     fontWeight: '500',
     marginTop: 6,
     textAlign: 'center',
@@ -506,7 +509,7 @@ const styles = StyleSheet.create({
   freeDrinkTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: COLORS.WHITE,
+    color: theme.WHITE,
     textAlign: 'center',
     marginBottom: 4,
   },
@@ -532,20 +535,20 @@ const styles = StyleSheet.create({
     fontSize: 40,
   },
   claimButton: {
-    backgroundColor: '#ff6b6b',
+    backgroundColor: theme.ERROR,
     borderRadius: 12,
     paddingHorizontal: 20,
     paddingVertical: 10,
-    elevation: 3,
+    elevation: 2,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
   },
   claimButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: COLORS.WHITE,
+    color: theme.WHITE,
   },
   // 其他样式保持不变
   inviteProgressContainer: {
@@ -554,14 +557,14 @@ const styles = StyleSheet.create({
   progressLabel: {
     fontSize: 16,
     fontWeight: '600',
-    color: COLORS.TEXT_PRIMARY,
+    color: theme.TEXT_PRIMARY,
     marginBottom: 12,
   },
   invitationCard: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#f8f9fa',
+    backgroundColor: theme.CARD_BACKGROUND,
     borderRadius: 8,
     padding: 12,
     marginBottom: 8,
@@ -572,13 +575,13 @@ const styles = StyleSheet.create({
   },
   invitationPhone: {
     fontSize: 14,
-    color: COLORS.TEXT_PRIMARY,
+    color: theme.TEXT_PRIMARY,
     marginLeft: 8,
     fontWeight: '500',
   },
   invitationDate: {
     fontSize: 12,
-    color: COLORS.TEXT_SECONDARY,
+    color: theme.TEXT_SECONDARY,
   },
   inviteTextContainer: {
     marginBottom: 8,
@@ -586,27 +589,27 @@ const styles = StyleSheet.create({
   inviteTextLabel: {
     fontSize: 16,
     fontWeight: '600',
-    color: COLORS.TEXT_PRIMARY,
+    color: theme.TEXT_PRIMARY,
     marginBottom: 8,
   },
   inviteTextBox: {
-    backgroundColor: '#f8f9fa',
+    backgroundColor: theme.CARD_BACKGROUND,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: theme.GRAY_300,
   },
   inviteText: {
     fontSize: 14,
-    color: COLORS.TEXT_SECONDARY,
+    color: theme.TEXT_SECONDARY,
     lineHeight: 20,
   },
   copyTextButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.PRIMARY,
+    backgroundColor: theme.PRIMARY,
     borderRadius: 12,
     paddingVertical: 12,
     paddingHorizontal: 16,
@@ -614,7 +617,7 @@ const styles = StyleSheet.create({
   copyTextButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: COLORS.WHITE,
+    color: theme.WHITE,
     marginLeft: 8,
   },
 });

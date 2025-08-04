@@ -3,6 +3,7 @@ import { View, Text } from 'react-native';
 import { ActionButton } from './ActionButton';
 import { AuthResult, AuthComponentProps } from './AuthComponent';
 import { DEV_CONFIG } from '../constants';
+import { useTheme } from '../contexts/ColorThemeContext';
 
 export const DevAuthComponent: React.FC<AuthComponentProps> = ({
   onAuthSuccess,
@@ -12,6 +13,7 @@ export const DevAuthComponent: React.FC<AuthComponentProps> = ({
   triggerShake,
   changeEmotion,
 }) => {
+  const { theme } = useTheme();
   const handleDevLogin = () => {
     changeEmotion('🔧');
     
@@ -33,15 +35,15 @@ export const DevAuthComponent: React.FC<AuthComponentProps> = ({
   return (
     <View>
       <View style={{
-        backgroundColor: '#FFF3CD',
+        backgroundColor: theme.WARNING_BACKGROUND,
         borderWidth: 1,
-        borderColor: '#FFEAA7',
+        borderColor: theme.WARNING_BORDER,
         borderRadius: 8,
         padding: 16,
         marginBottom: 20,
       }}>
         <Text style={{
-          color: '#8B6914',
+          color: theme.WARNING_TEXT,
           fontSize: 14,
           fontWeight: '500',
           textAlign: 'center',
@@ -50,7 +52,7 @@ export const DevAuthComponent: React.FC<AuthComponentProps> = ({
           🔧 开发模式
         </Text>
         <Text style={{
-          color: '#8B6914',
+          color: theme.WARNING_TEXT,
           fontSize: 12,
           textAlign: 'center',
           lineHeight: 16,
@@ -69,7 +71,7 @@ export const DevAuthComponent: React.FC<AuthComponentProps> = ({
       />
       
       <Text style={{
-        color: '#6B7280',
+        color: theme.TEXT_SECONDARY,
         fontSize: 12,
         textAlign: 'center',
         marginTop: 12,

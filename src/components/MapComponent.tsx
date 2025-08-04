@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, Platform, Animated } from 'react-native';
 import { SimpleIcon } from './SimpleIcon';
 import { mapStyles } from '../styles/mapStyles';
+import { useTheme } from '../contexts/ColorThemeContext';
 
 interface MapComponentProps {
   showMap: boolean;
@@ -9,6 +10,8 @@ interface MapComponentProps {
 }
 
 export const MapComponent: React.FC<MapComponentProps> = ({ showMap, mapAnimation }) => {
+  const { theme } = useTheme();
+  
   if (Platform.OS === 'web') {
     return (
       <View style={mapStyles.webMapContainer}>
@@ -49,7 +52,7 @@ export const MapComponent: React.FC<MapComponentProps> = ({ showMap, mapAnimatio
   return (
     <View style={mapStyles.map}>
       <View style={mapStyles.nativeMapPlaceholder}>
-        <SimpleIcon name="location-on" size={48} color="#66CC99" />
+        <SimpleIcon name="location-on" size={48} color={theme.PRIMARY} />
         <Text style={mapStyles.nativeMapText}>Map View (Native)</Text>
         <Text style={mapStyles.nativeMapSubtext}>325 Kent Ave, Brooklyn, NY</Text>
       </View>

@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, Text, TextInput, TouchableOpacity, Animated } from 'react-native';
 import { SimpleIcon } from './SimpleIcon';
-import { inputStyles } from '../styles/inputStyles';
+import { createInputStyles } from '../styles/inputStyles';
+import { useTheme } from '../contexts/ColorThemeContext';
 
 interface BaseInputProps {
   value: string;
@@ -48,6 +49,9 @@ export const BaseInput: React.FC<BaseInputProps> = ({
   animationValue,
   errorMessage, // 新增：错误信息
 }) => {
+  const { theme } = useTheme();
+  const inputStyles = createInputStyles(theme);
+  
   const getWrapperStyle = () => {
     if (isDisabled) return [inputStyles.simpleInputWrapper, inputStyles.disabledSimpleInputWrapper];
     if (isError) return [inputStyles.simpleInputWrapper, inputStyles.errorSimpleInputWrapper];

@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, Animated } from 'react-native';
 import { ActionButton } from './ActionButton';
 import { rightContentStyles } from '../styles/globalStyles';
+import { useTheme } from '../contexts/ColorThemeContext';
 
 interface QuickOrderSummaryProps {
   address: string;
@@ -30,6 +31,9 @@ export const QuickOrderSummary: React.FC<QuickOrderSummaryProps> = ({
   animationValue,
   isOrderSubmitting
 }) => {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
+  
   const formatList = (items: string[], otherText?: string) => {
     const allItems = [...items];
     if (otherText && otherText.trim()) {
@@ -108,33 +112,33 @@ export const QuickOrderSummary: React.FC<QuickOrderSummaryProps> = ({
   );
 };
 
-const styles = {
+const createStyles = (theme: any) => ({
   summaryContainer: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.WHITE,
     borderRadius: 16,
     padding: 20,
     marginHorizontal: 20,
-    shadowColor: '#000',
+    shadowColor: theme.SHADOW,
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 4,
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 2,
   } as const,
   
   title: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
+    color: theme.TEXT_PRIMARY,
     textAlign: 'center',
     marginBottom: 4,
   } as const,
   
   subtitle: {
     fontSize: 14,
-    color: '#666',
+    color: theme.TEXT_SECONDARY,
     textAlign: 'center',
     marginBottom: 20,
   } as const,
@@ -152,14 +156,14 @@ const styles = {
   detailLabel: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#555',
+    color: theme.TEXT_SECONDARY,
     width: 80,
     flexShrink: 0,
   } as const,
   
   detailValue: {
     fontSize: 14,
-    color: '#333',
+    color: theme.TEXT_PRIMARY,
     flex: 1,
     lineHeight: 20,
   } as const,
@@ -172,23 +176,23 @@ const styles = {
   
   editButton: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: theme.BACKGROUND_WITH_OPACITY || '#F5F5F5',
     borderRadius: 12,
     paddingVertical: 12,
     paddingHorizontal: 16,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: theme.BORDER,
   } as const,
   
   editButtonText: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#666',
+    color: theme.TEXT_SECONDARY,
   } as const,
   
   confirmButton: {
     flex: 1,
   } as const,
-};
+});

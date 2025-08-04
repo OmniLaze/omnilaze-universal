@@ -61,3 +61,10 @@ export interface AddressSearchResponse {
   message: string;
   predictions: AddressSuggestion[];
 }
+
+export interface AuthResult {
+  userId?: string;
+  phoneNumber: string;
+  isNewUser: boolean;
+  isPhoneVerificationStep?: boolean; // 标识这只是手机号验证步骤
+}

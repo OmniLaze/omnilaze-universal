@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text } from 'react-native';
-import { progressStyles } from '../styles/globalStyles';
+import { createProgressStyles } from '../styles/globalStyles';
+import { useTheme } from '../contexts/ColorThemeContext';
 import { STEP_TITLES } from '../constants';
 
 interface ProgressStepsProps {
@@ -8,6 +9,9 @@ interface ProgressStepsProps {
 }
 
 export const ProgressSteps: React.FC<ProgressStepsProps> = ({ currentStep }) => {
+  const { theme } = useTheme();
+  const progressStyles = createProgressStyles(theme);
+
   return (
     <View style={progressStyles.progressContainer}>
       <View style={progressStyles.progressSteps}>

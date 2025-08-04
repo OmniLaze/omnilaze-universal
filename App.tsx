@@ -12,6 +12,7 @@ import {
   Text,
   Dimensions,
   PanResponder,
+  Image,
 } from 'react-native';
 
 const { height } = Dimensions.get('window');
@@ -27,6 +28,7 @@ import { AuthComponent } from './src/components/AuthComponent';
 import { UserMenu } from './src/components/UserMenu';
 import { InviteModalWithFreeDrink } from './src/components/InviteModalWithFreeDrink';
 import { FormInputContainer, FormActionButtonContainer } from './src/components/FormContainers';
+import ColorPalette from './src/components/ColorPalette';
 // import { QuickOrderSummary } from './src/components/QuickOrderSummary'; // 已移除快速下单卡片
 import { convertToChineseDisplay } from './src/data/checkboxOptions';
 
@@ -45,18 +47,40 @@ import {
   useFormSteps,
   useOrderManagement
 } from './src/hooks';
+import { ColorThemeProvider, useTheme } from './src/contexts/ColorThemeContext';
 
 // Data & Types
 import { STEP_CONTENT } from './src/data/stepContent';
 import type { AuthResult } from './src/types';
 
 // Styles
-import { globalStyles, rightContentStyles } from './src/styles/globalStyles';
-import { TIMING } from './src/constants';
+import { createGlobalStyles, rightContentStyles, createProgressStyles, createQuestionStyles, createAvatarStyles, createAnswerStyles } from './src/styles/globalStyles';
+import { TIMING, DEV_CONFIG } from './src/constants';
 
-export default function LemonadeApp() {
+function LemonadeAppContent() {
   // 使用状态管理hook
   const appState = useAppState();
+  
+  // 颜色主题hook
+  const { 
+    theme, 
+    themeState, 
+    isDebugMode, 
+    updatePrimaryColor, 
+    updateBackgroundColor, 
+    updateAllColors,
+    updateTextColors,
+    updatePrimaryOpacity, 
+    updateBackgroundOpacity, 
+    toggleDebugMode 
+  } = useTheme();
+  
+  // 创建动态样式
+  const globalStyles = createGlobalStyles(theme);
+  const progressStyles = createProgressStyles(theme);
+  const questionStyles = createQuestionStyles(theme);
+  const avatarStyles = createAvatarStyles(theme);
+  const answerStyles = createAnswerStyles(theme);
   
   // 解构需要的状态和函数
   const {
@@ -105,7 +129,7 @@ export default function LemonadeApp() {
     newQuestionSlideInAnimation,
     triggerShake,
     changeEmotion,
-    triggerPushUpAnimation 
+    triggerPushUpAnimation
   } = useAnimations();
   
   // 统一的回答管理函数 - 必须在 useFormSteps 之前定义
@@ -138,17 +162,60 @@ export default function LemonadeApp() {
     }));
     
     // 统一动画处理
-    if (!skipAnimation && stepIndex >= 0) {
-      // 首先播放答案出现动画
-      Animated.spring(answerAnimations[stepIndex], {
-        toValue: 1,
-        tension: 60,
-        friction: 8,
-        useNativeDriver: false,
-      }).start(() => {
-        // 答案动画完成后，直接完成
-        onComplete?.();
-      });
+    if (!skipAnimation) {
+      if (stepIndex >= 0) {
+        // 先重置问题和答案动画值为0，确保从下方开始动画
+        questionAnimations[stepIndex].setValue(0);
+        answerAnimations[stepIndex].setValue(0);
+        
+        // 先播放问题动画，然后播放答案动画
+        Animated.spring(questionAnimations[stepIndex], {
+          toValue: 1,
+          tension: 80,
+          friction: 10,
+          useNativeDriver: false,
+        }).start(() => {
+          // 问题动画完成后，开始答案动画
+          Animated.spring(answerAnimations[stepIndex], {
+            toValue: 1,
+            tension: 80,  // 增加tension让动画更快更有弹性
+            friction: 10, // 增加friction让动画更自然
+            useNativeDriver: false,
+          }).start(() => {
+            // 答案动画完成后，模拟下滑手势切换到新问题
+            setTimeout(() => {
+              // 先上滑到已完成问题区域
+              if (focusMode === 'current' && Object.keys(completedAnswers).length > 0) {
+                handleFocusGesture('up');
+                
+                // 然后模拟下滑手势回到当前问题，触发新问题的打字机动画
+                setTimeout(() => {
+                  handleFocusGesture('down');
+                }, 300); // 300ms后下滑
+              }
+              
+              // 执行完成回调
+              onComplete?.();
+            }, 500); // 500ms的停顿让用户能够看到答案
+          });
+        });
+      } else {
+        // 特殊步骤（如手机号，索引-1）的处理
+        setTimeout(() => {
+          // 模拟下滑手势切换到新问题
+          if (focusMode === 'current' && Object.keys(completedAnswers).length > 0) {
+            handleFocusGesture('up');
+            
+            // 然后模拟下滑手势回到当前问题，触发新问题的打字机动画
+            setTimeout(() => {
+              handleFocusGesture('down');
+            }, 300); // 300ms后下滑
+          }
+          
+          // 执行完成回调
+          onComplete?.();
+        }, 500); // 保持相同的延迟
+      }
     } else {
       onComplete?.();
     }
@@ -270,6 +337,26 @@ export default function LemonadeApp() {
     }
   }, [isQuickOrderMode, currentStep, isAuthenticated, isOrderCompleted, isSearchingRestaurant]);
 
+  // 测量已完成问题容器高度
+  const measureCompletedQuestionsHeight = (event?: any) => {
+    if (event && event.nativeEvent) {
+      const { height } = event.nativeEvent.layout;
+      console.log('已完成问题容器高度:', height);
+      console.log('头像将定位在top:', Math.max(height + 30, 120));
+      setCompletedQuestionsHeight(height + 20); // 加上一些padding
+    }
+  };
+
+  // 测量单个问题组件高度
+  const measureSingleQuestionHeight = (event?: any) => {
+    if (event && event.nativeEvent) {
+      const { height } = event.nativeEvent.layout;
+      console.log('单个问题组件高度:', height);
+      setSingleQuestionHeight(height + 10); // 加上一些margin
+    }
+  };
+
+
   // ===========================================
   // 免单状态管理结束
   // ==========================================
@@ -292,6 +379,9 @@ export default function LemonadeApp() {
     currentQuestionAnimation.setValue(1);
     completedQuestionsContainerAnimation.setValue(0);
     newQuestionSlideInAnimation.setValue(0); // 重置到下方位置
+    focusTransition.setValue(0);
+    autoPushOffset.setValue(0); // 重置自动推送偏移量
+    gestureTransition.setValue(0); // 重置手势动画值
     
     setAuthResetTrigger(prev => prev + 1);
   };
@@ -306,37 +396,90 @@ export default function LemonadeApp() {
   // 状态管理：聚焦模式
   const [focusMode, setFocusMode] = useState<'current' | 'completed'>('current'); // 聚焦模式：当前问题或已完成问题
   const [focusTransition] = useState(new Animated.Value(0)); // 0=聚焦当前问题, 1=聚焦已完成问题
+  const [autoPushOffset] = useState(new Animated.Value(0)); // 自动推送偏移量
+  const [gestureTransition] = useState(new Animated.Value(0)); // 新增：手势跟随动画值
+  const [completedQuestionsHeight, setCompletedQuestionsHeight] = useState(height * 0.3); // 已完成问题容器的实际高度
+  const [singleQuestionHeight, setSingleQuestionHeight] = useState(120); // 单个问题组件的高度
+  const completedQuestionsRef = useRef<View>(null); // 用于测量已完成问题容器高度
+  const singleQuestionRef = useRef<View>(null); // 用于测量单个问题组件高度
+  
+  // 手势状态管理
+  const [isDragging, setIsDragging] = useState(false); // 是否正在拖拽
   
   // 切换聚焦模式
   const switchToCurrentQuestion = () => {
     setFocusMode('current');
+    setIsDragging(false);
     Animated.spring(focusTransition, {
       toValue: 0,
       tension: 60,
       friction: 8,
       useNativeDriver: false,
     }).start();
+    
+    // 重置手势动画值
+    gestureTransition.setValue(0);
+    
+    // 重置自动推送偏移量
+    autoPushOffset.setValue(0);
+    
+    // 模拟下滑手势后，确保当前输入状态正确显示，但不重新触发动画
+    setTimeout(() => {
+      // 如果有活跃的输入，确保输入组件显示
+      if (isAuthenticated && editingStep === null && currentStep < STEP_CONTENT.length && !completedAnswers[currentStep]) {
+        const stepData = formSteps.getCurrentStepData();
+        
+        // 检查用户输入状态，确保输入框显示
+        let hasUserInput = false;
+        switch (stepData.inputType) {
+          case 'address':
+            hasUserInput = !!address.trim();
+            break;
+          case 'foodType':
+            hasUserInput = selectedFoodType.length > 0;
+            break;
+          case 'allergies':
+            hasUserInput = selectedAllergies.length > 0 || !!otherAllergyText.trim();
+            break;
+          case 'preferences':
+            hasUserInput = selectedPreferences.length > 0 || !!otherPreferenceText.trim();
+            break;
+          case 'budget':
+            hasUserInput = !!budget.trim();
+            break;
+        }
+        
+        // 如果有用户输入，确保输入组件可见，但不触发完整的问题转换动画
+        if (hasUserInput) {
+          inputSectionAnimation.setValue(1);
+        }
+      } else if (isAuthenticated && editingStep !== null) {
+        // 编辑模式时确保输入组件可见
+        inputSectionAnimation.setValue(1);
+      }
+    }, 100); // 短暂延迟确保聚焦切换完成
   };
   
   const switchToCompletedQuestions = () => {
     setFocusMode('completed');
+    setIsDragging(false);
     Animated.spring(focusTransition, {
       toValue: 1,
       tension: 60,
       friction: 8,
       useNativeDriver: false,
     }).start();
+    
+    // 重置手势动画值
+    gestureTransition.setValue(0);
   };
-  
-  // 移除滚动处理函数，不再需要
+
   
   // 处理聚焦切换手势
   const handleFocusGesture = (direction: 'up' | 'down') => {
     if (direction === 'up' && focusMode === 'current' && Object.keys(completedAnswers).length > 0) {
-      console.log('✅ 检测到上滑手势，切换到已完成问题');
       switchToCompletedQuestions();
     } else if (direction === 'down' && focusMode === 'completed') {
-      console.log('✅ 检测到下滑手势，切换回当前问题');
       switchToCurrentQuestion();
     }
   };
@@ -350,14 +493,12 @@ export default function LemonadeApp() {
       const isQuickScroll = Math.abs(event.deltaY) > 10;
       
       if (isQuickScroll && Object.keys(completedAnswers).length > 0) {
-        console.log('滚轮聚焦控制:', event.deltaY, '当前聚焦:', focusMode);
-        
-        if (event.deltaY < 0 && focusMode === 'current') {
-          // 向上快速滚动且聚焦在当前问题
+        if (event.deltaY > 0 && focusMode === 'current') {
+          // 向下滚动（向上查看内容）且聚焦在当前问题
           handleFocusGesture('up');
           event.preventDefault();
-        } else if (event.deltaY > 0 && focusMode === 'completed') {
-          // 向下快速滚动且聚焦在已完成问题
+        } else if (event.deltaY < 0 && focusMode === 'completed') {
+          // 向上滚动（向下查看内容）且聚焦在已完成问题
           handleFocusGesture('down');
           event.preventDefault();
         }
@@ -377,7 +518,6 @@ export default function LemonadeApp() {
   const handleTouchStart = (event: any) => {
     const touch = event.touches[0];
     setTouchStartY(touch.clientY);
-    console.log('🟢 原生触摸开始:', touch.clientY);
   };
   
   const handleTouchMove = (event: any) => {
@@ -385,12 +525,11 @@ export default function LemonadeApp() {
     
     const touch = event.touches[0];
     const deltaY = touchStartY - touch.clientY; // 向上滑动为正值，向下滑动为负值
-    console.log('🔵 原生触摸移动:', deltaY, '当前聚焦:', focusMode);
     
     // 检测快速滑动手势
     const isQuickSwipe = Math.abs(deltaY) > 50;
     
-    if (isQuickSwipe) {
+    if (isQuickSwipe && Object.keys(completedAnswers).length > 0) {
       if (deltaY > 0 && focusMode === 'current') {
         // 向上快速滑动且聚焦在当前问题
         handleFocusGesture('up');
@@ -404,64 +543,78 @@ export default function LemonadeApp() {
   };
   
   const handleTouchEnd = () => {
-    console.log('🔴 原生触摸结束');
     setTouchStartY(null);
   };
   
-  // 创建手势识别器用于处理滑动
+  // 创建手势识别器用于处理滑动 - 改进版本支持平滑跟随
   const panResponder = PanResponder.create({
     onStartShouldSetPanResponder: (evt, gestureState) => {
-      console.log('onStartShouldSetPanResponder 被调用', '当前聚焦:', focusMode);
-      // 当有已完成问题时才响应触摸
       return Object.keys(completedAnswers).length > 0;
     },
     onMoveShouldSetPanResponder: (evt, gestureState) => {
-      // 手势检测：垂直滑动距离大于水平滑动距离
       const hasVerticalMovement = Math.abs(gestureState.dy) > Math.abs(gestureState.dx) && Math.abs(gestureState.dy) > 5;
-      console.log('onMoveShouldSetPanResponder 手势检测:', { 
-        dy: gestureState.dy, 
-        dx: gestureState.dx, 
-        hasVerticalMovement,
-        focusMode 
-      });
       return hasVerticalMovement;
     },
+    onPanResponderGrant: (evt, gestureState) => {
+      setIsDragging(true);
+    },
     onPanResponderMove: (evt, gestureState) => {
-      console.log('onPanResponderMove:', gestureState.dy, 'dx:', gestureState.dx, '当前聚焦:', focusMode);
+      // 计算手势距离（限制在合理范围内）
+      const maxGestureDistance = height * 0.3; // 最大手势距离为屏幕高度的30%
+      const clampedDy = Math.max(-maxGestureDistance, Math.min(maxGestureDistance, gestureState.dy));
       
-      // 检测快速手势
-      const isQuickGesture = Math.abs(gestureState.dy) > 15;
+      // 计算手势跟随的动画值（-1到1之间）
+      const gestureProgress = clampedDy / maxGestureDistance;
       
-      if (isQuickGesture) {
-        if (gestureState.dy < 0 && focusMode === 'current') {
-          // 向上快速滑动且聚焦在当前问题
-          handleFocusGesture('up');
-        } else if (gestureState.dy > 0 && focusMode === 'completed') {
-          // 向下快速滑动且聚焦在已完成问题
-          handleFocusGesture('down');
+      // 根据当前聚焦模式调整手势方向
+      let gestureValue;
+      if (focusMode === 'current') {
+        // 在当前问题模式，向上滑动（负值）应该产生正向手势值
+        gestureValue = -gestureProgress;
+      } else {
+        // 在已完成问题模式，向下滑动（正值）应该产生负向手势值
+        gestureValue = gestureProgress;
+      }
+      
+      // 更新手势跟随动画值，不修改主要的focusTransition
+      gestureTransition.setValue(gestureValue);
+    },
+    onPanResponderRelease: (evt, gestureState) => {
+      setIsDragging(false);
+      
+      // 定义切换的临界值（屏幕高度的百分比）
+      const threshold = height * 0.2; // 20%的屏幕高度作为临界值
+      const shouldSwitch = Math.abs(gestureState.dy) > threshold;
+      
+      // 先重置手势跟随动画值
+      Animated.spring(gestureTransition, {
+        toValue: 0,
+        tension: 100,
+        friction: 8,
+        useNativeDriver: false,
+      }).start();
+      
+      if (shouldSwitch) {
+        // 达到临界值，执行真正的页面切换
+        if (gestureState.dy < -threshold && focusMode === 'current') {
+          switchToCompletedQuestions();
+        } else if (gestureState.dy > threshold && focusMode === 'completed') {
+          switchToCurrentQuestion();
         }
       }
     },
-    onPanResponderGrant: (evt, gestureState) => {
-      console.log('✋ 开始触摸区域', gestureState);
-    },
-    onPanResponderRelease: (evt, gestureState) => {
-      console.log('🔚 结束触摸，最终手势:', gestureState.dy, 'dx:', gestureState.dx);
-      
-      // 如果是向上滑动且聚焦在当前问题，切换到已完成问题
-      if (gestureState.dy < -10 && focusMode === 'current') {
-        console.log('✅ 释放时检测到上滑，切换到已完成问题');
-        switchToCompletedQuestions();
-      }
-      // 如果是向下滑动且聚焦在已完成问题，切换回当前问题
-      else if (gestureState.dy > 10 && focusMode === 'completed') {
-        console.log('✅ 释放时检测到下滑，切换回当前问题');
-        switchToCurrentQuestion();
-      }
-    },
     onPanResponderTerminationRequest: () => {
-      console.log('onPanResponderTerminationRequest');
       return false; // 不允许其他组件接管手势
+    },
+    onPanResponderTerminate: () => {
+      setIsDragging(false);
+      // 回弹手势跟随动画值
+      Animated.spring(gestureTransition, {
+        toValue: 0,
+        tension: 100,
+        friction: 8,
+        useNativeDriver: false,
+      }).start();
     },
   });
 
@@ -566,10 +719,39 @@ export default function LemonadeApp() {
     }
   }, [editingStep, isStateRestored]);
 
+  // 确保已完成答案的动画状态正确设置
+  useEffect(() => {
+    if (!isStateRestored) return;
+    
+    // 当completedAnswers变化时，确保对应的answerAnimations设置为1
+    Object.keys(completedAnswers).forEach(key => {
+      const index = parseInt(key);
+      if (index >= 0 && index < answerAnimations.length) {
+        answerAnimations[index].setValue(1);
+      }
+    });
+  }, [completedAnswers, isStateRestored]);
+
   // 移除自动切换回当前问题的逻辑 - 只有用户手动下滑才切换
 
   // 鉴权成功回调 - 集成偏好系统
   const handleAuthSuccess = async (result: AuthResult) => {
+    // 如果这只是手机号验证步骤，只处理答案动画，不完成认证
+    if (result.isPhoneVerificationStep) {
+      const phoneAnswer = { type: 'phone', value: result.phoneNumber };
+      
+      // 手机号作为答案，触发答案动画
+      handleAnswerSubmission(-1, phoneAnswer, { 
+        isEditing: false, 
+        skipAnimation: false,
+        onComplete: () => {
+          // 答案动画完成后，这里不需要做其他事情，验证码问题会自动显示
+        }
+      });
+      
+      return; // 提前返回，不执行完整的认证流程
+    }
+    
     setIsAuthenticated(true);
     setAuthResult(result);
     
@@ -626,6 +808,15 @@ export default function LemonadeApp() {
             
             // 批量状态更新
             setCompletedAnswers(currentCompletedAnswers);
+            
+            // 确保对应的答案动画设置为可见状态
+            Object.keys(currentCompletedAnswers).forEach(key => {
+              const index = parseInt(key);
+              if (index >= 0 && index < answerAnimations.length) {
+                answerAnimations[index].setValue(1);
+              }
+            });
+            
             setIsQuickOrderMode(true); // 设置快速下单模式
             setIsOrderCompleted(false);
             setIsSearchingRestaurant(false);
@@ -724,10 +915,10 @@ export default function LemonadeApp() {
 
   return (
     <KeyboardAvoidingView 
-      style={globalStyles.container} 
+      style={[globalStyles.container, { backgroundColor: theme.BACKGROUND }]} 
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <StatusBar barStyle="dark-content" backgroundColor="#F2F2F2" />
+      <StatusBar barStyle="dark-content" backgroundColor={theme.BACKGROUND} />
       
       {/* 用户菜单 - 仅在登录后显示 */}
       {isAuthenticated && (
@@ -738,6 +929,45 @@ export default function LemonadeApp() {
           phoneNumber={authResult?.phoneNumber || ''}
         />
       )}
+      
+      {/* 临时调色板调试按钮 - 方便测试 */}
+      <View style={{
+        position: 'absolute',
+        top: 50,
+        right: 20,
+        zIndex: 9999,
+        backgroundColor: 'rgba(255,255,255,0.9)',
+        padding: 10,
+        borderRadius: 8,
+      }}>
+        <Text style={{ fontSize: 12, marginBottom: 5 }}>
+          调色板开关: {DEV_CONFIG.ENABLE_COLOR_PALETTE ? '开启' : '关闭'}
+        </Text>
+        <Text style={{ fontSize: 12, marginBottom: 5 }}>
+          调试模式: {isDebugMode ? '是' : '否'}
+        </Text>
+        {DEV_CONFIG.ENABLE_COLOR_PALETTE && (
+          <TouchableOpacity
+            style={{
+              width: 60,
+              height: 60,
+              borderRadius: 30,
+              backgroundColor: theme.PRIMARY,
+              justifyContent: 'center',
+              alignItems: 'center',
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.3,
+              shadowRadius: 8,
+              elevation: 8,
+              marginTop: 5,
+            }}
+            onPress={toggleDebugMode}
+          >
+            <Text style={{ color: 'white', fontSize: 28 }}>🎨</Text>
+          </TouchableOpacity>
+        )}
+      </View>
       
       {/* 邀请免单弹窗 */}
       {authResult && (
@@ -760,12 +990,25 @@ export default function LemonadeApp() {
           globalStyles.container, 
           { 
             position: 'relative',
-            transform: [{
-              translateY: focusTransition.interpolate({
-                inputRange: [0, 1],
-                outputRange: [0, -(height * 0.3)], // 进一步减少移动距离
-              })
-            }]
+            transform: [
+              {
+                translateY: Animated.add(
+                  // 主要的页面切换动画
+                  focusTransition.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [singleQuestionHeight, -completedQuestionsHeight+singleQuestionHeight], // 修正：避免过度移动导致输入组件消失
+                  }),
+                  // 手势跟随动画（叠加效果）
+                  gestureTransition.interpolate({
+                    inputRange: [-1, 0, 1],
+                    outputRange: [50, 0, -50], 
+                  })
+                )
+              },
+              {
+                translateY: autoPushOffset // 自动推送偏移量
+              }
+            ]
           }
         ]}
         {...(Platform.OS === 'web' && {
@@ -776,11 +1019,15 @@ export default function LemonadeApp() {
         {...panResponder.panHandlers}
       >
         {/* ========== 已完成问题区域（在上方，紧凑布局） ========== */}
-        <View style={{
-          paddingTop: 60,
-          paddingBottom: 10,
-          paddingHorizontal: 16,
-        }}>
+        <View 
+          ref={completedQuestionsRef}
+          style={{
+            paddingTop: 10,
+            paddingBottom: 10,
+            paddingHorizontal: 16,
+          }}
+          onLayout={measureCompletedQuestionsHeight}
+        >
           <View style={{
             width: '100%',
             maxWidth: 500,
@@ -802,18 +1049,27 @@ export default function LemonadeApp() {
                       STEP_CONTENT[index]?.message || '';
                     
                     return (
-                      <CompletedQuestion
+                      <View
                         key={index}
-                        question={questionText}
-                        answer={answer}
-                        index={index}
-                        questionAnimation={questionAnimations[Math.max(0, index)] || new Animated.Value(1)}
-                        answerAnimation={answerAnimations[Math.max(0, index)] || new Animated.Value(1)}
-                        onEdit={() => formSteps.handleEditAnswer(index)}
-                        formatAnswerDisplay={formSteps.formatAnswerDisplay}
-                        isEditing={false} // 已完成问题区域不显示编辑表单
-                        canEdit={index >= 0 && (isQuickOrderMode || !(isOrderCompleted && index === 4))}
-                      />
+                        {...(index === parseInt(Object.keys(completedAnswers).sort((a, b) => parseInt(a) - parseInt(b))[0]) ? 
+                          { 
+                            ref: singleQuestionRef,
+                            onLayout: measureSingleQuestionHeight 
+                          } : {}
+                        )}
+                      >
+                        <CompletedQuestion
+                          question={questionText}
+                          answer={answer}
+                          index={index}
+                          questionAnimation={index >= 0 ? (questionAnimations[index] || new Animated.Value(1)) : new Animated.Value(1)}
+                          answerAnimation={index >= 0 ? (answerAnimations[index] || new Animated.Value(1)) : new Animated.Value(1)}
+                          onEdit={() => formSteps.handleEditAnswer(index)}
+                          formatAnswerDisplay={formSteps.formatAnswerDisplay}
+                          isEditing={false} // 已完成问题区域不显示编辑表单
+                          canEdit={index >= 0 && (isQuickOrderMode || !(isOrderCompleted && index === 4))}
+                        />
+                      </View>
                     );
                   })}
               </>
@@ -827,7 +1083,7 @@ export default function LemonadeApp() {
           justifyContent: 'flex-start',
           alignItems: 'center',
           paddingHorizontal: 16,
-          paddingTop: 10,
+          paddingTop: 10 , // 基础padding
           paddingBottom: 40,
         }}>
           <View style={{
@@ -835,7 +1091,7 @@ export default function LemonadeApp() {
             maxWidth: 500,
           }}>
             {/* 当前问题内容 */}
-            {/* 鉴权组件 - 未鉴权时显示 */}
+            {/* 未认证状态 - 显示认证组件 */}
             {!isAuthenticated && (
               <CurrentQuestion
                 displayedText={displayedText}
@@ -844,8 +1100,8 @@ export default function LemonadeApp() {
                 inputError={inputError}
                 currentStep={0}
                 currentQuestionAnimation={currentQuestionAnimation}
-                emotionAnimation={emotionAnimation}
                 shakeAnimation={shakeAnimation}
+                emotionAnimation={emotionAnimation}
               >
                 <AuthComponent
                   onAuthSuccess={handleAuthSuccess}
@@ -871,8 +1127,8 @@ export default function LemonadeApp() {
                   inputError={inputError}
                   currentStep={currentStep}
                   currentQuestionAnimation={currentQuestionAnimation}
-                  emotionAnimation={emotionAnimation}
                   shakeAnimation={shakeAnimation}
+                  emotionAnimation={emotionAnimation}
                 >
                   {/* 搜索状态或订单完成状态时不显示任何输入组件或按钮 */}
                 </CurrentQuestion>
@@ -885,8 +1141,8 @@ export default function LemonadeApp() {
                     inputError={inputError}
                     currentStep={editingStep !== null ? editingStep : currentStep}
                     currentQuestionAnimation={currentQuestionAnimation}
-                    emotionAnimation={emotionAnimation}
                     shakeAnimation={shakeAnimation}
+                    emotionAnimation={emotionAnimation}
                   >
                     {/* Input Section */}
                     {renderCurrentInput()}
@@ -907,8 +1163,8 @@ export default function LemonadeApp() {
                 inputError={inputError}
                 currentStep={editingStep}
                 currentQuestionAnimation={currentQuestionAnimation}
-                emotionAnimation={emotionAnimation}
                 shakeAnimation={shakeAnimation}
+                emotionAnimation={emotionAnimation}
               >
                 {/* Input Section */}
                 {renderCurrentInput()}
@@ -920,6 +1176,57 @@ export default function LemonadeApp() {
           </View>
         </View>
       </Animated.View>
+
+      {/* 调色板调试工具 */}
+      {DEV_CONFIG.ENABLE_COLOR_PALETTE && isDebugMode && (
+        <ColorPalette
+          primaryColor={theme.PRIMARY}
+          backgroundColor={theme.BACKGROUND}
+          primaryOpacity={themeState.opacity.primary}
+          backgroundOpacity={themeState.opacity.background}
+          onPrimaryColorChange={updatePrimaryColor}
+          onBackgroundColorChange={updateBackgroundColor}
+          onPrimaryOpacityChange={updatePrimaryOpacity}
+          onBackgroundOpacityChange={updateBackgroundOpacity}
+          onTextColorsChange={updateTextColors}
+          onAllColorsChange={(colors) => updateAllColors(colors)}
+          onClose={() => toggleDebugMode()}
+        />
+      )}
+
+      {/* 调色板开关按钮 */}
+      {DEV_CONFIG.ENABLE_COLOR_PALETTE && (
+        <TouchableOpacity
+          style={{
+            position: 'absolute',
+            bottom: 20,
+            right: 20,
+            width: 50,
+            height: 50,
+            borderRadius: 25,
+            backgroundColor: theme.PRIMARY,
+            justifyContent: 'center',
+            alignItems: 'center',
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.3,
+            shadowRadius: 4,
+            elevation: 6,
+            zIndex: isDebugMode ? 999 : 1001,
+          }}
+          onPress={toggleDebugMode}
+        >
+          <Text style={{ color: 'white', fontSize: 24 }}>🎨</Text>
+        </TouchableOpacity>
+      )}
     </KeyboardAvoidingView>
+  );
+}
+
+export default function LemonadeApp() {
+  return (
+    <ColorThemeProvider>
+      <LemonadeAppContent />
+    </ColorThemeProvider>
   );
 }

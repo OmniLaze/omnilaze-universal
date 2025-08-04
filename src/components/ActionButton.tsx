@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Animated } from 'react-native';
-import { buttonStyles } from '../styles/inputStyles';
+import { createButtonStyles } from '../styles/inputStyles';
+import { useTheme } from '../contexts/ColorThemeContext';
 
 interface ActionButtonProps {
   onPress: () => void;
@@ -19,6 +20,9 @@ export const ActionButton: React.FC<ActionButtonProps> = ({
   animationValue,
   variant = 'confirm'
 }) => {
+  const { theme } = useTheme();
+  const buttonStyles = createButtonStyles(theme);
+  
   const getButtonStyle = () => {
     if (variant === 'next') {
       return buttonStyles.nextSimpleButton;

@@ -30,6 +30,9 @@ npm run build:production
 
 # Install dependencies
 npm install
+
+# Type checking (manual)
+npx tsc --noEmit
 ```
 
 ### Backend - Flask Development Server
@@ -43,12 +46,16 @@ pip install -r requirements.txt
 ./start_api.sh
 
 # Or manually start (runs on port 5001 to avoid macOS AirPlay conflicts)
-python app.py
+python app.py          # Original monolithic version
+python app_refactored.py  # Modular refactored version (recommended)
 # or
 uv run app.py
+uv run app_refactored.py
 
 # Test API endpoints
 python test_api.py
+python test_refactored_api.py  # For refactored version
+python test_preferences.py    # Test preferences system
 ```
 
 ### Backend - Cloudflare Workers Production
@@ -70,14 +77,22 @@ wrangler deploy
 wrangler tail
 ```
 
-### Database Setup
+### Database Management Commands
 ```bash
-# Flask Development (Supabase)
+# Local development (Flask + Supabase)
 psql -f jwt/supabase_setup.sql
-# Or copy contents of jwt/supabase_setup.sql to Supabase dashboard
 
-# Cloudflare Workers Production (D1)
-wrangler d1 execute omnilaze-orders --file=./migrations/001_initial.sql
+# Production (Cloudflare D1)
+wrangler d1 create omnilaze-orders
+wrangler d1 execute omnilaze-orders --file=./migrations/001_initial.sql --remote
+wrangler d1 execute omnilaze-orders --file=./migrations/007_user_preferences.sql --remote
+
+# Inspect database
+wrangler d1 execute omnilaze-orders --command="SELECT * FROM users LIMIT 5" --remote
+wrangler d1 execute omnilaze-orders --command="SELECT * FROM orders LIMIT 5" --remote
+
+# All migrations via deploy script
+./deploy.sh
 ```
 
 ## Architecture
@@ -125,11 +140,21 @@ Complex form flow management that handles:
 - Cross-step dependencies (selecting drink skips allergy/preference steps)
 
 ### Backend (Dual Architecture)
-- **Development**: Python Flask server (`jwt/app.py`) with in-memory storage
+- **Development**: Python Flask server with dual implementations:
+  - **Monolithic**: `jwt/app.py` - Single file implementation
+  - **Modular**: `jwt/app_refactored.py` - Refactored modular architecture (recommended)
 - **Production**: Cloudflare Workers (`worker.js`) with D1 database and KV storage  
 - **Database**: Supabase (Flask dev mode) / D1 database (Workers production)
-- **Tables**: `users`, `invite_codes`, `orders` (see `migrations/001_initial.sql`)
+- **Tables**: `users`, `invite_codes`, `orders`, `user_preferences` (see `migrations/`)
 - **Dependencies**: Flask (`jwt/requirements.txt`) / Workers (no external deps)
+
+### Refactored Flask Architecture (`jwt/src/`)
+The refactored Flask backend uses a clean modular structure:
+- **`config/`**: Application configuration and database setup
+- **`routes/`**: Blueprint-based route handlers (auth, orders, preferences, invites)
+- **`services/`**: Business logic layer (auth, orders, preferences, invites)
+- **`storage/`**: Data access layer with factory pattern (dev vs production storage)
+- **`utils/`**: Utility functions (SMS, validation, verification, order management)
 
 ### Authentication Flow Architecture
 The app uses a sophisticated 3-stage authentication system:
@@ -138,6 +163,14 @@ The app uses a sophisticated 3-stage authentication system:
 3. **Invite Code Validation**: New users must provide valid invite code to register
 
 ## Key Features & Implementation Details
+
+### Color Theme System (`src/contexts/ColorThemeContext.tsx` & `src/hooks/useColorTheme.ts`)
+Dynamic color theming system that changes throughout the app:
+- **Theme Colors**: 5 predefined colors for different steps (pink, blue, green, red, orange)
+- **Dynamic Styles**: `src/styles/dynamicStyles.ts` provides theme-aware style generation
+- **Context-based**: Uses React Context for global theme state management
+- **Hook Integration**: `useColorTheme()` provides current theme color and utilities
+- **Debug Mode**: `DEV_CONFIG.ENABLE_COLOR_PALETTE = true` enables color palette testing
 
 ### Critical Animation & Timing System
 The app uses React Native Animated API with carefully coordinated timing to avoid conflicts:
@@ -224,6 +257,13 @@ The backend provides authentication and order management endpoints:
 - `GET /free-drinks-remaining` - Get global free drink quota
 - `POST /claim-free-drink` - Claim free drink reward
 
+### Preferences System APIs
+- `POST /preferences` - Save user preferences (address, food type, allergies, preferences, budget)
+- `GET /preferences/{user_id}` - Get user preferences
+- `PUT /preferences/{user_id}` - Update user preferences  
+- `DELETE /preferences/{user_id}` - Delete user preferences
+- `GET /preferences-completeness/{user_id}` - Check if user has complete preferences for quick ordering
+
 ### Health Check
 - `GET /health` - Service health status and environment info
 
@@ -234,7 +274,7 @@ The backend provides authentication and order management endpoints:
 The API base URL is configurable via `REACT_APP_API_URL` environment variable (defaults to `localhost:5001` for Flask, or Workers URL for production).
 
 ### Current Production Deployment
-- **Frontend**: https://4f47009e.omnilaze-universal-frontend.pages.dev (Cloudflare Pages)
+- **Frontend**: https://order.omnilaze.co (Primary) / https://omnilaze-universal-frontend.pages.dev (Cloudflare Pages)
 - **Backend**: https://omnilaze-universal-api.stevenxxzg.workers.dev (Cloudflare Workers)
 - **Database**: D1 database with ID `37fb6011-73ef-49f9-a189-312c69a098db`
 - **KV Storage**: Verification codes with namespace ID `9c43c4f6c5d348afb5ff54b7784d9ba1`
@@ -263,13 +303,6 @@ export const DEV_CONFIG = {
 
 ### Default Invite Codes (Development)
 - `1234`, `WELCOME`, `LANDE`, `OMNILAZE`, `ADVX2025`
-
-### Preferences System APIs
-- `POST /preferences` - Save user preferences (address, food type, allergies, preferences, budget)
-- `GET /preferences/{user_id}` - Get user preferences
-- `PUT /preferences/{user_id}` - Update user preferences  
-- `DELETE /preferences/{user_id}` - Delete user preferences
-- `GET /preferences-completeness/{user_id}` - Check if user has complete preferences for quick ordering
 
 ### Data Translation System
 The app includes a sophisticated English-to-Chinese translation system for UI display:
@@ -362,15 +395,19 @@ const labels = Array.isArray(answerValue)
 })
 ```
 
-## Testing and Development
+## Development Workflow
 
-### Running Tests
-Currently no automated tests are configured. Manual testing through:
-- `python jwt/test_api.py` for backend API testing
-- Manual UI testing through the development server
+### Quick Start (Development Mode)
+1. **Start Backend**: `cd jwt && ./start_api.sh`
+2. **Start Frontend**: `npm run start`
+3. **Enable Dev Mode**: Set `DEV_CONFIG.SKIP_AUTH = true` in `src/constants/index.ts`
+4. **Test**: Access app at `http://localhost:8081` (or Expo dev server URL)
 
-### Linting and Type Checking
-This project uses TypeScript for type safety. While no specific lint/typecheck commands are configured in package.json, ensure your IDE has TypeScript checking enabled.
+### Production Deployment Workflow
+1. **Deploy Backend**: `./deploy.sh` (creates D1 DB, deploys Worker)
+2. **Deploy Frontend**: `./deploy-frontend.sh` (builds and deploys to Cloudflare Pages)
+3. **Test Production**: Verify API at production Worker URL
+4. **Monitor**: Use `wrangler tail` for real-time logging
 
 ### Common Development Tasks
 - **Address Component Testing**: Use dev mode with `DEV_CONFIG.SKIP_AUTH = true`
@@ -378,6 +415,41 @@ This project uses TypeScript for type safety. While no specific lint/typecheck c
 - **Production Testing**: Deploy to Cloudflare Workers staging environment
 - **Database Testing**: Use `wrangler d1` commands to inspect D1 database
 - **Real-time Monitoring**: Use `wrangler tail` for production debugging
+
+## Testing and Development
+
+### Running Tests
+Currently no automated frontend tests are configured. Backend testing available through:
+
+**Flask Backend Testing:**
+```bash
+cd jwt
+
+# Test original monolithic API
+python test_api.py
+
+# Test refactored modular API
+python test_refactored_api.py
+
+# Test preferences system specifically
+python test_preferences.py
+```
+
+**Manual Testing:**
+- Frontend: Manual UI testing through development server
+- Backend: Use test scripts or tools like Postman/curl
+- Full Integration: Test with development mode enabled (`DEV_CONFIG.SKIP_AUTH = true`)
+
+### TypeScript Configuration
+- **tsconfig.json**: Extends Expo's base configuration with strict mode enabled
+- **Type Safety**: Full TypeScript support with strict checking
+- **IDE Integration**: Ensure your IDE has TypeScript support enabled for real-time type checking
+
+### Linting and Type Checking
+No specific lint/typecheck commands are configured in package.json. The project relies on:
+- **TypeScript Compiler**: Built into Expo development server for real-time type checking
+- **IDE Integration**: Recommended to use VS Code or similar with TypeScript support
+- **Manual Checking**: Run `npx tsc --noEmit` to check types without compilation
 
 ### Debugging
 - **Frontend Logs**: Check browser console or React Native debugger

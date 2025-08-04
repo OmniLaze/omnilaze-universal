@@ -107,5 +107,20 @@ export const CookieManager = {
   // 清除对话状态
   clearConversationState: () => {
     CookieManager.deleteCookie('conversation_state');
+  },
+
+  // 通用存储方法 (兼容React Native AsyncStorage接口)
+  saveItem: async (key: string, value: string) => {
+    CookieManager.setCookie(key, value, 30); // 30天有效期
+  },
+
+  // 通用获取方法
+  getItem: async (key: string): Promise<string | null> => {
+    return CookieManager.getCookie(key);
+  },
+
+  // 通用删除方法
+  removeItem: (key: string) => {
+    CookieManager.deleteCookie(key);
   }
 };

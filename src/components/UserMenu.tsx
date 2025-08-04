@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Modal, Animated, Platform, Dimensions, Image, Linking, ScrollView } from 'react-native';
 import { SimpleIcon } from './SimpleIcon';
 import { COLORS } from '../constants';
+import { useTheme } from '../contexts/ColorThemeContext';
 
 const { width } = Dimensions.get('window');
 
@@ -21,6 +22,10 @@ export const UserMenu: React.FC<UserMenuProps> = ({
   const [showDropdown, setShowDropdown] = useState(false);
   const [showBubble, setShowBubble] = useState(true); // 控制气泡显示
   const [showAboutModal, setShowAboutModal] = useState(false); // 控制关于我们弹窗
+  const { theme } = useTheme();
+  
+  // 创建动态样式
+  const styles = createStyles(theme);
 
   // 获取手机号后4位
   const getPhoneLast4Digits = () => {
@@ -213,7 +218,7 @@ export const UserMenu: React.FC<UserMenuProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: any) => StyleSheet.create({
   container: {
     position: 'absolute',
     top: width > 768 ? 120 : 70,
@@ -227,8 +232,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: width > 768 ? 12 : 10,
     height: width > 768 ? 40 : 36,
     borderRadius: width > 768 ? 20 : 18,
-    backgroundColor: COLORS.WHITE,
-    shadowColor: COLORS.SHADOW,
+    backgroundColor: theme.WHITE,
+    shadowColor: theme.SHADOW,
     shadowOffset: {
       width: 0,
       height: 2,
@@ -240,7 +245,7 @@ const styles = StyleSheet.create({
   phoneNumber: {
     fontSize: width > 768 ? 14 : 12,
     fontWeight: '600',
-    color: COLORS.TEXT_PRIMARY,
+    color: theme.TEXT_PRIMARY,
     marginRight: width > 768 ? 8 : 6,
   },
   dotsContainer: {
@@ -251,7 +256,7 @@ const styles = StyleSheet.create({
     width: width > 768 ? 4 : 3,
     height: width > 768 ? 4 : 3,
     borderRadius: width > 768 ? 2 : 1.5,
-    backgroundColor: COLORS.TEXT_PRIMARY,
+    backgroundColor: theme.TEXT_PRIMARY,
     marginVertical: 0.5,
   },
   dropdown: {
@@ -262,7 +267,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 8,
     minWidth: 140, // 增加最小宽度以适应"关于我们"
-    shadowColor: COLORS.SHADOW,
+    shadowColor: theme.SHADOW,
     shadowOffset: {
       width: 0,
       height: 4,
@@ -281,7 +286,7 @@ const styles = StyleSheet.create({
   menuItemText: {
     fontSize: 16,
     fontWeight: '500',
-    color: COLORS.TEXT_PRIMARY,
+    color: theme.TEXT_PRIMARY,
     marginLeft: 8,
   },
   separator: {
@@ -301,14 +306,14 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     right: 70, // 增加右侧距离，因为按钮变宽了
-    backgroundColor: COLORS.PRIMARY,
+    backgroundColor: theme.PRIMARY,
     borderRadius: width > 768 ? 20 : 18,
     paddingHorizontal: width > 768 ? 20 : 16, // 增加水平内边距
     paddingVertical: 0,
     height: width > 768 ? 40 : 36,
     minWidth: width > 768 ? 200 : 180, // 设置最小宽度
     justifyContent: 'center',
-    shadowColor: COLORS.SHADOW,
+    shadowColor: theme.SHADOW,
     shadowOffset: {
       width: 0,
       height: 2,
@@ -323,7 +328,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   bubbleText: {
-    color: COLORS.WHITE,
+    color: theme.WHITE,
     fontSize: width > 768 ? 14 : 12, // 调整字体大小
     fontWeight: '500',
     textAlign: 'center',
@@ -340,7 +345,7 @@ const styles = StyleSheet.create({
     borderRightWidth: 6,
     borderTopWidth: 6,
     borderBottomWidth: 6,
-    borderLeftColor: COLORS.PRIMARY,
+    borderLeftColor: theme.PRIMARY,
     borderRightColor: 'transparent',
     borderTopColor: 'transparent',
     borderBottomColor: 'transparent',
@@ -379,7 +384,7 @@ const styles = StyleSheet.create({
   aboutTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: COLORS.TEXT_PRIMARY,
+    color: theme.TEXT_PRIMARY,
   },
   aboutCloseButton: {
     width: 32,
@@ -404,7 +409,7 @@ const styles = StyleSheet.create({
   brandSlogan: {
     fontSize: 16,
     fontWeight: '500',
-    color: COLORS.TEXT_PRIMARY,
+    color: theme.TEXT_PRIMARY,
     textAlign: 'center',
     marginBottom: 20,
     letterSpacing: 0.5, // 增加字母间距
@@ -416,7 +421,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.PRIMARY,
+    backgroundColor: theme.PRIMARY,
     borderRadius: 12,
     paddingVertical: 12,
     paddingHorizontal: 16,
@@ -424,7 +429,7 @@ const styles = StyleSheet.create({
   websiteButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: COLORS.WHITE,
+    color: theme.WHITE,
     marginLeft: 8,
   },
   wechatInfo: {
@@ -439,7 +444,7 @@ const styles = StyleSheet.create({
   wechatText: {
     fontSize: 16,
     fontWeight: '500',
-    color: COLORS.TEXT_SECONDARY,
+    color: theme.TEXT_SECONDARY,
     marginLeft: 8,
   },
 });

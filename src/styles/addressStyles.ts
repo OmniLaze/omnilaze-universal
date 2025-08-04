@@ -1,7 +1,7 @@
 import { StyleSheet, Platform } from 'react-native';
 import { COLORS, LAYOUT } from '../constants';
 
-export const addressAutocompleteStyles = StyleSheet.create({
+export const addressAutocompleteStyles = (theme: any = COLORS) => StyleSheet.create({
   container: {
     position: 'relative',
     zIndex: 9999, // 提高z-index
@@ -12,10 +12,10 @@ export const addressAutocompleteStyles = StyleSheet.create({
     top: '100%',
     left: 0,
     right: 0,
-    backgroundColor: COLORS.WHITE,
+    backgroundColor: theme.WHITE,
     borderRadius: LAYOUT.BORDER_RADIUS,
     marginTop: 4,
-    shadowColor: COLORS.SHADOW,
+    shadowColor: theme.SHADOW,
     shadowOffset: {
       width: 0,
       height: 4,
@@ -43,7 +43,7 @@ export const addressAutocompleteStyles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: theme.GRAY_100,
     ...Platform.select({
       web: {
         cursor: 'pointer',
@@ -63,13 +63,13 @@ export const addressAutocompleteStyles = StyleSheet.create({
   suggestionMainText: {
     fontSize: 16,
     fontWeight: '500',
-    color: COLORS.TEXT_PRIMARY,
+    color: theme.TEXT_PRIMARY,
     marginBottom: 2,
   },
   
   suggestionSecondaryText: {
     fontSize: 14,
-    color: '#6B7280',
+    color: theme.GRAY_500,
     fontWeight: '400',
   },
   
@@ -86,7 +86,7 @@ export const addressAutocompleteStyles = StyleSheet.create({
       left: 0,
       right: 0,
       zIndex: 9999,
-      backgroundColor: COLORS.WHITE,
+      backgroundColor: theme.WHITE,
       borderRadius: LAYOUT.BORDER_RADIUS,
       marginTop: 4,
       boxShadow: '0 4px 12px rgba(0, 0, 0, 0.12)',
@@ -99,7 +99,7 @@ export const addressAutocompleteStyles = StyleSheet.create({
   // 鼠标悬停效果 (仅web)
   suggestionItemHover: Platform.select({
     web: {
-      backgroundColor: '#F9FAFB',
+      backgroundColor: theme.GRAY_50,
     },
     default: {},
   }) as any,

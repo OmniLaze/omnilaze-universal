@@ -24,6 +24,7 @@ import { inputStyles } from '../styles/inputStyles';
 import { addressAutocompleteStyles } from '../styles/addressStyles';
 import { searchAddresses, AddressSuggestion } from '../services/api';
 import { WebPortal } from './WebPortal';
+import { useTheme } from '../contexts/ColorThemeContext';
 
 interface AddressAutocompleteProps {
   value: string;
@@ -54,6 +55,8 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
   animationValue,
   debounceMs = 500, // 增加到500ms，配合API优化策略
 }) => {
+  const { theme } = useTheme();
+  const styles = addressAutocompleteStyles(theme);
   const [suggestions, setSuggestions] = useState<AddressSuggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -178,7 +181,7 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
       <MaterialIcons 
         name="location-on" 
         size={16} 
-        color="#9CA3AF" 
+        color={theme.GRAY_400} 
         style={addressAutocompleteStyles.suggestionIcon}
       />
       <View style={addressAutocompleteStyles.suggestionTextContainer}>
@@ -215,7 +218,7 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
           <MaterialIcons 
             name={iconName}
             size={20} 
-            color="#B0B0B0" 
+            color={theme.PLACEHOLDER_TEXT} 
             style={inputStyles.simpleInputIcon}
           />
           <TextInput
@@ -234,7 +237,7 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
           />
           {isLoading && (
             <View style={addressAutocompleteStyles.loadingContainer}>
-              <MaterialIcons name="refresh" size={18} color="#9CA3AF" />
+              <MaterialIcons name="refresh" size={18} color={theme.GRAY_400} />
             </View>
           )}
           {value && !isDisabled && (
@@ -242,7 +245,7 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
               onPress={handleClear}
               style={inputStyles.simpleInputClearButton}
             >
-              <MaterialIcons name="close" size={18} color="#9ca3af" />
+              <MaterialIcons name="close" size={18} color={theme.GRAY_400} />
             </TouchableOpacity>
           )}
         </View>
@@ -257,10 +260,10 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
                     left: inputPosition.x,
                     top: inputPosition.y,
                     width: inputPosition.width || 300,
-                    backgroundColor: '#FFFFFF',
+                    backgroundColor: theme.WHITE,
                     borderRadius: 12,
                     marginTop: 4,
-                    shadowColor: '#000',
+                    shadowColor: theme.SHADOW,
                     shadowOffset: { width: 0, height: 4 },
                     shadowOpacity: 0.12,
                     shadowRadius: 12,

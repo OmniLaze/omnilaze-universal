@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, Image, Animated, StyleSheet, Platform } from 'react-native';
 import { ActionButton } from './ActionButton';
 import { COLORS } from '../constants';
+import { useTheme } from '../contexts/ColorThemeContext';
 
 interface PaymentComponentProps {
   budget: string;
@@ -18,6 +19,9 @@ export const PaymentComponent: React.FC<PaymentComponentProps> = ({
   isTyping = false,
   isFreeOrder = false,
 }) => {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
+  
   const [showPaymentContent, setShowPaymentContent] = useState(false);
 
   // 监听打字机状态，打字完成后延迟显示支付内容
@@ -110,26 +114,27 @@ export const PaymentComponent: React.FC<PaymentComponentProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: any) => StyleSheet.create({
   container: {
     marginTop: 16,
+    marginLeft: 44, // 与问题文字对齐：32px头像 + 12px间距
   },
   paymentCard: {
     width: 280, // 纵向瘦长的宽度
     height: 400, // 纵向瘦长的高度
     backgroundColor: COLORS.WHITE,
     borderRadius: 16,
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: COLORS.PRIMARY,
     padding: 24,
     shadowColor: COLORS.SHADOW,
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 4,
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 2,
     marginBottom: 24,
     alignItems: 'center',
     justifyContent: 'center',
@@ -158,22 +163,23 @@ const styles = StyleSheet.create({
   wechatText: {
     fontSize: 16,
     fontWeight: '500',
-    color: COLORS.PRIMARY,
+    color: theme.PRIMARY,
     marginBottom: 8,
   },
   budgetText: {
     fontSize: 20, // 金额文字稍大
     fontWeight: '600',
-    color: COLORS.TEXT_PRIMARY,
+    color: theme.TEXT_PRIMARY,
     textAlign: 'center',
   },
   buttonContainer: {
     marginTop: 16,
+    marginLeft: -44, // 抵消容器的左边距，让按钮使用自己的对齐
   },
   // 免单相关样式
   freeOrderCard: {
-    borderColor: '#10b981',
-    backgroundColor: '#10b981',
+    borderColor: theme.PRIMARY,
+    backgroundColor: theme.PRIMARY,
   },
   freeOrderContainer: {
     alignItems: 'center',

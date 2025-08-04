@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { View, Text, Image, Animated, TouchableOpacity, Pressable, Dimensions } from 'react-native';
 import { SimpleIcon } from './SimpleIcon';
-import { questionStyles, avatarStyles, answerStyles } from '../styles/globalStyles';
+import { createQuestionStyles, createAvatarStyles, createAnswerStyles } from '../styles/globalStyles';
+import { useTheme } from '../contexts/ColorThemeContext';
 import type { Answer } from '../types';
 
 const { width } = Dimensions.get('window');
@@ -35,6 +36,12 @@ export const CompletedQuestion: React.FC<CompletedQuestionProps> = ({
 }) => {
   const [isHovered, setIsHovered] = useState(false);
   const isMobile = width <= 768;
+  const { theme } = useTheme();
+  
+  // 创建动态样式
+  const questionStyles = createQuestionStyles(theme);
+  const avatarStyles = createAvatarStyles(theme);
+  const answerStyles = createAnswerStyles(theme);
 
   return (
     <Animated.View 
@@ -72,9 +79,15 @@ export const CompletedQuestion: React.FC<CompletedQuestionProps> = ({
             onHoverIn={() => !isMobile && setIsHovered(true)}
             onHoverOut={() => !isMobile && setIsHovered(false)}
           >
-            <View
+            <Animated.View
               style={{
-                opacity: 1,
+                opacity: answerAnimation,
+                transform: [{
+                  translateY: answerAnimation.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [30, 0], // 从下往上滑入
+                  }),
+                }],
               }}
             >
               <View style={answerStyles.answerWithEdit}>
@@ -90,7 +103,7 @@ export const CompletedQuestion: React.FC<CompletedQuestionProps> = ({
                         answerStyles.editAnswerButton,
                         {
                           opacity: 1,
-                          backgroundColor: '#f3f4f6',
+                          backgroundColor: theme.GRAY_100,
                           borderRadius: 6,
                           marginLeft: 8,
                           padding: 8,
@@ -101,7 +114,7 @@ export const CompletedQuestion: React.FC<CompletedQuestionProps> = ({
                       <SimpleIcon 
                         name="edit" 
                         size={16} 
-                        color="#4B5563" 
+                        color={theme.GRAY_600} 
                       />
                     </TouchableOpacity>
                   ) : (
@@ -111,13 +124,13 @@ export const CompletedQuestion: React.FC<CompletedQuestionProps> = ({
                         onPress={onEdit}
                         style={answerStyles.editAnswerButton}
                       >
-                        <SimpleIcon name="edit" size={22} color="#4B5563" />
+                        <SimpleIcon name="edit" size={22} color={theme.GRAY_600} />
                       </TouchableOpacity>
                     )
                   )
                 )}
               </View>
-            </View>
+            </Animated.View>
           </Pressable>
         )}
       </View>

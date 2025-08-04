@@ -1,29 +1,31 @@
 import { StyleSheet, Platform } from 'react-native';
 import { COLORS, LAYOUT } from '../constants';
 
-export const inputStyles = StyleSheet.create({
+// 创建动态输入样式函数
+export const createInputStyles = (theme: any = COLORS) => StyleSheet.create({
   inputSection: {
     marginTop: 16,
     marginBottom: 20,
+    marginLeft: 44, // 与问题文字对齐：32px头像 + 12px间距
   },
   simpleInputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.WHITE,
+    backgroundColor: theme.WHITE,
     borderWidth: 0,
     borderRadius: LAYOUT.BORDER_RADIUS,
     paddingHorizontal: 16,
     paddingVertical: 2,
     minHeight: 56,
     width: '100%',
-    shadowColor: COLORS.SHADOW,
+    shadowColor: theme.SHADOW,
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 4,
     },
     shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowRadius: 6,
+    elevation: 2,
     ...(Platform.OS === 'web' && {
       outlineStyle: 'none',
       outlineWidth: 0,
@@ -37,7 +39,7 @@ export const inputStyles = StyleSheet.create({
   simpleTextInput: {
     flex: 1,
     fontSize: 18,
-    color: COLORS.TEXT_PRIMARY,
+    color: theme.TEXT_PRIMARY,
     paddingVertical: 16,
     paddingHorizontal: 0,
     fontWeight: '400',
@@ -53,8 +55,8 @@ export const inputStyles = StyleSheet.create({
     opacity: 0.8,
   },
   errorSimpleInputWrapper: {
-    backgroundColor: COLORS.ERROR_BACKGROUND,
-    shadowColor: COLORS.ERROR,
+    backgroundColor: theme.ERROR_BACKGROUND,
+    shadowColor: theme.ERROR,
     shadowOffset: {
       width: 0,
       height: 0,
@@ -78,24 +80,28 @@ export const inputStyles = StyleSheet.create({
   },
   errorText: {
     fontSize: 14,
-    color: COLORS.ERROR,
+    color: theme.ERROR,
     marginTop: 8,
     marginLeft: 4,
     fontWeight: '400',
   },
 });
 
-export const budgetStyles = StyleSheet.create({
+// 保持默认导出以向后兼容
+export const inputStyles = createInputStyles();
+
+export const createBudgetStyles = (theme: any = COLORS) => StyleSheet.create({
   budgetOptionsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
     marginBottom: 16,
+    marginLeft: 44, // 与问题文字对齐：32px头像 + 12px间距
   },
   budgetOptionButton: {
-    backgroundColor: COLORS.WHITE,
+    backgroundColor: theme.WHITE,
     borderWidth: 1,
-    borderColor: COLORS.BORDER,
+    borderColor: theme.BORDER,
     borderRadius: 6,
     paddingHorizontal: 16,
     paddingVertical: 10,
@@ -103,20 +109,23 @@ export const budgetStyles = StyleSheet.create({
     alignItems: 'center',
   },
   selectedBudgetOptionButton: {
-    backgroundColor: COLORS.PRIMARY,
-    borderColor: COLORS.PRIMARY,
+    backgroundColor: theme.PRIMARY_WITH_OPACITY || theme.PRIMARY,
+    borderColor: theme.PRIMARY,
   },
   budgetOptionText: {
     fontSize: 28,
     fontWeight: '500',
-    color: COLORS.TEXT_PRIMARY,
+    color: theme.TEXT_PRIMARY,
   },
   selectedBudgetOptionText: {
-    color: COLORS.WHITE,
+    color: theme.WHITE,
   },
 });
 
-export const buttonStyles = StyleSheet.create({
+// 保持默认导出以向后兼容
+export const budgetStyles = createBudgetStyles();
+
+export const createButtonStyles = (theme: any = COLORS) => StyleSheet.create({
   simpleButton: {
     borderRadius: LAYOUT.BORDER_RADIUS,
     paddingHorizontal: 32, // 从24增加到32，给更多横向空间
@@ -125,25 +134,26 @@ export const buttonStyles = StyleSheet.create({
     alignItems: 'center', // 确保文字居中
     alignSelf: 'flex-start',
     marginTop: 12,
-    shadowColor: COLORS.SHADOW,
+    marginLeft: 44, // 与问题文字对齐：32px头像 + 12px间距
+    shadowColor: theme.SHADOW,
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 4,
     },
     shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowRadius: 6,
+    elevation: 2,
   },
   activeSimpleButton: {
-    backgroundColor: COLORS.PRIMARY,
-    shadowColor: COLORS.PRIMARY,
+    backgroundColor: theme.PRIMARY_WITH_OPACITY || theme.PRIMARY,
+    shadowColor: theme.PRIMARY,
     shadowOffset: {
       width: 0,
-      height: 3,
+      height: 4,
     },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 5,
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 3,
   },
   disabledSimpleButton: {
     backgroundColor: '#F8FAFC',
@@ -157,7 +167,7 @@ export const buttonStyles = StyleSheet.create({
     textAlign: 'center',
   },
   activeSimpleButtonText: {
-    color: COLORS.WHITE,
+    color: theme.WHITE,
     fontWeight: '600',
     letterSpacing: 0.3,
   },
@@ -167,7 +177,7 @@ export const buttonStyles = StyleSheet.create({
     letterSpacing: 0.2,
   },
   nextSimpleButton: {
-    backgroundColor: COLORS.PRIMARY,
+    backgroundColor: theme.PRIMARY_WITH_OPACITY || theme.PRIMARY,
     borderRadius: 8,
     paddingHorizontal: 28, // 从20增加到28
     paddingVertical: 12,
@@ -175,11 +185,15 @@ export const buttonStyles = StyleSheet.create({
     alignItems: 'center', // 确保文字居中
     alignSelf: 'flex-start',
     marginTop: 8,
+    marginLeft: 44, // 与问题文字对齐：32px头像 + 12px间距
   },
   nextSimpleButtonText: {
-    color: COLORS.WHITE,
+    color: theme.WHITE,
     fontSize: 21,
     fontWeight: '500',
     textAlign: 'center',
   },
 });
+
+// 保持默认导出以向后兼容
+export const buttonStyles = createButtonStyles();

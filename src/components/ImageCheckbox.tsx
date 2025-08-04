@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, Image, Animated, TextInput, Dimensions } 
 import { SimpleIcon } from './SimpleIcon';
 import { StyleSheet } from 'react-native';
 import { COLORS } from '../constants';
+import { useTheme } from '../contexts/ColorThemeContext';
 
 const { width } = Dimensions.get('window');
 
@@ -31,6 +32,9 @@ export const ImageCheckbox: React.FC<ImageCheckboxProps> = ({
   onOtherTextChange,
   disabled = false, // 默认不禁用
 }) => {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
+  
   const [shouldRender, setShouldRender] = useState(true); // 修改：默认为true，确保组件能够正常渲染
   const [otherText, setOtherText] = useState('');
   const [showOtherInput, setShowOtherInput] = useState(false);
@@ -308,9 +312,10 @@ export const ImageCheckbox: React.FC<ImageCheckboxProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: any) => StyleSheet.create({
   container: {
     marginTop: width > 768 ? 16 : 8, // 移动端减少顶部间距
+    marginLeft: 44, // 与问题文字对齐：32px头像 + 12px间距
     maxWidth: 500,
   },
   grid: {
@@ -320,28 +325,28 @@ const styles = StyleSheet.create({
     justifyContent: width > 768 ? 'center' : 'flex-start',
   },
   optionCard: {
-    backgroundColor: COLORS.WHITE,
+    backgroundColor: theme.WHITE,
     borderRadius: width > 768 ? 12 : 8,
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: '#E2E8F0',
-    borderLeftWidth: width > 768 ? 2 : 4, // 移动端统一左边框宽度
+    borderLeftWidth: width > 768 ? 1 : 2, // 移动端统一左边框宽度
     padding: width > 768 ? 12 : 12,
     alignItems: 'center',
     justifyContent: width > 768 ? 'space-between' : 'flex-start',
     flexDirection: width > 768 ? 'column' : 'row',
     position: 'relative',
-    shadowColor: COLORS.SHADOW,
+    shadowColor: theme.SHADOW,
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 4,
     },
     shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowRadius: 6,
+    elevation: 2,
   },
   selectedCard: {
-    borderColor: COLORS.PRIMARY,
-    borderLeftColor: COLORS.PRIMARY, // 确保选中时左边框也是主色
+    borderColor: theme.PRIMARY,
+    borderLeftColor: theme.PRIMARY, // 确保选中时左边框也是主色
   },
   imageContainer: {
     width: width > 768 ? 160 : 80, // 移动端放大图片容器
@@ -369,7 +374,7 @@ const styles = StyleSheet.create({
   optionLabel: {
     fontSize: width > 768 ? 21 : 16,
     fontWeight: '500',
-    color: COLORS.TEXT_PRIMARY,
+    color: theme.TEXT_PRIMARY,
     textAlign: width > 768 ? 'center' : 'left',
     // Safari 兼容性修复
     lineHeight: width > 768 ? 25 : 20,
@@ -383,24 +388,24 @@ const styles = StyleSheet.create({
     // justifyContent: width > 768 ? 'center' : 'flex-start',
   },
   selectedLabel: {
-    color: COLORS.PRIMARY,
+    color: theme.PRIMARY,
     fontWeight: '600',
   },
   checkbox: {
     width: width > 768 ? 22 : 18,
     height: width > 768 ? 22 : 18,
     borderRadius: 4,
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: '#D1D5DB',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.WHITE,
+    backgroundColor: theme.WHITE,
     position: width > 768 ? 'static' : 'absolute',
     right: width > 768 ? 'auto' : 12,
   },
   checkedBox: {
-    backgroundColor: COLORS.PRIMARY,
-    borderColor: COLORS.PRIMARY,
+    backgroundColor: theme.PRIMARY,
+    borderColor: theme.PRIMARY,
   },
   disabledCard: {
     opacity: 0.8,
@@ -412,22 +417,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: width > 768 ? 0 : 8, // 移动端添加左右内边距
   },
   otherInput: {
-    borderWidth: 2,
-    borderColor: COLORS.PRIMARY,
+    borderWidth: 1,
+    borderColor: theme.PRIMARY,
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: width > 768 ? 12 : 10, // 移动端调整内边距
     fontSize: width > 768 ? 16 : 14, // 移动端调整字体大小
-    backgroundColor: COLORS.WHITE,
-    color: COLORS.TEXT_PRIMARY,
-    shadowColor: COLORS.SHADOW,
+    backgroundColor: theme.WHITE,
+    color: theme.TEXT_PRIMARY,
+    shadowColor: theme.SHADOW,
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 4,
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 2,
     minHeight: width > 768 ? 44 : 40, // 设置最小高度便于点击
   },
 });
