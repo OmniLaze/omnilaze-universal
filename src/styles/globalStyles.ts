@@ -121,10 +121,10 @@ export const createQuestionStyles = (theme: any = COLORS) => StyleSheet.create({
   },
   questionText: {
     fontSize: 24,
-    color: theme.TEXT_SECONDARY, // 改为灰色
+    color: theme.TEXT_PRIMARY, // 改为黑色，通过外层透明度控制弱化效果
     lineHeight: 32,
     flex: 1,
-    opacity: 0.7, // 添加透明度让已完成问题更淡
+    // 移除opacity，通过外层容器控制透明度
   },
   currentQuestionText: {
     fontSize: 24,
@@ -181,10 +181,10 @@ export const createAnswerStyles = (theme: any = COLORS) => StyleSheet.create({
   },
   answerValue: {
     fontSize: 24,
-    color: theme.TEXT_SECONDARY, // 改为灰色
+    color: theme.TEXT_PRIMARY, // 改为黑色，通过外层透明度控制弱化效果
     fontWeight: '400',
     lineHeight: 36,
-    opacity: 0.7, // 添加透明度让已完成答案更淡
+    // 移除opacity，通过外层容器控制透明度
   },
   answerWithEdit: {
     flexDirection: 'row',

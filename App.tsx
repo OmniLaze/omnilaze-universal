@@ -412,9 +412,9 @@ function LemonadeAppContent() {
     setIsDragging(false);
     Animated.spring(focusTransition, {
       toValue: 0,
-      tension: 60,
-      friction: 8,
-      useNativeDriver: false,
+      tension: 120, // 提高tension让动画更快响应
+      friction: 12, // 增加friction减少震荡
+      useNativeDriver: true, // 启用native driver提升性能
     }).start();
     
     // 重置手势动画值
@@ -465,9 +465,9 @@ function LemonadeAppContent() {
     setIsDragging(false);
     Animated.spring(focusTransition, {
       toValue: 1,
-      tension: 60,
-      friction: 8,
-      useNativeDriver: false,
+      tension: 120, // 提高tension让动画更快响应
+      friction: 12, // 增加friction减少震荡
+      useNativeDriver: true, // 启用native driver提升性能
     }).start();
     
     // 重置手势动画值
@@ -559,8 +559,11 @@ function LemonadeAppContent() {
       setIsDragging(true);
     },
     onPanResponderMove: (evt, gestureState) => {
+      // 性能优化：限制更新频率，避免过于频繁的动画更新
+      if (Math.abs(gestureState.dy) < 5) return; // 忽略小幅移动，减少计算
+      
       // 计算手势距离（限制在合理范围内）
-      const maxGestureDistance = height * 0.3; // 最大手势距离为屏幕高度的30%
+      const maxGestureDistance = height * 0.25; // 减少最大距离提升响应性
       const clampedDy = Math.max(-maxGestureDistance, Math.min(maxGestureDistance, gestureState.dy));
       
       // 计算手势跟随的动画值（-1到1之间）
@@ -576,22 +579,21 @@ function LemonadeAppContent() {
         gestureValue = gestureProgress;
       }
       
-      // 更新手势跟随动画值，不修改主要的focusTransition
+      // 更新手势跟随动画值，使用更平滑的插值
       gestureTransition.setValue(gestureValue);
     },
     onPanResponderRelease: (evt, gestureState) => {
       setIsDragging(false);
       
-      // 定义切换的临界值（屏幕高度的百分比）
-      const threshold = height * 0.2; // 20%的屏幕高度作为临界值
+      // 定义切换的临界值（降低临界值提升响应性）
+      const threshold = height * 0.15; // 从20%降低到15%，让切换更敏感
       const shouldSwitch = Math.abs(gestureState.dy) > threshold;
       
-      // 先重置手势跟随动画值
-      Animated.spring(gestureTransition, {
+      // 先重置手势跟随动画值（使用更快的动画参数）
+      Animated.timing(gestureTransition, {
         toValue: 0,
-        tension: 100,
-        friction: 8,
-        useNativeDriver: false,
+        duration: 200, // 使用timing动画替代spring，更精确的控制
+        useNativeDriver: true, // 启用native driver提升性能
       }).start();
       
       if (shouldSwitch) {
@@ -998,10 +1000,10 @@ function LemonadeAppContent() {
                     inputRange: [0, 1],
                     outputRange: [singleQuestionHeight, -completedQuestionsHeight+singleQuestionHeight], // 修正：避免过度移动导致输入组件消失
                   }),
-                  // 手势跟随动画（叠加效果）
+                  // 手势跟随动画（叠加效果）- 优化范围让手势更流畅
                   gestureTransition.interpolate({
                     inputRange: [-1, 0, 1],
-                    outputRange: [50, 0, -50], 
+                    outputRange: [80, 0, -80], // 增加跟随范围让手势感觉更直接
                   })
                 )
               },
@@ -1019,12 +1021,17 @@ function LemonadeAppContent() {
         {...panResponder.panHandlers}
       >
         {/* ========== 已完成问题区域（在上方，紧凑布局） ========== */}
-        <View 
+        <Animated.View 
           ref={completedQuestionsRef}
           style={{
             paddingTop: 10,
             paddingBottom: 10,
             paddingHorizontal: 16,
+            // 添加基于焦点模式的透明度效果（互换：新问题页时已完成问题为黑色）
+            opacity: focusTransition.interpolate({
+              inputRange: [0, 1],
+              outputRange: [1.0, 0.4], // 新问题模式(0)时透明度1.0（黑色），已完成问题模式(1)时透明度0.4（灰色）
+            }),
           }}
           onLayout={measureCompletedQuestionsHeight}
         >
@@ -1075,16 +1082,21 @@ function LemonadeAppContent() {
               </>
             )}
           </View>
-        </View>
+        </Animated.View>
 
         {/* ========== 当前问题区域（在下方，始终可见） ========== */}
-        <View style={{
+        <Animated.View style={{
           flex: 1,
           justifyContent: 'flex-start',
           alignItems: 'center',
           paddingHorizontal: 16,
           paddingTop: 10 , // 基础padding
           paddingBottom: 40,
+          // 添加基于焦点模式的透明度效果（互换：已完成问题页时当前问题为黑色）
+          opacity: focusTransition.interpolate({
+            inputRange: [0, 1],
+            outputRange: [0.4, 1.0], // 新问题模式(0)时透明度0.4（灰色），已完成问题模式(1)时透明度1.0（黑色）
+          }),
         }}>
           <View style={{
             width: '100%',
@@ -1174,7 +1186,7 @@ function LemonadeAppContent() {
               </CurrentQuestion>
             )}
           </View>
-        </View>
+        </Animated.View>
       </Animated.View>
 
       {/* 调色板调试工具 */}
