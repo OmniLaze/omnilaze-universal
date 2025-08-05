@@ -131,7 +131,10 @@ export const useAppState = () => {
       // 开发模式下也需要恢复对话状态
       const savedConversation = CookieManager.getConversationState();
       
+      console.log('🔄 页面刷新状态恢复 (开发模式):', { savedConversation });
+      
       if (savedConversation) {
+        console.log('✅ 恢复对话状态:', { completedAnswers: savedConversation.completedAnswers });
         setCurrentStep(savedConversation.currentStep || 0);
         setCompletedAnswers(prev => ({
           ...prev,

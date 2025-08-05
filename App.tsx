@@ -192,14 +192,10 @@ function LemonadeAppContent() {
             friction: 12,
             useNativeDriver: true,
           }).start(() => {
-            // 答案动画完成后，保持在当前问题视图
+            // 答案动画完成后的回调
             setTimeout(() => {
-              // 确保始终在当前问题视图，不执行自动切换
-              if (focusMode !== 'current') {
-                switchToCurrentQuestion();
-              }
-              
-              // 执行完成回调
+              // 执行完成回调，但不强制切换视图
+              // 让用户保持当前的视图状态，避免闪烁
               onComplete?.();
             }, 500); // 500ms的停顿让用户能够看到答案
           });
@@ -207,12 +203,8 @@ function LemonadeAppContent() {
       } else {
         // 特殊步骤（如手机号，索引-1）的处理
         setTimeout(() => {
-          // 确保始终在当前问题视图，不执行自动切换
-          if (focusMode !== 'current') {
-            switchToCurrentQuestion();
-          }
-          
-          // 执行完成回调
+          // 执行完成回调，但不强制切换视图
+          // 让用户保持当前的视图状态，避免闪烁
           onComplete?.();
         }, 500); // 保持相同的延迟
       }
@@ -340,10 +332,9 @@ function LemonadeAppContent() {
   // 测量已完成问题容器高度
   const measureCompletedQuestionsHeight = (event?: any) => {
     if (event && event.nativeEvent) {
-      const { height } = event.nativeEvent.layout;
-      console.log('已完成问题容器高度:', height);
-      console.log('头像将定位在top:', Math.max(height + 30, 120));
-      setCompletedQuestionsHeight(height + 20); // 加上一些padding
+      const { height: measuredHeight } = event.nativeEvent.layout;
+      console.log('已完成问题容器高度:', measuredHeight);
+      setCompletedQuestionsHeight(measuredHeight + 60); // 加上一些padding
     }
   };
 
@@ -352,7 +343,7 @@ function LemonadeAppContent() {
     if (event && event.nativeEvent) {
       const { height } = event.nativeEvent.layout;
       console.log('单个问题组件高度:', height);
-      setSingleQuestionHeight(height + 10); // 加上一些margin
+      setSingleQuestionHeight(height); // 保存测量到的高度
     }
   };
 
@@ -373,17 +364,20 @@ function LemonadeAppContent() {
     setInputError('');
     clearText(); // 使用简化的清空函数
     
-    // 重置所有动画到初始状态  
-    mapAnimation.setValue(0);
+    // 重置动画到初始状态  
     inputSectionAnimation.setValue(0);
     currentQuestionAnimation.setValue(1);
-    completedQuestionsContainerAnimation.setValue(0);
-    newQuestionSlideInAnimation.setValue(0); // 重置到下方位置
-    focusTransition.setValue(0);
-    autoPushOffset.setValue(0); // 重置自动推送偏移量
-    gestureTransition.setValue(0); // 重置手势动画值
     
     setAuthResetTrigger(prev => prev + 1);
+    
+    // 重置滚动位置到当前问题页面
+    scrollViewRef.current?.scrollTo({
+      y: completedQuestionsHeight,
+      animated: false,
+    });
+    scrollPosition.setValue(completedQuestionsHeight);
+    setFocusMode('current');
+    saveFocusMode('current');
   };
 
   // 邀请处理函数
@@ -420,244 +414,147 @@ function LemonadeAppContent() {
     }
   };
   
-  // 状态管理：聚焦模式
-  const getInitialFocusTransitionValue = () => {
-    // 根据保存的focusMode设置初始动画值
-    if (Platform.OS === 'web') {
-      try {
-        const savedMode = localStorage.getItem('omnilaze_focus_mode');
-        return savedMode === 'completed' ? 1 : 0;
-      } catch (error) {
-        console.log('读取focusTransition初始值失败:', error);
-        return 0;
+  // 连续滚动状态管理
+  const scrollViewRef = useRef<ScrollView>(null);
+  const [scrollPosition, setScrollPosition] = useState(new Animated.Value(0));
+  const [isScrolling, setIsScrolling] = useState(false);
+  const [completedQuestionsHeight, setCompletedQuestionsHeight] = useState(300); // 恢复动态高度状态
+  
+  // 滚动阈值和页面高度 - 基于动态内容高度
+  const pageHeight = height - 100; // 减去状态栏和padding
+  const dynamicContentHeight = completedQuestionsHeight + pageHeight; // 基于实际内容的总高度
+  const SNAP_THRESHOLD = 200; // 使用单个问题高度作为吸附阈值
+  
+  // 当前滚动进度 (1 = 已完成问题页面在焦点, 0 = 当前问题页面在焦点)
+  const scrollProgress = scrollPosition.interpolate({
+    inputRange: [0, completedQuestionsHeight], // 基于实际内容高度
+    outputRange: [1, 0], // 滚动到顶部(0)时已完成问题在焦点(1)，滚动到底部时当前问题在焦点(0)
+    extrapolate: 'clamp',
+  });
+  
+  // 滚动处理函数
+  const handleScroll = (event: any) => {
+    const offsetY = event.nativeEvent.contentOffset.y;
+    scrollPosition.setValue(offsetY);
+  };
+  
+  // 滚动结束时的自动吸附 - 增强吸附效果
+  const handleScrollEnd = (event: any) => {
+    setIsScrolling(false);
+    const offsetY = event.nativeEvent.contentOffset.y;
+    
+    // 判断应该吸附到哪个页面 - 修复逻辑重叠问题
+    let targetOffset;
+    
+    // 计算有效的吸附阈值，避免重叠
+    const effectiveThreshold = Math.min(SNAP_THRESHOLD, completedQuestionsHeight / 3);
+    
+    if (offsetY <= effectiveThreshold) {
+      // 吸附到已完成问题页面（顶部）
+      targetOffset = 0;
+      setFocusMode('completed');
+      saveFocusMode('completed');
+    } else if (offsetY >= completedQuestionsHeight - effectiveThreshold) {
+      // 吸附到当前问题页面
+      targetOffset = completedQuestionsHeight;
+      setFocusMode('current');
+      saveFocusMode('current');
+    } else {
+      // 根据距离决定吸附方向 - 中间区域
+      const midPoint = completedQuestionsHeight * 0.5; // 使用50%作为中点
+      if (offsetY < midPoint) {
+        targetOffset = 0;
+        setFocusMode('completed');
+        saveFocusMode('completed');
+      } else {
+        targetOffset = completedQuestionsHeight;
+        setFocusMode('current');
+        saveFocusMode('current');
       }
     }
-    return 0;
+    
+    console.log('滚动吸附:', { 
+      offsetY, 
+      effectiveThreshold, 
+      completedQuestionsHeight, 
+      targetOffset, 
+      SNAP_THRESHOLD 
+    });
+    
+    // 平滑吸附动画 - 调整动画参数让吸附更明显
+    scrollViewRef.current?.scrollTo({
+      y: targetOffset,
+      animated: true,
+      // 可以考虑添加更快的动画速度
+    });
   };
   
-  const [focusTransition] = useState(new Animated.Value(getInitialFocusTransitionValue())); // 0=聚焦当前问题, 1=聚焦已完成问题
-  const [autoPushOffset] = useState(new Animated.Value(0)); // 自动推送偏移量
-  const [gestureTransition] = useState(new Animated.Value(0)); // 新增：手势跟随动画值
-  const [completedQuestionsHeight, setCompletedQuestionsHeight] = useState(height * 0.3); // 已完成问题容器的实际高度
-  const [singleQuestionHeight, setSingleQuestionHeight] = useState(120); // 单个问题组件的高度
-  const completedQuestionsRef = useRef<View>(null); // 用于测量已完成问题容器高度
-  const singleQuestionRef = useRef<View>(null); // 用于测量单个问题组件高度
-  
-  // 手势状态管理
-  const [isDragging, setIsDragging] = useState(false); // 是否正在拖拽
-  
-  // 切换聚焦模式
-  const switchToCurrentQuestion = () => {
-    setFocusMode('current');
-    saveFocusMode('current'); // 保存到localStorage
-    setIsDragging(false);
-    Animated.spring(focusTransition, {
-      toValue: 0,
-      tension: 120, // 提高tension让动画更快响应
-      friction: 12, // 增加friction减少震荡
-      useNativeDriver: true, // 启用native driver提升性能
-    }).start();
-    
-    // 重置手势动画值
-    gestureTransition.setValue(0);
-    
-    // 重置自动推送偏移量
-    autoPushOffset.setValue(0);
-    
-    // 模拟下滑手势后，确保当前输入状态正确显示，但不重新触发动画
-    setTimeout(() => {
-      // 如果有活跃的输入，确保输入组件显示
-      if (isAuthenticated && editingStep === null && currentStep < STEP_CONTENT.length && !completedAnswers[currentStep]) {
-        const stepData = formSteps.getCurrentStepData();
-        
-        // 检查用户输入状态，确保输入框显示
-        let hasUserInput = false;
-        switch (stepData.inputType) {
-          case 'address':
-            hasUserInput = !!address.trim();
-            break;
-          case 'foodType':
-            hasUserInput = selectedFoodType.length > 0;
-            break;
-          case 'allergies':
-            hasUserInput = selectedAllergies.length > 0 || !!otherAllergyText.trim();
-            break;
-          case 'preferences':
-            hasUserInput = selectedPreferences.length > 0 || !!otherPreferenceText.trim();
-            break;
-          case 'budget':
-            hasUserInput = !!budget.trim();
-            break;
-        }
-        
-        // 如果有用户输入，确保输入组件可见，但不触发完整的问题转换动画
-        if (hasUserInput) {
-          inputSectionAnimation.setValue(1);
-        }
-      } else if (isAuthenticated && editingStep !== null) {
-        // 编辑模式时确保输入组件可见
-        inputSectionAnimation.setValue(1);
-      }
-    }, 100); // 短暂延迟确保聚焦切换完成
-  };
-  
-  const switchToCompletedQuestions = () => {
-    setFocusMode('completed');
-    saveFocusMode('completed'); // 保存到localStorage
-    setIsDragging(false);
-    Animated.spring(focusTransition, {
-      toValue: 1,
-      tension: 120, // 提高tension让动画更快响应
-      friction: 12, // 增加friction减少震荡
-      useNativeDriver: true, // 启用native driver提升性能
-    }).start();
-    
-    // 重置手势动画值
-    gestureTransition.setValue(0);
+  // 程序化切换页面
+  const scrollToPage = (page: 'current' | 'completed') => {
+    const targetOffset = page === 'completed' ? 0 : completedQuestionsHeight;
+    scrollViewRef.current?.scrollTo({
+      y: targetOffset,
+      animated: true,
+    });
+    setFocusMode(page);
+    saveFocusMode(page);
   };
 
   
-  // 处理聚焦切换手势
+  // 处理聚焦切换手势 - 更新为滚动版本
   const handleFocusGesture = (direction: 'up' | 'down') => {
     if (direction === 'up' && focusMode === 'current' && Object.keys(completedAnswers).length > 0) {
-      switchToCompletedQuestions();
+      scrollToPage('completed');
     } else if (direction === 'down' && focusMode === 'completed') {
-      switchToCurrentQuestion();
+      scrollToPage('current');
     }
   };
   
-  // 处理滚轮事件（Web特有）
+  // 程序初始化滚加在正确的页面
   useEffect(() => {
-    if (Platform.OS !== 'web') return;
+    if (!isStateRestored) return;
     
-    const handleWheel = (event: WheelEvent) => {
-      // 检测快速滚动来触发聚焦切换
-      const isQuickScroll = Math.abs(event.deltaY) > 10;
-      
-      if (isQuickScroll && Object.keys(completedAnswers).length > 0) {
-        if (event.deltaY < 0 && focusMode === 'current') {
-          // 向上滚动且聚焦在当前问题 → 切换到已完成问题
-          handleFocusGesture('up');
-          event.preventDefault();
-        } else if (event.deltaY > 0 && focusMode === 'completed') {
-          // 向下滚动且聚焦在已完成问题 → 切换到当前问题
-          handleFocusGesture('down');
-          event.preventDefault();
-        }
-      }
-    };
+    // 等待打字机效果和其他初始化完成后再设置滚动位置
+    // 避免在打字机效果期间触发滚动导致闪烁
+    if (isTyping) return; // 如果正在打字，等待完成
     
-    document.addEventListener('wheel', handleWheel, { passive: false });
-    
-    return () => {
-      document.removeEventListener('wheel', handleWheel);
-    };
-  }, [focusMode, completedAnswers]);
-  
-  // 添加原生触摸事件处理（Web专用）
-  const [touchStartY, setTouchStartY] = useState<number | null>(null);
-  
-  const handleTouchStart = (event: any) => {
-    const touch = event.touches[0];
-    setTouchStartY(touch.clientY);
-  };
-  
-  const handleTouchMove = (event: any) => {
-    if (touchStartY === null) return;
-    
-    const touch = event.touches[0];
-    const deltaY = touchStartY - touch.clientY; // 向上滑动为正值，向下滑动为负值
-    
-    // 检测快速滑动手势
-    const isQuickSwipe = Math.abs(deltaY) > 50;
-    
-    if (isQuickSwipe && Object.keys(completedAnswers).length > 0) {
-      if (deltaY > 0 && focusMode === 'current') {
-        // 向上快速滑动且聚焦在当前问题 → 切换到已完成问题
-        handleFocusGesture('up');
-        event.preventDefault();
-      } else if (deltaY < 0 && focusMode === 'completed') {
-        // 向下快速滑动且聚焦在已完成问题 → 切换到当前问题
-        handleFocusGesture('down');
-        event.preventDefault();
+    // 页面刷新后，默认显示当前问题页面，除非用户明确保存了completed视图
+    let initialOffset;
+    if (focusMode === 'completed' && Object.keys(completedAnswers).length > 0) {
+      // 只有在明确保存了completed模式且有已完成答案时，才显示已完成问题页面
+      initialOffset = 0;
+    } else {
+      // 其他情况都显示当前问题页面
+      initialOffset = completedQuestionsHeight;
+      // 只在需要时更新focusMode，避免不必要的状态变更
+      if (focusMode !== 'current') {
+        setFocusMode('current');
+        saveFocusMode('current');
       }
     }
-  };
-  
-  const handleTouchEnd = () => {
-    setTouchStartY(null);
-  };
-  
-  // 创建手势识别器用于处理滑动 - 改进版本支持平滑跟随
-  const panResponder = PanResponder.create({
-    onStartShouldSetPanResponder: (evt, gestureState) => {
-      return Object.keys(completedAnswers).length > 0;
-    },
-    onMoveShouldSetPanResponder: (evt, gestureState) => {
-      const hasVerticalMovement = Math.abs(gestureState.dy) > Math.abs(gestureState.dx) && Math.abs(gestureState.dy) > 5;
-      return hasVerticalMovement;
-    },
-    onPanResponderGrant: (evt, gestureState) => {
-      setIsDragging(true);
-    },
-    onPanResponderMove: (evt, gestureState) => {
-      // 性能优化：限制更新频率，避免过于频繁的动画更新
-      if (Math.abs(gestureState.dy) < 3) return; // 更敏感的阈值
-      
-      // 计算手势距离（限制在合理范围内）
-      const maxGestureDistance = height * 0.2; // 优化距离
-      const clampedDy = Math.max(-maxGestureDistance, Math.min(maxGestureDistance, gestureState.dy));
-      
-      // 计算手势跟随的动画值（-1到1之间）
-      const gestureProgress = clampedDy / maxGestureDistance;
-      
-      // 应用缓动函数，让手势跟随更自然
-      const easedProgress = gestureProgress * Math.abs(gestureProgress); // 二次缓动
-      const gestureValue = -easedProgress;
-      
-      // 更新手势跟随动画值
-      gestureTransition.setValue(gestureValue);
-    },
-    onPanResponderRelease: (evt, gestureState) => {
-      setIsDragging(false);
-      
-      // 定义切换的临界值（降低临界值提升响应性）
-      const threshold = height * 0.15; // 从20%降低到15%，让切换更敏感
-      const shouldSwitch = Math.abs(gestureState.dy) > threshold;
-      
-      // 先重置手势跟随动画值（使用平滑的spring动画）
-      Animated.spring(gestureTransition, {
-        toValue: 0,
-        tension: 120,
-        friction: 12,
-        useNativeDriver: true,
-      }).start();
-      
-      if (shouldSwitch) {
-        // 达到临界值，执行真正的页面切换（反转方向）
-        if (gestureState.dy < -threshold && focusMode === 'current') {
-          // 向上滑动，在current模式 → 切换到completed（看历史）
-          switchToCompletedQuestions();
-        } else if (gestureState.dy > threshold && focusMode === 'completed') {
-          // 向下滑动，在completed模式 → 切换到current（看新内容）
-          switchToCurrentQuestion();
-        }
+    
+    console.log('📍 初始化滚动位置:', { 
+      focusMode, 
+      initialOffset, 
+      completedQuestionsHeight,
+      completedAnswersCount: Object.keys(completedAnswers).length,
+      isTyping
+    });
+    
+    // 延迟设置初始位置，确保 ScrollView 已经渲染且打字机效果稳定
+    const timeoutId = setTimeout(() => {
+      // 再次检查是否还在打字，避免干扰打字机效果
+      if (!isTyping) {
+        scrollViewRef.current?.scrollTo({
+          y: initialOffset,
+          animated: false, // 初始化时不需要动画
+        });
+        scrollPosition.setValue(initialOffset);
       }
-    },
-    onPanResponderTerminationRequest: () => {
-      return false; // 不允许其他组件接管手势
-    },
-    onPanResponderTerminate: () => {
-      setIsDragging(false);
-      // 回弹手势跟随动画值
-      Animated.spring(gestureTransition, {
-        toValue: 0,
-        tension: 120,
-        friction: 12,
-        useNativeDriver: true,
-      }).start();
-    },
-  });
+    }, isTyping ? 500 : 200); // 如果正在打字，等待更长时间
+    
+    return () => clearTimeout(timeoutId);
+  }, [isStateRestored, completedQuestionsHeight, isTyping]); // 添加 isTyping 依赖
 
   // AI流式问题过渡函数 - 更丝滑的现代效果
   // 防止动画冲突的状态
@@ -770,26 +667,8 @@ function LemonadeAppContent() {
       const stepData = STEP_CONTENT[editingStep];
       if (stepData) {
         handleQuestionTransition(stepData.message, true); // 编辑模式总是有用户输入
-        // 只有编辑已完成问题时才执行下滑手势，编辑当前问题时保持不变
-        if (editingStep < currentStep) {
-          // 编辑的是已完成问题，执行下滑手势切换到当前问题视图
-          if (focusMode === 'current') {
-            // 如果当前在current模式，先快速切换到completed模式，然后下滑
-            switchToCompletedQuestions();
-            setTimeout(() => {
-              handleFocusGesture('down');
-            }, 200); // 短暂延迟让切换完成
-          } else {
-            // 如果已经在completed模式，直接执行下滑手势
-            handleFocusGesture('down');
-          }
-        } else {
-          // 编辑的是当前问题，无需手势动画，用户本来就在当前问题视图
-          // 确保在当前问题视图（通常已经是，但为了保险起见）
-          if (focusMode !== 'current') {
-            switchToCurrentQuestion();
-          }
-        }
+        // 编辑模式时，直接滚动到当前问题页面
+        scrollToPage('current');
       }
     }
   }, [editingStep, isStateRestored]);
@@ -806,54 +685,6 @@ function LemonadeAppContent() {
       }
     });
   }, [completedAnswers, isStateRestored]);
-
-  // 页面初始化视图检查 - 强制默认当前问题视图
-  useEffect(() => {
-    if (!isStateRestored) return;
-    
-    // 如果用户在编辑状态，不执行初始化视图切换
-    if (editingStep !== null) {
-      console.log('页面初始化：检测到编辑状态，跳过视图切换', { editingStep });
-      return;
-    }
-    
-    // 检查是否有已完成的答案
-    const hasCompletedAnswers = Object.keys(completedAnswers).length > 0;
-    
-    console.log('页面初始化检查:', {
-      hasCompletedAnswers,
-      focusMode,
-      editingStep
-    });
-    
-    // 如果有已完成答案，但默认策略是强制回到当前问题视图
-    if (hasCompletedAnswers) {
-      console.log('页面初始化：强制设置为当前问题视图（无论之前在哪个视图）');
-      
-      // 延迟执行，确保所有状态恢复完成
-      setTimeout(() => {
-        // 强制切换到当前问题视图
-        if (focusMode !== 'current') {
-          console.log('页面初始化：当前不在current视图，切换到current');
-          // 使用更温和的切换，避免突兀的动画
-          setFocusMode('current');
-          saveFocusMode('current');
-          Animated.timing(focusTransition, {
-            toValue: 0,
-            duration: 200,
-            useNativeDriver: true,
-          }).start();
-          gestureTransition.setValue(0);
-        } else {
-          console.log('页面初始化：已在current视图，确保动画值正确');
-          // 即使已经是current模式，也确保动画值是正确的
-          focusTransition.setValue(0);
-          gestureTransition.setValue(0);
-          saveFocusMode('current');
-        }
-      }, 100); // 短暂延迟确保状态稳定
-    }
-  }, [isStateRestored, editingStep]); // 依赖 editingStep 以便状态变化时重新检查
 
   // 页面刷新后编辑状态恢复逻辑
   useEffect(() => {
@@ -1139,60 +970,45 @@ function LemonadeAppContent() {
         <ProgressSteps currentStep={currentStep} />
       )}  
 
-      <Animated.View 
-        style={[
-          globalStyles.container, 
-          { 
-            position: 'relative',
-            transform: [
-              {
-                translateY: Animated.add(
-                  // 主要的页面切换动画
-                  focusTransition.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [-completedQuestionsHeight+singleQuestionHeight, singleQuestionHeight], // 交换：0=当前问题视图，1=已完成问题视图
-                  }),
-                  // 手势跟随动画（叠加效果）- 优化范围让手势更流畅
-                  gestureTransition.interpolate({
-                    inputRange: [-1, 0, 1],
-                    outputRange: [80, 0, -80], // 优化范围，减少过度移动
-                  })
-                )
-              },
-              {
-                translateY: autoPushOffset // 自动推送偏移量
-              }
-            ]
-          }
-        ]}
-        {...(Platform.OS === 'web' && {
-          onTouchStart: handleTouchStart,
-          onTouchMove: handleTouchMove,
-          onTouchEnd: handleTouchEnd
-        })}
-        {...panResponder.panHandlers}
+      {/* 连续滚动容器 - 新的滚动体验 */}
+      <ScrollView
+        ref={scrollViewRef}
+        style={{ flex: 1 }}
+        contentContainerStyle={{ height: dynamicContentHeight }} // 使用动态计算的内容高度
+        showsVerticalScrollIndicator={false}
+        scrollEventThrottle={16}
+        onScroll={handleScroll}
+        onMomentumScrollEnd={handleScrollEnd}
+        onScrollEndDrag={handleScrollEnd}
+        bounces={false} // 禁用弹性滚动，避免超出边界
+        decelerationRate={0.92} // 调整减速率，让滚动停止更快，吸附更明显
+        // 暂时移除snapToOffsets，使用自定义吸附逻辑
       >
-        {/* ========== 已完成问题区域（在上方，紧凑布局） ========== */}
+        {/* ========== 已完成问题页面（动态高度） ========== */}
         <Animated.View 
-          ref={completedQuestionsRef}
-          style={{
-            paddingTop: 10,
-            paddingBottom: 10,
-            paddingHorizontal: 16,
-            // 已完成问题区域透明度：当前问题视图时半透明，已完成问题视图时不透明
-            opacity: focusTransition.interpolate({
-              inputRange: [0, 1],
-              outputRange: [0.4, 1.0], // 当前问题模式(0)时已完成问题半透明，已完成问题模式(1)时已完成问题不透明
-              extrapolate: 'clamp',
-            }),
-          }}
-          onLayout={measureCompletedQuestionsHeight}
+          style={[
+            {
+              minHeight: 200, // 最小高度，防止内容过少
+              paddingTop: 100, // 给进度条留出空间
+              paddingHorizontal: 16,
+              paddingBottom: 20,
+              justifyContent: 'flex-start',
+              backgroundColor: theme.BACKGROUND, // 保持一致的背景色
+            }
+          ]}
+          onLayout={measureCompletedQuestionsHeight} // 恢复高度测量
         >
           <View style={{
             width: '100%',
             maxWidth: 500,
             alignSelf: 'center',
+            flex: 1,
           }}>
+            {console.log('渲染已完成问题:', { 
+              completedAnswersLength: Object.keys(completedAnswers).length, 
+              completedAnswers,
+              isStateRestored 
+            })}
             {Object.keys(completedAnswers).length > 0 && (
               <>
                 {/* 已完成问题列表 */}
@@ -1201,7 +1017,6 @@ function LemonadeAppContent() {
                   .map((stepIndex) => {
                     const index = parseInt(stepIndex);
                     const answer = completedAnswers[index];
-                    const isCurrentlyEditing = editingStep === index;
                     
                     // 为手机号问题（index: -1）提供特殊处理
                     const questionText = index === -1 ? 
@@ -1209,14 +1024,16 @@ function LemonadeAppContent() {
                       STEP_CONTENT[index]?.message || '';
                     
                     return (
-                      <View
+                      <Animated.View
                         key={index}
-                        {...(index === parseInt(Object.keys(completedAnswers).sort((a, b) => parseInt(a) - parseInt(b))[0]) ? 
-                          { 
-                            ref: singleQuestionRef,
-                            onLayout: measureSingleQuestionHeight 
-                          } : {}
-                        )}
+                        style={{
+                          // 动态调节内容颜色 - 已完成问题页面的透明度
+                          opacity: scrollProgress.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [0.4, 1.0], // scrollProgress=0(当前问题焦点)时已完成问题半透明，scrollProgress=1(已完成问题焦点)时完全不透明
+                            extrapolate: 'clamp',
+                          }),
+                        }}
                       >
                         <CompletedQuestion
                           question={questionText}
@@ -1229,7 +1046,7 @@ function LemonadeAppContent() {
                           isEditing={false} // 已完成问题区域不显示编辑表单
                           canEdit={index >= 0 && (isQuickOrderMode || !(isOrderCompleted && index === 4))}
                         />
-                      </View>
+                      </Animated.View>
                     );
                   })}
               </>
@@ -1237,58 +1054,39 @@ function LemonadeAppContent() {
           </View>
         </Animated.View>
 
-        {/* ========== 当前问题区域（在下方，始终可见） ========== */}
-        <Animated.View style={{
-          flex: 1,
-          justifyContent: 'flex-start',
-          alignItems: 'center',
-          paddingHorizontal: 16,
-          paddingTop: 10 , // 基础padding
-          paddingBottom: 40,
-          // 当前问题区域透明度：当前问题视图时不透明，已完成问题视图时半透明
-          opacity: focusTransition.interpolate({
-            inputRange: [0, 1],
-            outputRange: [1.0, 0.4], // 当前问题模式(0)时当前问题不透明，已完成问题模式(1)时当前问题半透明
-            extrapolate: 'clamp',
-          }),
-        }}>
+        {/* ========== 当前问题页面（紧贴已完成问题） ========== */}
+        <Animated.View 
+          style={[
+            {
+              height: pageHeight, // 保持完整高度
+              paddingTop: 1, // 减少顶部padding，让两个页面更接近
+              paddingHorizontal: 16,
+              paddingBottom: 40,
+              justifyContent: 'flex-start',
+              backgroundColor: theme.BACKGROUND, // 保持一致的背景色
+            }
+          ]}
+        >
           <View style={{
             width: '100%',
             maxWidth: 500,
+            alignSelf: 'center',
+            flex: 1,
           }}>
             {/* 当前问题内容 */}
-            {/* 未认证状态 - 显示认证组件 */}
-            {!isAuthenticated && (
-              <CurrentQuestion
-                displayedText={displayedText}
-                isTyping={isTyping}
-                showCursor={showCursor}
-                cursorOpacity={cursorOpacity}
-                streamingOpacity={streamingOpacity}
-                isStreaming={isStreaming()}
-                inputError={inputError}
-                currentStep={0}
-                currentQuestionAnimation={currentQuestionAnimation}
-                shakeAnimation={shakeAnimation}
-                emotionAnimation={emotionAnimation}
-              >
-                <AuthComponent
-                  onAuthSuccess={handleAuthSuccess}
-                  onError={handleAuthError}
-                  onQuestionChange={handleAuthQuestionChange}
-                  animationValue={inputSectionAnimation}
-                  validatePhoneNumber={validatePhoneNumber}
-                  triggerShake={triggerShake}
-                  changeEmotion={changeEmotion}
-                  resetTrigger={authResetTrigger}
-                />
-              </CurrentQuestion>
-            )}
-
-            {/* Current Question - 正常流程、搜索状态、订单完成状态显示 */}
-            {isAuthenticated && editingStep === null && (
-              // 如果正在搜索餐厅或订单已完成，只显示相应文本，不显示其他内容
-              (isSearchingRestaurant || isOrderCompleted) ? (
+            <Animated.View
+              style={{
+                flex: 1,
+                // 动态调节内容颜色 - 当前问题页面的透明度
+                opacity: scrollProgress.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [1.0, 0.4], // scrollProgress=0(当前问题焦点)时完全不透明，scrollProgress=1(已完成问题焦点)时半透明
+                  extrapolate: 'clamp',
+                }),
+              }}
+            >
+              {/* 未认证状态 - 显示认证组件 */}
+              {!isAuthenticated && (
                 <CurrentQuestion
                   displayedText={displayedText}
                   isTyping={isTyping}
@@ -1297,15 +1095,28 @@ function LemonadeAppContent() {
                   streamingOpacity={streamingOpacity}
                   isStreaming={isStreaming()}
                   inputError={inputError}
-                  currentStep={currentStep}
+                  currentStep={0}
                   currentQuestionAnimation={currentQuestionAnimation}
                   shakeAnimation={shakeAnimation}
                   emotionAnimation={emotionAnimation}
                 >
-                  {/* 搜索状态或订单完成状态时不显示任何输入组件或按钮 */}
+                  <AuthComponent
+                    onAuthSuccess={handleAuthSuccess}
+                    onError={handleAuthError}
+                    onQuestionChange={handleAuthQuestionChange}
+                    animationValue={inputSectionAnimation}
+                    validatePhoneNumber={validatePhoneNumber}
+                    triggerShake={triggerShake}
+                    changeEmotion={changeEmotion}
+                    resetTrigger={authResetTrigger}
+                  />
                 </CurrentQuestion>
-              ) : (
-                (currentStep < STEP_CONTENT.length && !completedAnswers[currentStep]) && (
+              )}
+
+              {/* Current Question - 正常流程、搜索状态、订单完成状态显示 */}
+              {isAuthenticated && editingStep === null && (
+                // 如果正在搜索餐厅或订单已完成，只显示相应文本，不显示其他内容
+                (isSearchingRestaurant || isOrderCompleted) ? (
                   <CurrentQuestion
                     displayedText={displayedText}
                     isTyping={isTyping}
@@ -1314,46 +1125,64 @@ function LemonadeAppContent() {
                     streamingOpacity={streamingOpacity}
                     isStreaming={isStreaming()}
                     inputError={inputError}
-                    currentStep={editingStep !== null ? editingStep : currentStep}
+                    currentStep={currentStep}
                     currentQuestionAnimation={currentQuestionAnimation}
                     shakeAnimation={shakeAnimation}
                     emotionAnimation={emotionAnimation}
                   >
-                    {/* Input Section */}
-                    {renderCurrentInput()}
-
-                    {/* Action Button */}
-                    {renderActionButton()}
+                    {/* 搜索状态或订单完成状态时不显示任何输入组件或按钮 */}
                   </CurrentQuestion>
+                ) : (
+                  (currentStep < STEP_CONTENT.length && !completedAnswers[currentStep]) && (
+                    <CurrentQuestion
+                      displayedText={displayedText}
+                      isTyping={isTyping}
+                      showCursor={showCursor}
+                      cursorOpacity={cursorOpacity}
+                      streamingOpacity={streamingOpacity}
+                      isStreaming={isStreaming()}
+                      inputError={inputError}
+                      currentStep={editingStep !== null ? editingStep : currentStep}
+                      currentQuestionAnimation={currentQuestionAnimation}
+                      shakeAnimation={shakeAnimation}
+                      emotionAnimation={emotionAnimation}
+                    >
+                      {/* Input Section */}
+                      {renderCurrentInput()}
+
+                      {/* Action Button */}
+                      {renderActionButton()}
+                    </CurrentQuestion>
+                  )
                 )
-              )
-            )}
+              )}
 
-            {/* 编辑模式 - 当有编辑步骤时显示 */}
-            {editingStep !== null && (
-              <CurrentQuestion
-                displayedText={displayedText}
-                isTyping={isTyping}
-                showCursor={showCursor}
-                cursorOpacity={cursorOpacity}
-                streamingOpacity={streamingOpacity}
-                isStreaming={isStreaming()}
-                inputError={inputError}
-                currentStep={editingStep}
-                currentQuestionAnimation={currentQuestionAnimation}
-                shakeAnimation={shakeAnimation}
-                emotionAnimation={emotionAnimation}
-              >
-                {/* Input Section */}
-                {renderCurrentInput()}
+              {/* 编辑模式 - 当有编辑步骤时显示 */}
+              {editingStep !== null && (
+                <CurrentQuestion
+                  displayedText={displayedText}
+                  isTyping={isTyping}
+                  showCursor={showCursor}
+                  cursorOpacity={cursorOpacity}
+                  streamingOpacity={streamingOpacity}
+                  isStreaming={isStreaming()}
+                  inputError={inputError}
+                  currentStep={editingStep}
+                  currentQuestionAnimation={currentQuestionAnimation}
+                  shakeAnimation={shakeAnimation}
+                  emotionAnimation={emotionAnimation}
+                >
+                  {/* Input Section */}
+                  {renderCurrentInput()}
 
-                {/* Action Button */}
-                {renderActionButton()}
-              </CurrentQuestion>
-            )}
+                  {/* Action Button */}
+                  {renderActionButton()}
+                </CurrentQuestion>
+              )}
+            </Animated.View>
           </View>
         </Animated.View>
-      </Animated.View>
+      </ScrollView>
 
       {/* 调色板调试工具 */}
       {DEV_CONFIG.ENABLE_COLOR_PALETTE && isDebugMode && (
