@@ -164,6 +164,7 @@ export const AuthComponent: React.FC<AuthComponentProps> = ({
               isNewUser: false,
               userId: result.user_id,
               phoneNumber: result.phone_number || phoneNumber,
+              userSequence: result.user_sequence, // 传递用户注册次序
             });
           }
         }, 1000); // 显示成功状态1秒

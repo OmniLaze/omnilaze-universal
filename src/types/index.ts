@@ -20,28 +20,6 @@ export interface StepContent {
   inputType: 'address' | 'phone' | 'budget' | 'allergy' | 'preference' | 'foodType' | 'completed' | 'payment';
 }
 
-export interface InputFocus {
-  address: boolean;
-  phone: boolean;
-  budget: boolean;
-  allergies: boolean;
-  preferences: boolean;
-}
-
-export interface LabelAnimations {
-  address: any;
-  phone: any;
-  budget: any;
-  allergies: any;
-  preferences: any;
-}
-
-export interface ThemeColor {
-  r: number;
-  g: number;
-  b: number;
-}
-
 export interface ValidationResult {
   isValid: boolean;
   errorMessage?: string;
@@ -66,5 +44,6 @@ export interface AuthResult {
   userId?: string;
   phoneNumber: string;
   isNewUser: boolean;
+  userSequence?: number; // 用户注册次序
   isPhoneVerificationStep?: boolean; // 标识这只是手机号验证步骤
 }

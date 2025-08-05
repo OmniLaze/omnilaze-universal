@@ -29,6 +29,7 @@ export interface VerificationResponse {
   user_id?: string;
   phone_number?: string;
   is_new_user?: boolean;
+  user_sequence?: number; // 用户注册次序
 }
 
 export interface InviteCodeResponse {
@@ -421,69 +422,6 @@ export async function submitOrder(orderId: string): Promise<SubmitOrderResponse>
 }
 
 /**
- * 提交订单反馈
- */
-export async function submitOrderFeedback(orderId: string, rating: number, feedback: string): Promise<FeedbackResponse> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/order-feedback`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        order_id: orderId,
-        rating: rating,
-        feedback: feedback
-      })
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.message || '提交反馈失败');
-    }
-
-    return data;
-  } catch (error) {
-    // 提交反馈失败时静默处理
-    return {
-      success: false,
-      message: error instanceof Error ? error.message : '网络错误，请重试'
-    };
-  }
-}
-
-/**
- * 获取用户订单列表
- */
-export async function getUserOrders(userId: string): Promise<OrdersResponse> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/orders/${userId}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      }
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.message || '获取订单列表失败');
-    }
-
-    return data;
-  } catch (error) {
-    // 获取订单列表失败时静默处理
-    return {
-      success: false,
-      orders: [],
-      count: 0
-    };
-  }
-
-}
-
-/**
  * 获取用户邀请统计信息
  */
 export async function getUserInviteStats(userId: string): Promise<UserInviteStatsResponse> {
@@ -704,61 +642,6 @@ export async function saveUserPreferences(userId: string, formData: any): Promis
 
     if (!response.ok) {
       throw new Error(data.message || '保存用户偏好失败');
-    }
-
-    return data;
-  } catch (error) {
-    return {
-      success: false,
-      message: error instanceof Error ? error.message : '网络错误，请重试'
-    };
-  }
-}
-
-/**
- * 更新用户偏好设置
- */
-export async function updateUserPreferences(userId: string, updates: Partial<UserPreferences>): Promise<PreferencesResponse> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/preferences/${userId}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(updates)
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.message || '更新用户偏好失败');
-    }
-
-    return data;
-  } catch (error) {
-    return {
-      success: false,
-      message: error instanceof Error ? error.message : '网络错误，请重试'
-    };
-  }
-}
-
-/**
- * 删除用户偏好设置
- */
-export async function deleteUserPreferences(userId: string): Promise<PreferencesResponse> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/preferences/${userId}`, {
-      method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json',
-      }
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.message || '删除用户偏好失败');
     }
 
     return data;

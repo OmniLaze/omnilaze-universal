@@ -35,14 +35,6 @@ export const COLORS = {
   SHADOW: '#000',
 } as const;
 
-export const THEME_COLORS = [
-  { r: 236, g: 72, b: 153 },   // 地址 - 粉色
-  { r: 59, g: 130, b: 246 },   // 手机 - 蓝色  
-  { r: 34, g: 197, b: 94 },    // 预算 - 绿色
-  { r: 245, g: 101, b: 101 },  // 忌口 - 红色
-  { r: 251, g: 146, b: 60 },   // 偏好 - 橙色
-] as const;
-
 export const BUDGET_OPTIONS = ['20', '30', '40', '50'] as const;
 
 // 根据食物类型的不同预算选项
