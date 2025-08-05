@@ -122,5 +122,5 @@ export const convertToChineseDisplay = (values: string | string[]): string => {
     return VALUE_MAPPING[values] || values;
   }
   
-  return values.toString();
+  return String(values);
 };

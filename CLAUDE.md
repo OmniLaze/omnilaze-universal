@@ -139,6 +139,38 @@ Complex form flow management that handles:
 - Special handling for free order flow (auto-progression, limited options)
 - Cross-step dependencies (selecting drink skips allergy/preference steps)
 
+### Advanced Animation System Architecture
+
+The app features a sophisticated question flow animation system that creates seamless transitions between current and completed questions:
+
+#### Flow Animation State Management (`App.tsx:148-171`)
+- **`transitionQuestion`**: Core state tracking animated questions with `isSettled` flag
+- **`isFlowAnimationActive`**: Prevents conflicts during animation sequences
+- **`getEffectiveCompletedAnswers()`**: Smart state merger that includes settled transition questions
+
+#### Position-Based Animation System (`src/hooks/index.ts:467-506`)
+- **`triggerQuestionFlowAnimation()`**: Coordinates position-based movement with fade-in effects
+- **Dynamic positioning**: Uses `measure()` API for precise layout calculations
+- **Distance-based timing**: Animation duration scales with movement distance (600-1200ms)
+- **Parallel animations**: Combines position movement with opacity transitions
+
+#### Animation Coordination Patterns
+```typescript
+// Core pattern for triggering flow animations
+triggerQuestionFlowToCompleted(stepIndex, questionText, answer);
+
+// State management during transitions
+setTransitionQuestion({ stepIndex, question, answer, isSettled: false });
+
+// Completion handling with smart cleanup
+setTransitionQuestion(prev => prev ? { ...prev, isSettled: true } : null);
+```
+
+#### Critical Animation Timing
+- **Zero delays**: `TIMING.ANIMATION_DELAY = 0` prevents timing conflicts
+- **Immediate transitions**: All animations coordinated to prevent UI flashing
+- **Smart cleanup**: Delayed state cleanup ensures smooth visual continuity
+
 ### Backend (Dual Architecture)
 - **Development**: Python Flask server with dual implementations:
   - **Monolithic**: `jwt/app.py` - Single file implementation
@@ -172,11 +204,12 @@ Dynamic color theming system that changes throughout the app:
 - **Hook Integration**: `useColorTheme()` provides current theme color and utilities
 - **Debug Mode**: `DEV_CONFIG.ENABLE_COLOR_PALETTE = true` enables color palette testing
 
-### Critical Animation & Timing System
-The app uses React Native Animated API with carefully coordinated timing to avoid conflicts:
-- **Zero Animation Delays**: `TIMING.ANIMATION_DELAY = 0` to prevent timing conflicts
-- **Immediate Transitions**: Typewriter effects and input animations happen synchronously
-- **Unified Management**: All animations coordinated through central handlers to prevent flashing
+### Scroll-Based Page Management System
+The app uses a sophisticated dual-page scroll system:
+- **Continuous Scrolling**: Single ScrollView containing both completed and current question pages
+- **Dynamic Height Calculation**: Content height adapts based on completed questions
+- **Focus Mode Management**: Tracks which page is currently in focus with localStorage persistence
+- **Smart Initialization**: Restores correct scroll position on app restart
 
 ### Free Order System Architecture
 Special mode that changes the entire app flow:
@@ -204,7 +237,7 @@ Advanced user experience optimization for returning users:
 - **Auto-fill Flow**: If preferences exist, automatically fills all form fields and skips to payment
 - **Streamlined UX**: Quick order mode bypasses confirmation cards and goes directly to order submission
 - **Fallback Handling**: New users or users without complete preferences follow normal flow
-- **Implementation**: Located in `handleAuthSuccess()` in `App.tsx:347-425`
+- **Implementation**: Located in `handleAuthSuccess()` in `App.tsx:854-957`
 
 ## Environment Setup
 
@@ -336,6 +369,17 @@ Recent improvements to address user experience issues:
 - **Implementation**: Message persists through `CookieManager.saveConversationState()`
 - **Result**: "我去下单，记得保持手机畅通，不要错过外卖员电话哦" message survives refresh
 
+#### Advanced Question Flow Animation System
+- **Issue**: Questions would suddenly disappear and reappear in completed section without smooth transition
+- **Solution**: Implemented comprehensive position-based animation system with:
+  - Real-time position measurement using `measure()` API
+  - Smooth movement animations from current question area to completed questions area
+  - Dynamic height expansion of completed questions container
+  - Smart state management with `isSettled` flags to prevent duplication
+  - Avatar fade-out effects during transition
+- **Implementation**: `App.tsx:148-243` and `src/hooks/index.ts:467-506`
+- **Result**: Seamless visual flow where completed questions naturally move from current area to completed area
+
 ## Database Migrations
 
 The project uses incremental SQL migrations for database schema management:
@@ -357,6 +401,22 @@ wrangler d1 execute omnilaze-orders --file=./migrations/007_user_preferences.sql
 
 ### State Management Debugging
 When working with this codebase, be aware of these critical patterns:
+
+#### Animation System Integration
+When modifying the question flow system, always consider:
+```typescript
+// Check for active flow animations before making state changes
+if (isFlowAnimationActive) {
+  console.log('🚫 流动动画进行中，跳过操作');
+  return;
+}
+
+// Use effective completed answers that include settled transitions
+const effectiveAnswers = getEffectiveCompletedAnswers();
+
+// Coordinate with scroll system during animations
+if (isFlowAnimationActive) return; // Skip auto-scroll during animations
+```
 
 #### Array vs String Value Handling
 The app handles values that can be either arrays or strings. **Always use this pattern when processing answer values**:
@@ -385,7 +445,11 @@ const labels = Array.isArray(answerValue)
 **Problem**: Stale question text in quick order mode
 **Solution**: Force update with `handleQuestionTransition()` after state changes
 
-#### 3. React Native Web Style Issues
+#### 3. Animation State Conflicts
+**Problem**: Multiple animations or state changes interfering with flow animations
+**Solution**: Always check `isFlowAnimationActive` before triggering new animations or major state changes
+
+#### 4. React Native Web Style Issues
 **Problem**: Invalid CSS properties causing warnings
 **Solution**: Use platform-specific styles:
 ```typescript
@@ -415,6 +479,7 @@ const labels = Array.isArray(answerValue)
 - **Production Testing**: Deploy to Cloudflare Workers staging environment
 - **Database Testing**: Use `wrangler d1` commands to inspect D1 database
 - **Real-time Monitoring**: Use `wrangler tail` for production debugging
+- **Animation Testing**: Enable color palette debug mode and test question flow animations
 
 ## Testing and Development
 
@@ -458,6 +523,7 @@ No specific lint/typecheck commands are configured in package.json. The project 
 - **Environment Issues**: Check `.env` file and environment variable configuration
 - **Animation Issues**: All timing conflicts have been eliminated - animations should be smooth without flashing
 - **Database Issues**: Use `wrangler d1 execute omnilaze-orders --command="SELECT * FROM table_name" --remote` to inspect data
+- **Flow Animations**: Look for console logs with 🎬 prefix for animation debugging
 
 ## Address Autocomplete Implementation
 

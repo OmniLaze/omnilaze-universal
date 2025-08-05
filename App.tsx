@@ -11,8 +11,6 @@ import {
   TouchableOpacity,
   Text,
   Dimensions,
-  PanResponder,
-  Image,
 } from 'react-native';
 
 const { height } = Dimensions.get('window');
@@ -29,7 +27,6 @@ import { UserMenu } from './src/components/UserMenu';
 import { InviteModalWithFreeDrink } from './src/components/InviteModalWithFreeDrink';
 import { FormInputContainer, FormActionButtonContainer } from './src/components/FormContainers';
 import ColorPalette from './src/components/ColorPalette';
-// import { QuickOrderSummary } from './src/components/QuickOrderSummary'; // 已移除快速下单卡片
 import { convertToChineseDisplay } from './src/data/checkboxOptions';
 
 // API Services
@@ -135,13 +132,10 @@ function LemonadeAppContent() {
     emotionAnimation,
     shakeAnimation,
     inputSectionAnimation,
-    completedQuestionsContainerAnimation,
-    newQuestionSlideInAnimation,
     transitionQuestionAnimation,
     transitionPositionAnimation,
     triggerShake,
     changeEmotion,
-    triggerPushUpAnimation,
     triggerQuestionFlowAnimation
   } = useAnimations();
   
@@ -909,16 +903,16 @@ function LemonadeAppContent() {
             
             // 标记前面步骤为已完成，但不包括预算步骤
             const completedAnswers = {
-              [-1]: phoneAnswer,
-              [0]: { type: 'address', value: formData.address },
-              [1]: { type: 'foodType', value: convertToChineseDisplay(formData.selectedFoodType) },
-              [2]: { type: 'allergy', value: convertToChineseDisplay(formData.selectedAllergies) },
-              [3]: { type: 'preference', value: convertToChineseDisplay(formData.selectedPreferences) }
+              [-1]: { type: 'phone' as const, value: result.phoneNumber },
+              [0]: { type: 'address' as const, value: formData.address },
+              [1]: { type: 'foodType' as const, value: convertToChineseDisplay(formData.selectedFoodType) },
+              [2]: { type: 'allergy' as const, value: convertToChineseDisplay(formData.selectedAllergies) },
+              [3]: { type: 'preference' as const, value: convertToChineseDisplay(formData.selectedPreferences) }
               // 不包括预算步骤，让用户在预算步骤手动确认
             };
             
             // 显式清除步骤4及之后的答案，确保预算步骤显示
-            const currentCompletedAnswers = { ...completedAnswers };
+            const currentCompletedAnswers: any = { ...completedAnswers };
             delete currentCompletedAnswers[4];
             delete currentCompletedAnswers[5];
             
@@ -972,7 +966,7 @@ function LemonadeAppContent() {
     setCurrentStep(0); // 重新开始表单流程
     
     // 保留用户数据，但让用户可以编辑
-    const phoneAnswer = { type: 'phone', value: authResult?.phoneNumber || '' };
+    const phoneAnswer = { type: 'phone' as const, value: authResult?.phoneNumber || '' };
     setCompletedAnswers({ [-1]: phoneAnswer });
   };
 
@@ -1137,14 +1131,8 @@ function LemonadeAppContent() {
               alignSelf: 'center',
               flex: 1,
             }}>
-            {/* 调试日志：已完成问题渲染状态 */}
-            {console.log('渲染已完成问题:', { 
-              completedAnswersLength: Object.keys(getEffectiveCompletedAnswers()).length, 
-              effectiveCompletedAnswers: getEffectiveCompletedAnswers(),
-              isFlowAnimationActive,
-              isStateRestored,
-              hasTransitionQuestion: !!transitionQuestion
-            })}
+            {/* Debug log: rendering completed questions */}
+            {/* completedAnswersLength: Object.keys(getEffectiveCompletedAnswers()).length, effectiveCompletedAnswers: getEffectiveCompletedAnswers(), isFlowAnimationActive, isStateRestored, hasTransitionQuestion: !!transitionQuestion */}
             {/* 显示有效的已完成问题，包括已安定的过渡问题 */}
             {Object.keys(getEffectiveCompletedAnswers()).length > 0 && (
               <>

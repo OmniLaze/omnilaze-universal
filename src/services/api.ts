@@ -15,6 +15,7 @@
  */
 
 import { ENV_CONFIG } from '../config/env';
+import type { AddressSuggestion, AddressSearchResponse } from '../types';
 
 export interface ApiResponse<T = any> {
   success: boolean;
@@ -579,6 +580,7 @@ export interface PreferencesCompletenessResponse {
 export interface FormDataFromPreferencesResponse {
   success: boolean;
   has_preferences: boolean;
+  message?: string;
   form_data: {
     address: string;
     selectedFoodType: string[];

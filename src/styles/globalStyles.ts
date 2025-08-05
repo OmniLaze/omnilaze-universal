@@ -167,6 +167,10 @@ export const createAvatarStyles = (theme: any = COLORS) => StyleSheet.create({
     height: 36,
     borderRadius: 12,
   },
+  avatarEmoji: {
+    fontSize: 18,
+    textAlign: 'center',
+  },
 });
 
 // 保持默认导出以向后兼容

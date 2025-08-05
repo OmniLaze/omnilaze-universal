@@ -412,9 +412,9 @@ export const useAnimations = () => {
   const [inputSectionAnimation] = useState(new Animated.Value(0));
   const [themeAnimation] = useState(new Animated.Value(0));
   
-  // 新增：推上去动画值
-  const [completedQuestionsContainerAnimation] = useState(new Animated.Value(0));
-  const [newQuestionSlideInAnimation] = useState(new Animated.Value(0)); // 从0开始，表示在下方
+  // 流动动画相关的动画值
+  const [transitionQuestionAnimation] = useState(new Animated.Value(0)); // 过渡问题的动画状态
+  const [transitionPositionAnimation] = useState(new Animated.ValueXY({ x: 0, y: 0 })); // 过渡问题的位置动画
 
   const triggerShake = () => {
     Animated.sequence([
@@ -443,25 +443,6 @@ export const useAnimations = () => {
   };
 
   // 添加过渡动画相关的动画值
-  const [transitionQuestionAnimation] = useState(new Animated.Value(0)); // 过渡问题的动画状态
-  const [transitionPositionAnimation] = useState(new Animated.ValueXY({ x: 0, y: 0 })); // 过渡问题的位置动画
-  
-  // 流动动画：当前问题向上流入已完成区域，新问题在原位置出现
-  const triggerPushUpAnimation = (callback?: () => void) => {
-    // 当前问题向上滑入已完成区域并消失
-    Animated.spring(newQuestionSlideInAnimation, {
-      toValue: 1, // 完全滑入并消失
-      tension: 60,
-      friction: 8,
-      useNativeDriver: false,
-    }).start(() => {
-      // 动画完成后重置状态，准备新问题
-      setTimeout(() => {
-        newQuestionSlideInAnimation.setValue(0); // 重置动画值
-        callback?.();
-      }, 150);
-    });
-  };
 
   // 新的流动动画：问题从当前位置移动到已完成区域并逐渐淡入
   const triggerQuestionFlowAnimation = (
@@ -514,13 +495,10 @@ export const useAnimations = () => {
     shakeAnimation,
     inputSectionAnimation,
     themeAnimation,
-    completedQuestionsContainerAnimation,
-    newQuestionSlideInAnimation,
     transitionQuestionAnimation,
     transitionPositionAnimation,
     triggerShake,
     changeEmotion,
-    triggerPushUpAnimation,
     triggerQuestionFlowAnimation,
   };
 };

@@ -61,7 +61,7 @@ export const useOrderManagement = (props: UseOrderManagementProps) => {
       budget: budget,
       foodType: selectedFoodType,
       isFreeOrder: isFreeOrder,
-      freeOrderType: isFreeOrder ? 'invite_reward' : undefined
+      freeOrderType: isFreeOrder ? 'invite_reward' as const : undefined
     };
 
     try {

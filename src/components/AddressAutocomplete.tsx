@@ -22,7 +22,8 @@ import { View, Text, TextInput, TouchableOpacity, FlatList, Animated, Platform }
 import { MaterialIcons } from '@expo/vector-icons';
 import { inputStyles } from '../styles/inputStyles';
 import { addressAutocompleteStyles } from '../styles/addressStyles';
-import { searchAddresses, AddressSuggestion } from '../services/api';
+import { searchAddresses } from '../services/api';
+import type { AddressSuggestion } from '../types';
 import { WebPortal } from './WebPortal';
 import { useTheme } from '../contexts/ColorThemeContext';
 

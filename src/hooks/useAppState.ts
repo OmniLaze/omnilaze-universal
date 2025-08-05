@@ -125,7 +125,7 @@ export const useAppState = () => {
       });
       
       // 添加手机号作为第一个完成的答案
-      const phoneAnswer = { type: 'phone', value: DEV_CONFIG.MOCK_USER.phone_number };
+      const phoneAnswer = { type: 'phone' as const, value: DEV_CONFIG.MOCK_USER.phone_number };
       setCompletedAnswers({ [-1]: phoneAnswer });
       
       // 开发模式下也需要恢复对话状态
@@ -169,7 +169,7 @@ export const useAppState = () => {
         isNewUser: savedSession.isNewUser
       });
       
-      const phoneAnswer = { type: 'phone', value: savedSession.phoneNumber };
+      const phoneAnswer = { type: 'phone' as const, value: savedSession.phoneNumber };
       setCompletedAnswers({ [-1]: phoneAnswer });
       
       const savedConversation = CookieManager.getConversationState();

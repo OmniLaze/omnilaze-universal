@@ -5,7 +5,18 @@ import { ColorThemeProvider, useTheme } from './src/contexts/ColorThemeContext';
 import { DEV_CONFIG } from './src/constants';
 
 function TestAppContent() {
-  const { theme, isDebugMode, updatePrimaryColor, updateBackgroundColor, toggleDebugMode } = useTheme();
+  const { 
+    theme, 
+    themeState, 
+    isDebugMode, 
+    updatePrimaryColor, 
+    updateBackgroundColor, 
+    updatePrimaryOpacity,
+    updateBackgroundOpacity,
+    updateTextColors,
+    updateAllColors,
+    toggleDebugMode 
+  } = useTheme();
 
   return (
     <View style={[styles.container, { backgroundColor: theme.BACKGROUND }]}>
@@ -44,8 +55,14 @@ function TestAppContent() {
         <ColorPalette
           primaryColor={theme.PRIMARY}
           backgroundColor={theme.BACKGROUND}
+          primaryOpacity={themeState.opacity.primary}
+          backgroundOpacity={themeState.opacity.background}
           onPrimaryColorChange={updatePrimaryColor}
           onBackgroundColorChange={updateBackgroundColor}
+          onPrimaryOpacityChange={updatePrimaryOpacity}
+          onBackgroundOpacityChange={updateBackgroundOpacity}
+          onTextColorsChange={updateTextColors}
+          onAllColorsChange={updateAllColors}
           onClose={() => toggleDebugMode()}
         />
       )}
