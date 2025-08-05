@@ -376,10 +376,10 @@ function LemonadeAppContent() {
     
     // 重置滚动位置到当前问题页面
     scrollViewRef.current?.scrollTo({
-      y: completedQuestionsHeight,
+      y: getCurrentPagePosition(),
       animated: false,
     });
-    scrollPosition.setValue(completedQuestionsHeight);
+    scrollPosition.setValue(getCurrentPagePosition());
     setFocusMode('current');
     saveFocusMode('current');
   };
@@ -429,9 +429,13 @@ function LemonadeAppContent() {
   const dynamicContentHeight = completedQuestionsHeight + pageHeight; // 基于实际内容的总高度
   const SNAP_THRESHOLD = 200; // 使用单个问题高度作为吸附阈值
   
+  // 🎯 当前问题页位置调整 - 改这个数值就能调整所有地方的当前问题页位置
+  const CURRENT_PAGE_OFFSET = 167; // 向上偏移50px，让当前问题页不那么靠上
+  const getCurrentPagePosition = () => completedQuestionsHeight - CURRENT_PAGE_OFFSET;
+  
   // 当前滚动进度 (1 = 已完成问题页面在焦点, 0 = 当前问题页面在焦点)
   const scrollProgress = scrollPosition.interpolate({
-    inputRange: [0, completedQuestionsHeight], // 基于实际内容高度
+    inputRange: [0, getCurrentPagePosition()], // 基于调整后的当前页面位置
     outputRange: [1, 0], // 滚动到顶部(0)时已完成问题在焦点(1)，滚动到底部时当前问题在焦点(0)
     extrapolate: 'clamp',
   });
@@ -458,20 +462,20 @@ function LemonadeAppContent() {
       targetOffset = 0;
       setFocusMode('completed');
       saveFocusMode('completed');
-    } else if (offsetY >= completedQuestionsHeight - effectiveThreshold) {
+    } else if (offsetY >= getCurrentPagePosition() - effectiveThreshold) {
       // 吸附到当前问题页面
-      targetOffset = completedQuestionsHeight;
+      targetOffset = getCurrentPagePosition();
       setFocusMode('current');
       saveFocusMode('current');
     } else {
       // 根据距离决定吸附方向 - 中间区域
-      const midPoint = completedQuestionsHeight * 0.5; // 使用50%作为中点
+      const midPoint = getCurrentPagePosition() * 0.5; // 使用50%作为中点
       if (offsetY < midPoint) {
         targetOffset = 0;
         setFocusMode('completed');
         saveFocusMode('completed');
       } else {
-        targetOffset = completedQuestionsHeight;
+        targetOffset = getCurrentPagePosition();
         setFocusMode('current');
         saveFocusMode('current');
       }
@@ -480,7 +484,8 @@ function LemonadeAppContent() {
     console.log('滚动吸附:', { 
       offsetY, 
       effectiveThreshold, 
-      completedQuestionsHeight, 
+      completedQuestionsHeight,
+      currentPagePosition: getCurrentPagePosition(), 
       targetOffset, 
       SNAP_THRESHOLD 
     });
@@ -495,7 +500,7 @@ function LemonadeAppContent() {
   
   // 程序化切换页面
   const scrollToPage = (page: 'current' | 'completed') => {
-    const targetOffset = page === 'completed' ? 0 : completedQuestionsHeight;
+    const targetOffset = page === 'completed' ? 0 : getCurrentPagePosition();
     scrollViewRef.current?.scrollTo({
       y: targetOffset,
       animated: true,
@@ -530,7 +535,7 @@ function LemonadeAppContent() {
       initialOffset = 0;
     } else {
       // 其他情况都显示当前问题页面
-      initialOffset = completedQuestionsHeight;
+      initialOffset = getCurrentPagePosition();
       // 只在需要时更新focusMode，避免不必要的状态变更
       if (focusMode !== 'current') {
         setFocusMode('current');
@@ -542,6 +547,7 @@ function LemonadeAppContent() {
       focusMode, 
       initialOffset, 
       completedQuestionsHeight,
+      currentPagePosition: getCurrentPagePosition(),
       completedAnswersCount: Object.keys(completedAnswers).length,
       isTyping
     });
