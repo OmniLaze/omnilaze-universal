@@ -99,25 +99,25 @@ export const progressStyles = createProgressStyles();
 
 export const createQuestionStyles = (theme: any = COLORS) => StyleSheet.create({
   completedQuestionContainer: {
-    marginBottom: 2,
+    marginBottom: -4, // 减少已完成问题之间的间距
   },
   currentQuestionCard: {
     backgroundColor: 'transparent',
     borderRadius: 0,
     padding: 0,
-    marginBottom: width > 768 ? 80 : 40, // 移动端减少底部间距
+    marginBottom: width > 768 ? 20 : 16, // 大幅减少底部间距
     marginTop: width > 768 ? 10 : 5, // 移动端减少顶部间距
     minHeight: width > 768 ? 200 : 150, // 移动端减小最小高度
   },
   completedQuestionRow: {
     backgroundColor: 'transparent',
-    paddingVertical: 12,
+    paddingVertical: 4, // 进一步减少从8到4
   },
   questionHeader: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 12,
-    marginBottom: 16,
+    marginBottom: 8, // 减少从16到8
   },
   questionText: {
     fontSize: 24,
@@ -178,9 +178,9 @@ export const avatarStyles = createAvatarStyles();
 
 export const createAnswerStyles = (theme: any = COLORS) => StyleSheet.create({
   completedAnswerText: {
-    marginLeft: 28,
-    marginTop: 2,
-    paddingLeft: 16, // 保留左侧padding作为空格
+    marginLeft: 0, // 移除左边距，因为不再需要为头像留空间
+    marginTop: -2, // 减少间距，从2改为-2
+    paddingLeft: 0, // 移除左侧padding
     opacity: 0.8, // 整体降低透明度
   },
   answerValue: {

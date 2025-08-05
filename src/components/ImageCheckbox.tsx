@@ -315,7 +315,7 @@ export const ImageCheckbox: React.FC<ImageCheckboxProps> = ({
 const createStyles = (theme: any) => StyleSheet.create({
   container: {
     marginTop: width > 768 ? 16 : 8, // 移动端减少顶部间距
-    marginLeft: 44, // 与问题文字对齐：32px头像 + 12px间距
+    marginLeft: 0, // 移除左边距，因为现在头像独立放置
     maxWidth: 500,
   },
   grid: {

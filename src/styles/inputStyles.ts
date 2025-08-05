@@ -1,12 +1,28 @@
 import { StyleSheet, Platform } from 'react-native';
 import { COLORS, LAYOUT } from '../constants';
 
+// 创建平台特定的阴影样式
+const createShadowStyle = (shadowColor: string, shadowOffset: {width: number, height: number}, shadowOpacity: number, shadowRadius: number, elevation: number) => {
+  if (Platform.OS === 'web') {
+    return {
+      boxShadow: `${shadowOffset.width}px ${shadowOffset.height}px ${shadowRadius}px rgba(0, 0, 0, ${shadowOpacity})`,
+    };
+  }
+  return {
+    shadowColor,
+    shadowOffset,
+    shadowOpacity,
+    shadowRadius,
+    elevation,
+  };
+};
+
 // 创建动态输入样式函数
 export const createInputStyles = (theme: any = COLORS) => StyleSheet.create({
   inputSection: {
-    marginTop: 16,
+    marginTop: 8, // 从16减少到8
     marginBottom: 20,
-    marginLeft: 44, // 与问题文字对齐：32px头像 + 12px间距
+    marginLeft: 0, // 移除左边距，因为现在头像独立放置
   },
   simpleInputWrapper: {
     flexDirection: 'row',
@@ -18,14 +34,7 @@ export const createInputStyles = (theme: any = COLORS) => StyleSheet.create({
     paddingVertical: 2,
     minHeight: 56,
     width: '100%',
-    shadowColor: theme.SHADOW,
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 2,
+    ...createShadowStyle(theme.SHADOW, { width: 0, height: 4 }, 0.06, 6, 2),
     ...(Platform.OS === 'web' && {
       outlineStyle: 'none',
       outlineWidth: 0,
@@ -56,14 +65,7 @@ export const createInputStyles = (theme: any = COLORS) => StyleSheet.create({
   },
   errorSimpleInputWrapper: {
     backgroundColor: theme.ERROR_BACKGROUND,
-    shadowColor: theme.ERROR,
-    shadowOffset: {
-      width: 0,
-      height: 0,
-    },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 4,
+    ...createShadowStyle(theme.ERROR, { width: 0, height: 0 }, 0.15, 8, 4),
   },
   simpleInputClearButton: {
     padding: 4,
@@ -96,7 +98,7 @@ export const createBudgetStyles = (theme: any = COLORS) => StyleSheet.create({
     flexWrap: 'wrap',
     gap: 8,
     marginBottom: 16,
-    marginLeft: 44, // 与问题文字对齐：32px头像 + 12px间距
+    marginLeft: 0, // 移除左边距，因为现在头像独立放置
   },
   budgetOptionButton: {
     backgroundColor: theme.WHITE,
@@ -133,33 +135,19 @@ export const createButtonStyles = (theme: any = COLORS) => StyleSheet.create({
     minWidth: 120, // 添加最小宽度确保文字不被压缩
     alignItems: 'center', // 确保文字居中
     alignSelf: 'flex-start',
-    marginTop: 12,
-    marginLeft: 44, // 与问题文字对齐：32px头像 + 12px间距
-    shadowColor: theme.SHADOW,
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 2,
+    marginTop: 8, // 从12减少到8
+    marginLeft: 0, // 移除左边距，因为现在头像独立放置
+    ...createShadowStyle(theme.SHADOW, { width: 0, height: 4 }, 0.08, 6, 2),
   },
   activeSimpleButton: {
     backgroundColor: theme.PRIMARY_WITH_OPACITY || theme.PRIMARY,
-    shadowColor: theme.PRIMARY,
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    elevation: 3,
+    ...createShadowStyle(theme.PRIMARY, { width: 0, height: 4 }, 0.12, 8, 3),
   },
   disabledSimpleButton: {
     backgroundColor: '#F8FAFC',
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    shadowOpacity: 0,
+    ...createShadowStyle('#000', { width: 0, height: 0 }, 0, 0, 0),
   },
   simpleButtonText: {
     fontSize: 21,
@@ -184,8 +172,8 @@ export const createButtonStyles = (theme: any = COLORS) => StyleSheet.create({
     minWidth: 120, // 添加最小宽度
     alignItems: 'center', // 确保文字居中
     alignSelf: 'flex-start',
-    marginTop: 8,
-    marginLeft: 44, // 与问题文字对齐：32px头像 + 12px间距
+    marginTop: 4, // 从8减少到4
+    marginLeft: 0, // 移除左边距，因为现在头像独立放置
   },
   nextSimpleButtonText: {
     color: theme.WHITE,

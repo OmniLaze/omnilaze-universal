@@ -60,79 +60,128 @@ export const CompletedQuestion: React.FC<CompletedQuestionProps> = ({
       ]}
     >
       <View style={questionStyles.completedQuestionRow}>
-        <View style={questionStyles.questionHeader}>
-          {/* 已完成问题不显示头像，使用占位空间保持对齐 */}
-          <View style={{ width: avatarStyles.avatarSimple.width, height: avatarStyles.avatarSimple.height }} />
-          <Text style={questionStyles.questionText}>
-            {question}
-          </Text>
-        </View>
-        
-        {isEditing ? (
-          <View style={{ marginLeft: 27, marginTop: 16 }}>
-            {editingInput}
-            {editingButtons}
-          </View>
-        ) : (
-          <Pressable 
-            style={answerStyles.completedAnswerText}
-            onHoverIn={() => !isMobile && setIsHovered(true)}
-            onHoverOut={() => !isMobile && setIsHovered(false)}
-          >
-            <Animated.View
-              style={{
-                opacity: answerAnimation,
-                transform: [{
-                  translateY: answerAnimation.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [30, 0], // 从下往上滑入
-                  }),
-                }],
-              }}
-            >
-              <View style={answerStyles.answerWithEdit}>
-                <Text style={answerStyles.answerValue}>
-                  {formatAnswerDisplay(answer)}
+        {/* 三分栏布局容器 */}
+        <View style={{
+          flexDirection: 'row',
+          flex: 1,
+          minHeight: 80,
+        }}>
+          {/* 左侧背景区域 */}
+          <View style={{
+            flexBasis: 'auto',
+            flexShrink: 1,
+            flexGrow: 0,
+            backgroundColor: theme.BACKGROUND,
+            borderTopLeftRadius: 8,
+            borderBottomLeftRadius: 8,
+          }} />
+          
+          {/* 中间内容区域 */}
+          <View style={{
+            flexBasis: 'auto',
+            flexShrink: 0,
+            flexGrow: 1,
+            backgroundColor: theme.BACKGROUND,
+            paddingHorizontal: 20,
+            paddingVertical: 12,
+            justifyContent: 'center',
+            alignItems: 'flex-start',
+            flexDirection: 'row',
+          }}>
+            {/* 头像占位区域 */}
+            <View style={{
+              width: 32, // LAYOUT.AVATAR_SIZE
+              marginRight: 18, // 与CurrentQuestion中的头像右边距一致
+              alignSelf: 'flex-start',
+              marginTop: 0,
+            }} />
+            
+            {/* 问题内容区域 */}
+            <View style={{ flex: 1 }}>
+              <View style={questionStyles.questionHeader}>
+                <Text style={questionStyles.questionText}>
+                  {question}
                 </Text>
-                {canEdit && (
-                  isMobile ? (
-                    // 移动端：始终显示的编辑按钮
-                    <TouchableOpacity 
-                      onPress={onEdit}
-                      style={[
-                        answerStyles.editAnswerButton,
-                        {
-                          opacity: 1,
-                          backgroundColor: theme.GRAY_100,
-                          borderRadius: 6,
-                          marginLeft: 8,
-                          padding: 8,
-                        }
-                      ]}
-                      hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}
-                    >
-                      <SimpleIcon 
-                        name="edit" 
-                        size={16} 
-                        color={theme.GRAY_600} 
-                      />
-                    </TouchableOpacity>
-                  ) : (
-                    // 桌面端：悬停显示
-                    isHovered && (
-                      <TouchableOpacity 
-                        onPress={onEdit}
-                        style={answerStyles.editAnswerButton}
-                      >
-                        <SimpleIcon name="edit" size={22} color={theme.GRAY_600} />
-                      </TouchableOpacity>
-                    )
-                  )
-                )}
               </View>
-            </Animated.View>
-          </Pressable>
-        )}
+              
+              {isEditing ? (
+                <View style={{ marginLeft: 0, marginTop: 8 }}>
+                  {editingInput}
+                  {editingButtons}
+                </View>
+              ) : (
+                <Pressable 
+                  style={answerStyles.completedAnswerText}
+                  onHoverIn={() => !isMobile && setIsHovered(true)}
+                  onHoverOut={() => !isMobile && setIsHovered(false)}
+                >
+                  <Animated.View
+                    style={{
+                      opacity: answerAnimation,
+                      transform: [{
+                        translateY: answerAnimation.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [30, 0], // 从下往上滑入
+                        }),
+                      }],
+                    }}
+                  >
+                    <View style={answerStyles.answerWithEdit}>
+                      <Text style={answerStyles.answerValue}>
+                        {formatAnswerDisplay(answer)}
+                      </Text>
+                      {canEdit && (
+                        isMobile ? (
+                          // 移动端：始终显示的编辑按钮
+                          <TouchableOpacity 
+                            onPress={onEdit}
+                            style={[
+                              answerStyles.editAnswerButton,
+                              {
+                                opacity: 1,
+                                backgroundColor: theme.GRAY_100,
+                                borderRadius: 6,
+                                marginLeft: 8,
+                                padding: 8,
+                              }
+                            ]}
+                            hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}
+                          >
+                            <SimpleIcon 
+                              name="edit" 
+                              size={16} 
+                              color={theme.GRAY_600} 
+                            />
+                          </TouchableOpacity>
+                        ) : (
+                          // 桌面端：悬停显示
+                          isHovered && (
+                            <TouchableOpacity 
+                              onPress={onEdit}
+                              style={answerStyles.editAnswerButton}
+                            >
+                              <SimpleIcon name="edit" size={22} color={theme.GRAY_600} />
+                            </TouchableOpacity>
+                          )
+                        )
+                      )}
+                    </View>
+                  </Animated.View>
+                </Pressable>
+              )}
+            </View>
+          </View>
+          
+          {/* 右侧背景区域 */}
+          <View style={{
+            flexBasis: 'auto',
+            flexShrink: 1,
+            flexGrow: 0,
+            backgroundColor: theme.BACKGROUND,
+            borderTopRightRadius: 8,
+            borderBottomRightRadius: 8,
+          }} />
+        </View>
       </View>
     </Animated.View>
   );

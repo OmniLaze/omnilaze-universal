@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated, PanResponder } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Animated, PanResponder, Platform } from 'react-native';
 import { SimpleIcon } from './SimpleIcon';
 
 interface ColorPaletteProps {
@@ -527,14 +527,16 @@ const styles = StyleSheet.create({
     bottom: 0,
     // 棋盘格背景效果
     backgroundColor: '#fff',
-    backgroundImage: `
+    backgroundImage: Platform.OS === 'web' ? `
       linear-gradient(45deg, #ddd 25%, transparent 25%),
       linear-gradient(-45deg, #ddd 25%, transparent 25%),
       linear-gradient(45deg, transparent 75%, #ddd 75%),
       linear-gradient(-45deg, transparent 75%, #ddd 75%)
-    `,
-    backgroundSize: '8px 8px',
-    backgroundPosition: '0 0',
+    ` : undefined,
+    backgroundSize: Platform.OS === 'web' ? '8px 8px' : undefined,
+    ...(Platform.OS === 'web' && {
+      backgroundPosition: '0px 0px, 0px 4px, 4px -4px, -4px 0px',
+    }),
   },
   sliderThumb: {
     width: 20,

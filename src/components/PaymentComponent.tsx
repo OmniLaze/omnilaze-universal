@@ -117,7 +117,7 @@ export const PaymentComponent: React.FC<PaymentComponentProps> = ({
 const createStyles = (theme: any) => StyleSheet.create({
   container: {
     marginTop: 16,
-    marginLeft: 44, // 与问题文字对齐：32px头像 + 12px间距
+    marginLeft: 0, // 移除左边距，因为现在头像独立放置
   },
   paymentCard: {
     width: 280, // 纵向瘦长的宽度
@@ -174,7 +174,7 @@ const createStyles = (theme: any) => StyleSheet.create({
   },
   buttonContainer: {
     marginTop: 16,
-    marginLeft: -44, // 抵消容器的左边距，让按钮使用自己的对齐
+    marginLeft: 0, // 移除负边距，现在不需要抵消
   },
   // 免单相关样式
   freeOrderCard: {
