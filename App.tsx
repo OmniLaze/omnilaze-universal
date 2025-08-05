@@ -132,108 +132,22 @@ function LemonadeAppContent() {
     emotionAnimation,
     shakeAnimation,
     inputSectionAnimation,
-    transitionQuestionAnimation,
-    transitionPositionAnimation,
     triggerShake,
     changeEmotion,
     triggerQuestionFlowAnimation
   } = useAnimations();
   
-  // 流动动画状态管理 - 核心状态
-  const [transitionQuestion, setTransitionQuestion] = useState<{
-    stepIndex: number;
-    question: string;
-    answer: any;
-    isSettled: boolean; // 新增：标记问题是否已经安定在目标位置
-  } | null>(null);
-  const [isFlowAnimationActive, setIsFlowAnimationActive] = useState(false);
+  // 移除流动动画状态管理
   const [completedQuestionsHeight, setCompletedQuestionsHeight] = useState(300);
   const [singleQuestionHeight, setSingleQuestionHeight] = useState(80);
-  const currentQuestionRef = useRef<View>(null);
-  const completedQuestionsRef = useRef<View>(null);
+  // 移除不再使用的引用
   
-  // 智能的已完成问题状态管理
+  // 简化的已完成问题状态管理
   const getEffectiveCompletedAnswers = () => {
-    const baseAnswers = { ...completedAnswers };
-    
-    // 如果有已安定的过渡问题，将其包含在内
-    if (transitionQuestion?.isSettled) {
-      baseAnswers[transitionQuestion.stepIndex] = transitionQuestion.answer;
-    }
-    
-    return baseAnswers;
+    return { ...completedAnswers };
   };
 
-  // 计算并触发问题流动动画
-  const triggerQuestionFlowToCompleted = (stepIndex: number, question: string, answer: any) => {
-    setIsFlowAnimationActive(true);
-    
-    // 设置过渡问题数据，初始状态为未安定
-    setTransitionQuestion({ 
-      stepIndex, 
-      question, 
-      answer, 
-      isSettled: false 
-    });
-    
-    // 立即预扩展已完成问题区域高度
-    const currentCompletedCount = Object.keys(getEffectiveCompletedAnswers()).length;
-    const estimatedQuestionHeight = singleQuestionHeight || 80;
-    const expandedHeight = completedQuestionsHeight + estimatedQuestionHeight;
-    setCompletedQuestionsHeight(expandedHeight);
-    
-    console.log('🎬 开始流动动画', { stepIndex, currentCompletedCount });
-    
-    // 计算位置
-    Promise.all([
-      // 当前问题位置
-      new Promise<{ x: number; y: number }>((resolve) => {
-        if (currentQuestionRef.current) {
-          currentQuestionRef.current.measure((x, y, width, height, pageX, pageY) => {
-            resolve({ x: pageX, y: pageY });
-          });
-        } else {
-          resolve({ x: 0, y: height * 0.6 });
-        }
-      }),
-      // 目标位置
-      new Promise<{ x: number; y: number }>((resolve) => {
-        if (completedQuestionsRef.current) {
-          completedQuestionsRef.current.measure((x, y, width, height, pageX, pageY) => {
-            const targetY = pageY + (currentCompletedCount * estimatedQuestionHeight);
-            resolve({ x: pageX, y: targetY });
-          });
-        } else {
-          const defaultY = 200 + (currentCompletedCount * 80);
-          resolve({ x: 0, y: defaultY });
-        }
-      })
-    ]).then(([fromPos, toPos]) => {
-      console.log('🎬 启动流动动画', { from: fromPos, to: toPos });
-      
-      // 触发流动动画
-      triggerQuestionFlowAnimation(fromPos, toPos, () => {
-        console.log('✅ 流动动画完成，问题安定在目标位置');
-        
-        // 标记过渡问题为已安定状态
-        setTransitionQuestion(prev => prev ? { ...prev, isSettled: true } : null);
-        
-        // 重置动画状态
-        setIsFlowAnimationActive(false);
-        
-        // 清理过渡问题状态，因为现在它已经在主状态中了
-        setTimeout(() => {
-          setTransitionQuestion(null);
-        }, 500); // 给一点时间让用户看到最终状态
-      });
-    }).catch((error) => {
-      console.error('❌ 流动动画失败', error);
-      // 失败处理
-      setTransitionQuestion(null);
-      setIsFlowAnimationActive(false);
-      setCompletedAnswers(prev => ({ ...prev, [stepIndex]: answer }));
-    });
-  };
+  // 移除不再使用的流动函数
   
   // 监听已完成问题区域高度变化，更新滚动系统
   useEffect(() => {
@@ -277,58 +191,29 @@ function LemonadeAppContent() {
       [stepIndex]: answer
     }));
     
-    // 统一动画处理
-    if (!skipAnimation) {
-      if (stepIndex >= 0) {
-        // 先重置问题和答案动画值为0，确保从下方开始动画
-        questionAnimations[stepIndex].setValue(0);
-        answerAnimations[stepIndex].setValue(0);
-        
-        // 先播放问题动画，然后播放答案动画
-        Animated.spring(questionAnimations[stepIndex], {
-          toValue: 1,
-          tension: 120,
-          friction: 12,
-          useNativeDriver: true,
-        }).start(() => {
-          // 问题动画完成后，开始答案动画
-          Animated.spring(answerAnimations[stepIndex], {
-            toValue: 1,
-            tension: 120,
-            friction: 12,
-            useNativeDriver: true,
-          }).start(() => {
-            // 答案动画完成后，启动流动动画（除非是编辑模式）
-            if (!isEditing) {
-              const questionText = STEP_CONTENT[stepIndex]?.message || '';
-              
-              setTimeout(() => {
-                // 触发问题流动到已完成区域的动画
-                triggerQuestionFlowToCompleted(stepIndex, questionText, answer);
-                
-                // 延迟执行完成回调，等待流动动画开始
-                setTimeout(() => {
-                  onComplete?.();
-                }, 300); // 等待流动动画开始后再执行回调
-              }, 500); // 500ms的停顿让用户能够看到答案
-            } else {
-              // 编辑模式不需要流动动画
-              setTimeout(() => {
-                onComplete?.();
-              }, 500);
-            }
-          });
-        });
-      } else {
-        // 特殊步骤（如手机号，索引-1）的处理
-        setTimeout(() => {
-          // 执行完成回调，但不强制切换视图
-          // 让用户保持当前的视图状态，避免闪烁
+    // 简化动画处理 - 直接执行流动动画或完成回调
+    if (!skipAnimation && !isEditing && stepIndex >= 0) {
+      // 确保问题和答案立即可见
+      questionAnimations[stepIndex].setValue(1);
+      answerAnimations[stepIndex].setValue(1);
+      
+      const questionText = STEP_CONTENT[stepIndex]?.message || '';
+      
+      setTimeout(() => {
+        // 直接执行完成回调，无动画
+        triggerQuestionFlowAnimation(() => {
           onComplete?.();
-        }, 500); // 保持相同的延迟
-      }
+        });
+      }, 500); // 500ms的停顿让用户能够看到答案
     } else {
-      onComplete?.();
+      // 编辑模式或跳过动画的情况
+      if (stepIndex >= 0) {
+        questionAnimations[stepIndex].setValue(1);
+        answerAnimations[stepIndex].setValue(1);
+      }
+      setTimeout(() => {
+        onComplete?.();
+      }, 500);
     }
     
     return true;
@@ -537,6 +422,7 @@ function LemonadeAppContent() {
   const scrollViewRef = useRef<ScrollView>(null);
   const [scrollPosition, setScrollPosition] = useState(new Animated.Value(0));
   const [isScrolling, setIsScrolling] = useState(false);
+  const [hasInitializedScroll, setHasInitializedScroll] = useState(false);
   
   // 滚动阈值和页面高度 - 基于动态内容高度
   const pageHeight = height - 100; // 减去状态栏和padding
@@ -560,12 +446,6 @@ function LemonadeAppContent() {
   const handleScrollEnd = (event: any) => {
     setIsScrolling(false);
     const offsetY = event.nativeEvent.contentOffset.y;
-    
-    // 如果流动动画正在进行，跳过自动吸附
-    if (isFlowAnimationActive) {
-      console.log('🚫 流动动画进行中，跳过自动吸附');
-      return;
-    }
     
     // 判断应该吸附到哪个页面 - 修复逻辑重叠问题
     let targetOffset;
@@ -637,11 +517,11 @@ function LemonadeAppContent() {
   
   // 程序初始化滚加在正确的页面
   useEffect(() => {
-    if (!isStateRestored) return;
+    if (!isStateRestored || hasInitializedScroll) return;
     
     // 等待打字机效果和其他初始化完成后再设置滚动位置
     // 避免在打字机效果期间触发滚动导致闪烁
-    if (isTyping || isFlowAnimationActive) return; // 如果正在打字或流动动画活跃，等待完成
+    if (isTyping) return; // 如果正在打字，等待完成
     
     // 页面刷新后，默认显示当前问题页面，除非用户明确保存了completed视图
     let initialOffset;
@@ -672,14 +552,15 @@ function LemonadeAppContent() {
       if (!isTyping) {
         scrollViewRef.current?.scrollTo({
           y: initialOffset,
-          animated: false, // 初始化时不需要动画
+          animated: true, // 使用自然的滑动动画
         });
         scrollPosition.setValue(initialOffset);
+        setHasInitializedScroll(true); // 标记已初始化，防止重复
       }
     }, isTyping ? 500 : 200); // 如果正在打字，等待更长时间
     
     return () => clearTimeout(timeoutId);
-  }, [isStateRestored, completedQuestionsHeight, isTyping, isFlowAnimationActive]); // 添加流动动画状态依赖
+  }, [isStateRestored, completedQuestionsHeight, isTyping]);
 
   // AI流式问题过渡函数 - 更丝滑的现代效果
   // 防止动画冲突的状态
@@ -1124,7 +1005,6 @@ function LemonadeAppContent() {
           onLayout={measureCompletedQuestionsHeight} // 恢复高度测量
         >
           <View 
-            ref={completedQuestionsRef}
             style={{
               width: '100%',
               maxWidth: 500,
@@ -1132,7 +1012,7 @@ function LemonadeAppContent() {
               flex: 1,
             }}>
             {/* Debug log: rendering completed questions */}
-            {/* completedAnswersLength: Object.keys(getEffectiveCompletedAnswers()).length, effectiveCompletedAnswers: getEffectiveCompletedAnswers(), isFlowAnimationActive, isStateRestored, hasTransitionQuestion: !!transitionQuestion */}
+            {/* 已完成问题区域 */}
             {/* 显示有效的已完成问题，包括已安定的过渡问题 */}
             {Object.keys(getEffectiveCompletedAnswers()).length > 0 && (
               <>
@@ -1143,10 +1023,7 @@ function LemonadeAppContent() {
                     const index = parseInt(stepIndex);
                     const answer = getEffectiveCompletedAnswers()[index];
                     
-                    // 如果有过渡问题且索引匹配且过渡问题尚未安定，跳过显示（避免重复）
-                    if (transitionQuestion && transitionQuestion.stepIndex === index && !transitionQuestion.isSettled) {
-                      return null;
-                    }
+                    // 移除过渡问题检查逻辑
                     
                     // 为手机号问题（index: -1）提供特殊处理
                     const questionText = index === -1 ? 
@@ -1213,7 +1090,6 @@ function LemonadeAppContent() {
           }}>
             {/* 当前问题内容 */}
             <Animated.View
-              ref={currentQuestionRef}
               style={{
                 flex: 1,
                 // 动态调节内容颜色 - 当前问题页面的透明度
@@ -1323,67 +1199,7 @@ function LemonadeAppContent() {
         </Animated.View>
       </ScrollView>
 
-      {/* 过渡问题组件 - 推上去的问题就是最终结果，会保持显示 */}
-      {transitionQuestion && (
-        <Animated.View
-          style={{
-            position: 'absolute',
-            left: 0,
-            right: 0,
-            zIndex: 9999, // 确保在最前面
-            opacity: transitionQuestionAnimation,
-            transform: [
-              { translateX: transitionPositionAnimation.x },
-              { translateY: transitionPositionAnimation.y },
-            ],
-          }}
-        >
-          <View style={[
-            questionStyles.completedQuestionContainer,
-            {
-              marginHorizontal: 16, // 保持和已完成问题一致的边距
-            }
-          ]}>
-            <View style={questionStyles.completedQuestionRow}>
-              <View style={questionStyles.questionHeader}>
-                {/* 头像占位空间，保持布局一致 */}
-                <View style={{ width: avatarStyles.avatarSimple.width, height: avatarStyles.avatarSimple.height }} />
-                
-                <Text style={questionStyles.questionText}>
-                  {transitionQuestion.question}
-                </Text>
-              </View>
-              
-              <View style={answerStyles.completedAnswerText}>
-                <View style={answerStyles.answerWithEdit}>
-                  <Text style={answerStyles.answerValue}>
-                    {formSteps.formatAnswerDisplay(transitionQuestion.answer)}
-                  </Text>
-                </View>
-              </View>
-            </View>
-          </View>
-          
-          {/* 头像独立层，在问题上方 */}
-          <Animated.View
-            style={{
-              position: 'absolute',
-              left: 16, // 与问题的marginHorizontal对齐
-              top: 0,
-              zIndex: 1,
-              opacity: transitionQuestionAnimation.interpolate({
-                inputRange: [0.3, 0.7, 1], // 在动画过程中逐渐淡出
-                outputRange: [1, 0.5, 0],
-                extrapolate: 'clamp',
-              }),
-            }}
-          >
-            <View style={avatarStyles.avatarSimple}>
-              <Text style={avatarStyles.avatarEmoji}>😋</Text>
-            </View>
-          </Animated.View>
-        </Animated.View>
-      )}
+      {/* 移除过渡问题组件 - 不再需要动画渲染 */}
 
       {/* 调色板调试工具 */}
       {DEV_CONFIG.ENABLE_COLOR_PALETTE && isDebugMode && (

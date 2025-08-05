@@ -412,9 +412,7 @@ export const useAnimations = () => {
   const [inputSectionAnimation] = useState(new Animated.Value(0));
   const [themeAnimation] = useState(new Animated.Value(0));
   
-  // 流动动画相关的动画值
-  const [transitionQuestionAnimation] = useState(new Animated.Value(0)); // 过渡问题的动画状态
-  const [transitionPositionAnimation] = useState(new Animated.ValueXY({ x: 0, y: 0 })); // 过渡问题的位置动画
+  // 移除流动动画相关的动画值
 
   const triggerShake = () => {
     Animated.sequence([
@@ -444,46 +442,13 @@ export const useAnimations = () => {
 
   // 添加过渡动画相关的动画值
 
-  // 新的流动动画：问题从当前位置移动到已完成区域并逐渐淡入
+  // 简化的流动逻辑：直接执行回调，无动画
   const triggerQuestionFlowAnimation = (
-    fromPosition: { x: number; y: number },
-    toPosition: { x: number; y: number },
     callback?: () => void
   ) => {
-    console.log('🎬 流动动画开始:', { from: fromPosition, to: toPosition });
-    
-    // 初始化过渡动画的位置和透明度
-    transitionPositionAnimation.setValue(fromPosition);
-    transitionQuestionAnimation.setValue(0.3); // 开始时半透明，模拟从当前问题过渡
-    
-    // 计算移动距离，用于调整动画参数
-    const distance = Math.sqrt(
-      Math.pow(toPosition.x - fromPosition.x, 2) + 
-      Math.pow(toPosition.y - fromPosition.y, 2)
-    );
-    
-    // 根据距离调整动画时长
-    const animationDuration = Math.max(600, Math.min(1200, distance * 2));
-    
-    // 同时执行位置移动和淡入动画
-    Animated.parallel([
-      // 位置移动动画
-      Animated.timing(transitionPositionAnimation, {
-        toValue: toPosition,
-        duration: animationDuration,
-        useNativeDriver: true,
-      }),
-      // 淡入动画（在移动过程中逐渐变为完全可见）
-      Animated.timing(transitionQuestionAnimation, {
-        toValue: 1, // 完全可见
-        duration: animationDuration,
-        useNativeDriver: true,
-      })
-    ]).start(() => {
-      console.log('🎬 流动动画完成，问题已到达目标位置并完全可见');
-      // 动画完成后，问题保持在目标位置且完全可见
-      callback?.();
-    });
+    console.log('🎬 流动逻辑执行（无动画）');
+    // 直接执行回调，不再有动画
+    callback?.();
   };
 
   return {
@@ -495,8 +460,6 @@ export const useAnimations = () => {
     shakeAnimation,
     inputSectionAnimation,
     themeAnimation,
-    transitionQuestionAnimation,
-    transitionPositionAnimation,
     triggerShake,
     changeEmotion,
     triggerQuestionFlowAnimation,
