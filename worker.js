@@ -550,14 +550,14 @@ async function handleCreateOrder(request, env) {
     const orderNumber = generateOrderNumber();
     const now = new Date().toISOString();
 
-    // 获取用户的下一个序号
+    // 获取用户的注册序号
     const userSequenceQuery = `
-      SELECT COALESCE(MAX(user_sequence_number), 0) + 1 as next_sequence
-      FROM orders 
-      WHERE user_id = ?
+      SELECT user_sequence
+      FROM users 
+      WHERE id = ?
     `;
     const sequenceResult = await env.DB.prepare(userSequenceQuery).bind(userId).first();
-    const userSequenceNumber = sequenceResult?.next_sequence || 1;
+    const userSequenceNumber = sequenceResult?.user_sequence || null;
 
     // 创建包含食物类型的元数据
     const metadata = {
@@ -1003,14 +1003,8 @@ async function handleClaimFreeDrink(request, env) {
         orderType: 'drink'
       };
 
-      // 获取用户的下一个序号
-      const userSequenceQuery = `
-        SELECT COALESCE(MAX(user_sequence_number), 0) + 1 as next_sequence
-        FROM orders 
-        WHERE user_id = ?
-      `;
-      const sequenceResult = await env.DB.prepare(userSequenceQuery).bind(userId).first();
-      const userSequenceNumber = sequenceResult?.next_sequence || 1;
+      // 获取用户的注册序号
+      const userSequenceNumber = userResult.user_sequence || null;
 
       const createFreeOrderQuery = `
         INSERT INTO orders (

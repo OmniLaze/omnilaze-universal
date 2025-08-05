@@ -88,10 +88,14 @@ class DevStorage(BaseStorage):
         order_id = str(uuid.uuid4())
         order_data['id'] = order_id
         
-        # 计算该用户的订单序号
+        # 获取用户的注册序号
         user_id = order_data['user_id']
-        user_orders = [o for o in self.orders.values() if o['user_id'] == user_id]
-        order_data['user_sequence_number'] = len(user_orders) + 1
+        user_info = None
+        for phone, user in self.users.items():
+            if user['id'] == user_id:
+                user_info = user
+                break
+        order_data['user_sequence_number'] = user_info['user_sequence'] if user_info else None
         
         self.orders[order_id] = order_data
         

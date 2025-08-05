@@ -161,7 +161,12 @@ export const useOrderManagement = (props: UseOrderManagementProps) => {
         setIsSearchingRestaurant(false);
         setIsOrderCompleted(true);
         changeEmotion('🎉');
-        const message = '我去下单，记得保持手机畅通，不要错过外卖员电话哦';
+        // 构建包含用户注册次序的消息
+        let message = '我去下单，记得保持手机畅通，不要错过外卖员电话哦';
+        if (authResult?.userSequence) {
+          message = `这是我们第${authResult.userSequence}个注册用户的订单！${message}`;
+        }
+        
         typeText(message, { streaming: true });
         setOrderMessage(message); // 持久化消息
       }, 1500);

@@ -38,6 +38,7 @@ export interface InviteCodeResponse {
   user_id?: string;
   phone_number?: string;
   user_invite_code?: string;
+  user_sequence?: number; // 用户注册次序
 }
 
 export interface UserInviteStatsResponse {
