@@ -114,8 +114,18 @@ function LemonadeAppContent() {
     resetAllState
   } = appState;
 
-  // Custom hooks
-  const { displayedText, isTyping, showCursor, typeText, setTextDirectly, clearText } = useTypewriterEffect();
+  // Custom hooks - AI流式打字机效果
+  const { 
+    displayedText, 
+    isTyping, 
+    showCursor, 
+    cursorOpacity, 
+    streamingOpacity,
+    typeText, 
+    setTextDirectly, 
+    clearText,
+    isStreaming 
+  } = useTypewriterEffect();
   const { inputError, validateInput, validatePhoneNumber, setInputError } = useValidation();
   const { 
     questionAnimations,
@@ -620,20 +630,35 @@ function LemonadeAppContent() {
     },
   });
 
-  // 统一的问题管理函数 - 简化版
+  // AI流式问题过渡函数 - 更丝滑的现代效果
   const handleQuestionTransition = (questionText: string, hasUserInput: boolean = false) => {
-    // 重置动画状态
+    // 重置动画状态，避免冲突
     inputSectionAnimation.setValue(0);
     currentQuestionAnimation.setValue(1);
     
     if (!hasUserInput) {
-      // 无用户输入：使用打字机效果
-      typeText(questionText, TIMING.TYPING_SPEED);
+      // 无用户输入：使用AI流式打字机效果
+      typeText(questionText, { 
+        instant: false,
+        streaming: true,
+        onComplete: () => {
+          // 打字完成后，丝滑显示输入框
+          Animated.timing(inputSectionAnimation, {
+            toValue: 1,
+            duration: 400,
+            useNativeDriver: false,
+          }).start();
+        }
+      });
     } else {
-      // 有用户输入：直接显示文本，然后显示输入框
+      // 有用户输入：直接显示文本，立即显示输入框
       setTextDirectly(questionText);
       // 立即显示输入框，因为已经有用户输入
-      inputSectionAnimation.setValue(1);
+      Animated.timing(inputSectionAnimation, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: false,
+      }).start();
     }
   };
 
@@ -713,9 +738,25 @@ function LemonadeAppContent() {
       const stepData = STEP_CONTENT[editingStep];
       if (stepData) {
         handleQuestionTransition(stepData.message, true); // 编辑模式总是有用户输入
-        // 编辑时自动切换到当前问题聚焦模式，让编辑在当前问题区域进行
-        if (focusMode !== 'current') {
-          switchToCurrentQuestion();
+        // 只有编辑已完成问题时才执行下滑手势，编辑当前问题时保持不变
+        if (editingStep < currentStep) {
+          // 编辑的是已完成问题，执行下滑手势切换到当前问题视图
+          if (focusMode === 'current') {
+            // 如果当前在current模式，先快速切换到completed模式，然后下滑
+            switchToCompletedQuestions();
+            setTimeout(() => {
+              handleFocusGesture('down');
+            }, 200); // 短暂延迟让切换完成
+          } else {
+            // 如果已经在completed模式，直接执行下滑手势
+            handleFocusGesture('down');
+          }
+        } else {
+          // 编辑的是当前问题，无需手势动画，用户本来就在当前问题视图
+          // 确保在当前问题视图（通常已经是，但为了保险起见）
+          if (focusMode !== 'current') {
+            switchToCurrentQuestion();
+          }
         }
       }
     }
@@ -733,6 +774,73 @@ function LemonadeAppContent() {
       }
     });
   }, [completedAnswers, isStateRestored]);
+
+  // 页面初始化视图检查 - 确保刷新后在当前问题视图
+  useEffect(() => {
+    if (!isStateRestored) return;
+    
+    // 检查是否有已完成的答案且当前不在编辑状态
+    const hasCompletedAnswers = Object.keys(completedAnswers).length > 0;
+    const isNotEditing = editingStep === null;
+    
+    // 如果用户在编辑状态，不执行初始化视图切换
+    if (editingStep !== null) {
+      console.log('页面初始化：检测到编辑状态，跳过视图切换', { editingStep });
+      return;
+    }
+    
+    // 无论当前 focusMode 状态如何，如果有已完成答案，强制确保在当前问题视图
+    if (hasCompletedAnswers && isNotEditing) {
+      console.log('页面初始化：检测到已完成答案，强制回到当前问题视图');
+      
+      // 延迟执行，确保所有状态恢复完成
+      setTimeout(() => {
+        // 不依赖 focusMode 状态，因为刷新后状态可能不准确
+        // 总是执行下滑手势，确保用户在当前问题视图
+        console.log('页面初始化：执行强制下滑手势，确保在当前问题视图');
+        
+        // 先切换到completed模式（确保有下滑的空间）
+        setFocusMode('completed');
+        focusTransition.setValue(1);
+        
+        // 然后立即执行下滑手势到current视图
+        setTimeout(() => {
+          handleFocusGesture('down');
+        }, 50); // 很短的延迟确保状态设置完成
+      }, 100); // 短暂延迟确保状态稳定
+    }
+  }, [isStateRestored, editingStep]); // 依赖 editingStep 以便状态变化时重新检查
+
+  // 页面刷新后编辑状态恢复逻辑
+  useEffect(() => {
+    if (!isStateRestored || editingStep === null) return;
+    
+    // 如果页面刷新后检测到有编辑状态，需要恢复编辑模式的具体值
+    const answerToEdit = completedAnswers[editingStep];
+    if (answerToEdit) {
+      console.log('页面刷新后恢复编辑状态:', { editingStep, answerToEdit });
+      
+      // 如果没有 originalAnswerBeforeEdit，设置为当前答案
+      if (!originalAnswerBeforeEdit) {
+        setOriginalAnswerBeforeEdit(answerToEdit);
+        console.log('设置编辑前原始答案:', answerToEdit);
+      }
+      
+      // 针对地址编辑的特殊处理
+      if (answerToEdit.type === 'address') {
+        // 确保地址处于可编辑状态
+        setIsAddressConfirmed(false);
+        setShowMap(false);
+        console.log('地址编辑状态恢复: isAddressConfirmed设置为false');
+      }
+      
+      // 确保当前步骤正确
+      if (currentStep !== editingStep) {
+        setCurrentStep(editingStep);
+        console.log('恢复编辑步骤:', editingStep);
+      }
+    }
+  }, [isStateRestored, editingStep, completedAnswers, originalAnswerBeforeEdit]); // 监听状态恢复和编辑状态
 
   // 移除自动切换回当前问题的逻辑 - 只有用户手动下滑才切换
 
@@ -1109,6 +1217,9 @@ function LemonadeAppContent() {
                 displayedText={displayedText}
                 isTyping={isTyping}
                 showCursor={showCursor}
+                cursorOpacity={cursorOpacity}
+                streamingOpacity={streamingOpacity}
+                isStreaming={isStreaming()}
                 inputError={inputError}
                 currentStep={0}
                 currentQuestionAnimation={currentQuestionAnimation}
@@ -1136,6 +1247,9 @@ function LemonadeAppContent() {
                   displayedText={displayedText}
                   isTyping={isTyping}
                   showCursor={showCursor}
+                  cursorOpacity={cursorOpacity}
+                  streamingOpacity={streamingOpacity}
+                  isStreaming={isStreaming()}
                   inputError={inputError}
                   currentStep={currentStep}
                   currentQuestionAnimation={currentQuestionAnimation}
@@ -1150,6 +1264,9 @@ function LemonadeAppContent() {
                     displayedText={displayedText}
                     isTyping={isTyping}
                     showCursor={showCursor}
+                    cursorOpacity={cursorOpacity}
+                    streamingOpacity={streamingOpacity}
+                    isStreaming={isStreaming()}
                     inputError={inputError}
                     currentStep={editingStep !== null ? editingStep : currentStep}
                     currentQuestionAnimation={currentQuestionAnimation}
@@ -1172,6 +1289,9 @@ function LemonadeAppContent() {
                 displayedText={displayedText}
                 isTyping={isTyping}
                 showCursor={showCursor}
+                cursorOpacity={cursorOpacity}
+                streamingOpacity={streamingOpacity}
+                isStreaming={isStreaming()}
                 inputError={inputError}
                 currentStep={editingStep}
                 currentQuestionAnimation={currentQuestionAnimation}

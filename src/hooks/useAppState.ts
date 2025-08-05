@@ -95,6 +95,8 @@ export const useAppState = () => {
       const conversationState = {
         currentStep,
         completedAnswers,
+        editingStep, // 保存编辑状态
+        originalAnswerBeforeEdit, // 保存编辑前的原始答案
         address,
         budget,
         selectedAllergies,
@@ -135,6 +137,8 @@ export const useAppState = () => {
           ...prev,
           ...savedConversation.completedAnswers
         }));
+        setEditingStep(savedConversation.editingStep || null); // 恢复编辑状态
+        setOriginalAnswerBeforeEdit(savedConversation.originalAnswerBeforeEdit || null); // 恢复编辑前答案
         setAddress(savedConversation.address || '');
         setBudget(savedConversation.budget || '');
         setSelectedAllergies(savedConversation.selectedAllergies || []);
@@ -173,6 +177,8 @@ export const useAppState = () => {
           ...prev,
           ...savedConversation.completedAnswers
         }));
+        setEditingStep(savedConversation.editingStep || null); // 恢复编辑状态
+        setOriginalAnswerBeforeEdit(savedConversation.originalAnswerBeforeEdit || null); // 恢复编辑前答案
         setAddress(savedConversation.address || '');
         setBudget(savedConversation.budget || '');
         setSelectedAllergies(savedConversation.selectedAllergies || []);
@@ -197,7 +203,7 @@ export const useAppState = () => {
     if (isAuthenticated) {
       saveConversationState();
     }
-  }, [currentStep, completedAnswers, address, budget, selectedAllergies, selectedPreferences, selectedFoodType, otherAllergyText, otherPreferenceText, isAddressConfirmed, showMap, isOrderCompleted, orderMessage]);
+  }, [currentStep, completedAnswers, editingStep, originalAnswerBeforeEdit, address, budget, selectedAllergies, selectedPreferences, selectedFoodType, otherAllergyText, otherPreferenceText, isAddressConfirmed, showMap, isOrderCompleted, orderMessage]);
 
   return {
     // 基础表单状态

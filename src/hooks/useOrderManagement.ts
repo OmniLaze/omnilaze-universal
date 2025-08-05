@@ -33,7 +33,7 @@ interface UseOrderManagementProps {
   // Animation & UI functions
   triggerShake: () => void;
   changeEmotion: (emotion: string) => void;
-  typeText: (text: string, speed: number) => void;
+  typeText: (text: string, options?: { instant?: boolean; onComplete?: () => void; streaming?: boolean }) => void;
 }
 
 export const useOrderManagement = (props: UseOrderManagementProps) => {
@@ -162,7 +162,7 @@ export const useOrderManagement = (props: UseOrderManagementProps) => {
         setIsOrderCompleted(true);
         changeEmotion('🎉');
         const message = '我去下单，记得保持手机畅通，不要错过外卖员电话哦';
-        typeText(message, TIMING.TYPING_SPEED_FAST);
+        typeText(message, { streaming: true });
         setOrderMessage(message); // 持久化消息
       }, 1500);
     } catch (error) {

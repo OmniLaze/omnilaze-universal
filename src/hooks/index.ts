@@ -5,66 +5,276 @@ import type { Answer, ValidationResult } from '../types';
 
 const { height } = Dimensions.get('window');
 
+// 流式打字机效果 - 模拟现代AI流式传输
 export const useTypewriterEffect = () => {
   const [displayedText, setDisplayedText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [showCursor, setShowCursor] = useState(true);
-  const [currentTimer, setCurrentTimer] = useState<NodeJS.Timeout | null>(null);
+  const [cursorOpacity] = useState(new Animated.Value(1));
+  const [streamingOpacity] = useState(new Animated.Value(0)); // 流式文本渐入效果
   const lastTextRef = useRef<string>('');
+  const currentAnimationRef = useRef<any>(null);
+  const rafRef = useRef<number | null>(null);
+  const textChunks = useRef<string[]>([]);
+  const isStreamingRef = useRef(false);
+
+  // 智能呼吸式光标动画 - 更自然的AI光标效果
+  const startCursorAnimation = () => {
+    const breathe = () => {
+      Animated.sequence([
+        Animated.timing(cursorOpacity, {
+          toValue: 0.2,
+          duration: 600,
+          useNativeDriver: true,
+        }),
+        Animated.timing(cursorOpacity, {
+          toValue: 1,
+          duration: 600,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        if (showCursor && !isStreamingRef.current) {
+          breathe();
+        }
+      });
+    };
+    breathe();
+  };
+
+  // 流式文本渐入动画
+  const triggerStreamingEffect = () => {
+    streamingOpacity.setValue(0);
+    Animated.timing(streamingOpacity, {
+      toValue: 1,
+      duration: 200,
+      useNativeDriver: true,
+    }).start();
+  };
 
   useEffect(() => {
-    const cursorInterval = setInterval(() => {
-      setShowCursor(prev => !prev);
-    }, TIMING.CURSOR_BLINK);
-    
-    return () => clearInterval(cursorInterval);
-  }, []);
+    if (showCursor) {
+      startCursorAnimation();
+    }
+    return () => {
+      if (currentAnimationRef.current) {
+        currentAnimationRef.current.stop();
+      }
+    };
+  }, [showCursor]);
 
-  const typeText = (text: string, speed: number = TIMING.TYPING_SPEED) => {
-    // 如果文本相同，不重复触发
-    if (lastTextRef.current === text && displayedText === text) {
+  // AI流式输出速度计算 - 更真实的流式传输效果
+  const calculateStreamingSpeed = (char: string, index: number, totalLength: number, isChunkEnd: boolean = false) => {
+    const ultraFast = 8;     // 极快模式 - 模拟AI模型输出token
+    const fast = 15;         // 快速模式
+    const normal = 25;       // 正常模式
+    const slow = 45;         // 思考模式
+    const pause = 120;       // 标点停顿
+    
+    // 标点符号后的自然停顿
+    if (['。', '？', '！'].includes(char)) {
+      return pause;
+    }
+    if (['，', '；', '：'].includes(char)) {
+      return pause * 0.6;
+    }
+    
+    // 模拟AI token输出的批次效果
+    if (isChunkEnd) {
+      return slow; // 批次结束稍微停顿
+    }
+    
+    // 句子开头的思考停顿
+    if (index < 2) {
+      return slow;
+    }
+    
+    // 长句子中的自然节奏变化
+    const progress = index / totalLength;
+    if (progress < 0.3) {
+      // 开始阶段：稍慢，模拟AI思考
+      return Math.random() > 0.7 ? slow : normal;
+    } else if (progress < 0.7) {
+      // 中间阶段：加速，模拟AI确定
+      return Math.random() > 0.8 ? normal : fast;
+    } else {
+      // 结尾阶段：很快，模拟AI完成
+      return Math.random() > 0.9 ? fast : ultraFast;
+    }
+  };
+
+  // AI流式输出效果 - 更真实的流式传输体验
+  const typeText = (text: string, options: { instant?: boolean; onComplete?: () => void; streaming?: boolean } = {}) => {
+    // 防止重复触发相同文本
+    if (lastTextRef.current === text && displayedText === text && !options.instant) {
+      options.onComplete?.();
       return;
     }
     
-    // 记录当前文本
     lastTextRef.current = text;
     
-    // 清除之前的定时器
-    if (currentTimer) {
-      clearInterval(currentTimer);
-      setCurrentTimer(null);
+    // 清除之前的动画
+    if (currentAnimationRef.current) {
+      currentAnimationRef.current.stop();
+    }
+    if (rafRef.current) {
+      cancelAnimationFrame(rafRef.current);
     }
     
-    setIsTyping(true);
-    setDisplayedText(''); // 立即清空开始打字
-    
-    if (!text || text.length === 0) {
+    // 即时显示模式
+    if (options.instant || !text || text.length === 0) {
+      isStreamingRef.current = false;
       setIsTyping(false);
+      setDisplayedText(text || '');
+      options.onComplete?.();
       return;
     }
     
-    let index = 0;
-    const timer = setInterval(() => {
-      if (index < text.length) {
-        setDisplayedText(text.substring(0, index + 1));
-        index++;
-      } else {
-        setIsTyping(false);
-        clearInterval(timer);
-        setCurrentTimer(null);
-      }
-    }, speed);
+    isStreamingRef.current = true;
+    setIsTyping(true);
+    setDisplayedText('');
+    triggerStreamingEffect(); // 触发渐入效果
     
-    setCurrentTimer(timer);
-    return timer;
+    // 将文本分割成AI token风格的块（模拟真实AI输出）
+    const chunks = splitIntoAIChunks(text);
+    textChunks.current = chunks;
+    
+    let chunkIndex = 0;
+    let charIndex = 0;
+    let currentChunk = '';
+    let lastTime = performance.now();
+    let nextCharTime = 0;
+    let displayedChunks: string[] = [];
+    
+    const animate = (currentTime: number) => {
+      // 检查是否完成所有块
+      if (chunkIndex >= chunks.length) {
+        isStreamingRef.current = false;
+        setIsTyping(false);
+        options.onComplete?.();
+        return;
+      }
+      
+      // 检查当前块是否完成
+      if (charIndex >= chunks[chunkIndex].length) {
+        displayedChunks.push(chunks[chunkIndex]);
+        chunkIndex++;
+        charIndex = 0;
+        
+        // 块间停顿，模拟AI处理间隔
+        if (chunkIndex < chunks.length) {
+          nextCharTime = Math.random() * 80 + 40; // 40-120ms随机停顿
+          lastTime = currentTime;
+        }
+        
+        rafRef.current = requestAnimationFrame(animate);
+        return;
+      }
+      
+      if (currentTime - lastTime >= nextCharTime) {
+        currentChunk = chunks[chunkIndex];
+        const char = currentChunk[charIndex];
+        
+        // 更新显示的文本
+        const partialChunk = currentChunk.substring(0, charIndex + 1);
+        const fullText = [...displayedChunks, partialChunk].join('');
+        setDisplayedText(fullText);
+        
+        // 计算下一个字符的延迟
+        const isChunkEnd = charIndex === currentChunk.length - 1;
+        nextCharTime = calculateStreamingSpeed(char, charIndex, currentChunk.length, isChunkEnd);
+        
+        lastTime = currentTime;
+        charIndex++;
+      }
+      
+      rafRef.current = requestAnimationFrame(animate);
+    };
+    
+    rafRef.current = requestAnimationFrame(animate);
+  };
+  
+  // 将文本分割成AI风格的token块
+  const splitIntoAIChunks = (text: string): string[] => {
+    const chunks: string[] = [];
+    const words = text.split('');
+    let currentChunk = '';
+    
+    for (let i = 0; i < words.length; i++) {
+      const char = words[i];
+      currentChunk += char;
+      
+      // 根据字符类型决定块的大小
+      const shouldEndChunk = 
+        // 标点符号结束块
+        ['。', '？', '！', '，', '；', '：'].includes(char) ||
+        // 随机长度块 (2-6字符)
+        (currentChunk.length >= 2 && Math.random() > 0.7) ||
+        // 强制最大块大小
+        currentChunk.length >= 6;
+      
+      if (shouldEndChunk || i === words.length - 1) {
+        chunks.push(currentChunk);
+        currentChunk = '';
+      }
+    }
+    
+    return chunks.filter(chunk => chunk.length > 0);
+  };
+
+  // 实时流式追加文本 - 模拟AI增量输出
+  const appendText = (newText: string, options: { speed?: 'fast' | 'normal' | 'slow'; onComplete?: () => void } = {}) => {
+    const currentText = displayedText;
+    const fullText = currentText + newText;
+    
+    isStreamingRef.current = true;
+    setIsTyping(true);
+    
+    // AI流式速度配置
+    const speeds = {
+      fast: { base: 12, variance: 8 },      // 12±8ms
+      normal: { base: 25, variance: 15 },   // 25±15ms  
+      slow: { base: 45, variance: 20 }      // 45±20ms
+    };
+    
+    const speedConfig = speeds[options.speed || 'normal'];
+    let currentIndex = currentText.length;
+    let lastTime = performance.now();
+    let nextCharTime = 0;
+    
+    const animate = (currentTime: number) => {
+      if (currentIndex >= fullText.length) {
+        isStreamingRef.current = false;
+        setIsTyping(false);
+        options.onComplete?.();
+        return;
+      }
+      
+      if (currentTime - lastTime >= nextCharTime) {
+        setDisplayedText(fullText.substring(0, currentIndex + 1));
+        
+        // 随机变化的速度，模拟AI处理的自然节奏
+        const randomVariance = (Math.random() - 0.5) * speedConfig.variance;
+        nextCharTime = speedConfig.base + randomVariance;
+        
+        lastTime = currentTime;
+        currentIndex++;
+      }
+      
+      rafRef.current = requestAnimationFrame(animate);
+    };
+    
+    rafRef.current = requestAnimationFrame(animate);
   };
 
   // 直接设置文本（不使用打字机效果）
   const setTextDirectly = (text: string) => {
-    if (currentTimer) {
-      clearInterval(currentTimer);
-      setCurrentTimer(null);
+    if (currentAnimationRef.current) {
+      currentAnimationRef.current.stop();
     }
+    if (rafRef.current) {
+      cancelAnimationFrame(rafRef.current);
+    }
+    isStreamingRef.current = false;
     setIsTyping(false);
     setDisplayedText(text);
     lastTextRef.current = text;
@@ -72,31 +282,61 @@ export const useTypewriterEffect = () => {
 
   // 清空文本
   const clearText = () => {
-    if (currentTimer) {
-      clearInterval(currentTimer);
-      setCurrentTimer(null);
+    if (currentAnimationRef.current) {
+      currentAnimationRef.current.stop();
     }
+    if (rafRef.current) {
+      cancelAnimationFrame(rafRef.current);
+    }
+    isStreamingRef.current = false;
     setIsTyping(false);
     setDisplayedText('');
     lastTextRef.current = '';
+    textChunks.current = [];
   };
+
+  // 暂停/恢复流式输出
+  const pauseStreaming = () => {
+    if (rafRef.current) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
+  };
+
+  const resumeStreaming = () => {
+    if (isStreamingRef.current && lastTextRef.current && displayedText.length < lastTextRef.current.length) {
+      typeText(lastTextRef.current);
+    }
+  };
+
+  // 检查是否正在流式输出
+  const isStreaming = () => isStreamingRef.current;
 
   // 清理函数
   useEffect(() => {
     return () => {
-      if (currentTimer) {
-        clearInterval(currentTimer);
+      if (currentAnimationRef.current) {
+        currentAnimationRef.current.stop();
+      }
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
       }
     };
-  }, [currentTimer]);
+  }, []);
 
   return {
     displayedText,
     isTyping,
     showCursor,
+    cursorOpacity,
+    streamingOpacity,
     typeText,
+    appendText,
     setTextDirectly,
     clearText,
+    pauseStreaming,
+    resumeStreaming,
+    isStreaming,
   };
 };
 

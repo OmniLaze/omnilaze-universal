@@ -269,13 +269,94 @@ export const useFormSteps = (props: UseFormStepsProps) => {
     mapAnimation.setValue(0);
   };
 
-  // 编辑答案
+  // 级联编辑答案 - 编辑某个问题后，后续问题都需要重新选择
   const handleEditAnswer = (stepIndex: number) => {
     const answerToEdit = completedAnswers[stepIndex];
     if (!answerToEdit) return;
     
+    // 检查是否有后续已完成的答案
+    const hasSubsequentAnswers = Object.keys(completedAnswers).some(key => 
+      parseInt(key) > stepIndex
+    );
+    
+    // 如果有后续答案，给用户一个轻微的反馈（通过动画或状态）
+    if (hasSubsequentAnswers) {
+      // 可以在这里添加用户提示，例如：
+      // showMessage('编辑此问题将清除后续所有答案');
+      console.log(`编辑第${stepIndex + 1}个问题将清除后续所有答案`);
+    }
+    
     setOriginalAnswerBeforeEdit(answerToEdit);
     
+    // 核心逻辑：清除所有后续步骤的已完成答案
+    const newCompletedAnswers = { ...completedAnswers };
+    
+    // 删除所有大于当前编辑步骤的已完成答案
+    Object.keys(newCompletedAnswers).forEach(key => {
+      const keyNumber = parseInt(key);
+      if (keyNumber > stepIndex) {
+        delete newCompletedAnswers[keyNumber];
+      }
+    });
+    
+    // 更新已完成答案集合
+    setCompletedAnswers(newCompletedAnswers);
+    
+    // 重置所有后续步骤的状态
+    resetSubsequentStepStates(stepIndex);
+    
+    // 恢复当前编辑步骤的值
+    restoreEditingStepValues(answerToEdit);
+    
+    // 设置当前步骤为编辑的步骤
+    setCurrentStep(stepIndex);
+    setEditingStep(stepIndex);
+    
+    // 注意：下滑手势切换到当前问题视图的逻辑在App.tsx的useEffect中处理
+  };
+  
+  // 重置后续步骤的状态
+  const resetSubsequentStepStates = (fromStep: number) => {
+    // 根据编辑的步骤，重置相应的后续状态
+    if (fromStep <= 0) {
+      // 编辑地址后，重置所有后续状态
+      setSelectedFoodType([]);
+      setSelectedAllergies([]);
+      setSelectedPreferences([]);
+      setBudget('');
+      setIsAddressConfirmed(false);
+      setShowMap(false);
+      mapAnimation.setValue(0);
+    }
+    
+    if (fromStep <= 1) {
+      // 编辑食物类型后，重置忌口、偏好、预算
+      setSelectedAllergies([]);
+      setSelectedPreferences([]);
+      setBudget('');
+    }
+    
+    if (fromStep <= 2) {
+      // 编辑忌口后，重置偏好、预算
+      setSelectedPreferences([]);
+      setBudget('');
+    }
+    
+    if (fromStep <= 3) {
+      // 编辑偏好后，重置预算
+      setBudget('');
+    }
+    
+    // 重置订单相关状态
+    setCurrentOrderId(null);
+    setCurrentOrderNumber(null);
+    setCurrentUserSequenceNumber(null);
+    setIsOrderSubmitting(false);
+    setIsSearchingRestaurant(false);
+  };
+  
+  // 恢复编辑步骤的值
+  const restoreEditingStepValues = (answerToEdit: Answer) => {
     switch (answerToEdit.type) {
       case 'address':
         setAddress(answerToEdit.value);
@@ -285,7 +366,6 @@ export const useFormSteps = (props: UseFormStepsProps) => {
         break;
       case 'foodType':
         if (answerToEdit.value !== '未选择') {
-          // 处理数组或字符串格式的值
           const labels = Array.isArray(answerToEdit.value) 
             ? answerToEdit.value 
             : answerToEdit.value.split(', ');
@@ -298,7 +378,6 @@ export const useFormSteps = (props: UseFormStepsProps) => {
         break;
       case 'allergy':
         if (answerToEdit.value !== '无忌口') {
-          // 处理数组或字符串格式的值
           const labels = Array.isArray(answerToEdit.value) 
             ? answerToEdit.value 
             : answerToEdit.value.split(', ');
@@ -313,7 +392,6 @@ export const useFormSteps = (props: UseFormStepsProps) => {
         break;
       case 'preference':
         if (answerToEdit.value !== '无特殊偏好') {
-          // 处理数组或字符串格式的值
           const labels = Array.isArray(answerToEdit.value) 
             ? answerToEdit.value 
             : answerToEdit.value.split(', ');
@@ -330,11 +408,9 @@ export const useFormSteps = (props: UseFormStepsProps) => {
         setBudget(answerToEdit.value);
         break;
     }
-    
-    setEditingStep(stepIndex);
   };
 
-  // 完成编辑 - 使用统一的回答管理
+  // 完成编辑 - 简化版，级联逻辑已在handleEditAnswer中处理
   const handleFinishEditing = () => {
     const currentAnswer = getCurrentAnswer();
     if (currentAnswer && editingStep !== null) {
@@ -344,60 +420,19 @@ export const useFormSteps = (props: UseFormStepsProps) => {
         isEditing: true,
         skipAnimation: true, // 编辑模式不需要动画
         onComplete: () => {
-          // 编辑完成后的特殊处理
+          // 编辑完成后的基本处理
           if (editingStep === 0) {
             setIsAddressConfirmed(true);
           }
           
-          if (editingStep === 1) {
-            const isSelectedDrink = selectedFoodType.includes('drink');
-            
-            setBudget('');
-            
-            setCurrentOrderId(null);
-            setCurrentOrderNumber(null);
-            setCurrentUserSequenceNumber(null);
-            setIsOrderSubmitting(false);
-            setIsSearchingRestaurant(false);
-            
-            if (isSelectedDrink) {
-              const newCompletedAnswers = { ...completedAnswers };
-              delete newCompletedAnswers[2];
-              delete newCompletedAnswers[3];
-              delete newCompletedAnswers[4];
-              delete newCompletedAnswers[5];
-              setCompletedAnswers({
-                ...newCompletedAnswers,
-                [editingStep]: currentAnswer
-              });
-              
-              setSelectedAllergies([]);
-              setSelectedPreferences([]);
-              
-              if (currentStep >= 4) {
-                setCurrentStep(4);
-              } else if (currentStep > 1) {
-                setCurrentStep(4);
-              }
-            } else {
-              const newCompletedAnswers = { ...completedAnswers };
-              delete newCompletedAnswers[4];
-              delete newCompletedAnswers[5];
-              setCompletedAnswers({
-                ...newCompletedAnswers,
-                [editingStep]: currentAnswer
-              });
-              
-              if (currentStep > 1 && currentStep < 4) {
-                // 保持当前步骤
-              } else if (currentStep >= 4) {
-                setCurrentStep(2);
-              }
-            }
-          }
-          
+          // 清除编辑状态
           setEditingStep(null);
           setOriginalAnswerBeforeEdit(null);
+          
+          // 继续到下一步（如果有的话）
+          if (editingStep !== null && editingStep < STEP_CONTENT.length - 1) {
+            setCurrentStep(editingStep + 1);
+          }
         }
       });
       
@@ -407,65 +442,37 @@ export const useFormSteps = (props: UseFormStepsProps) => {
     }
   };
 
-  // 取消编辑
+  // 取消编辑 - 恢复原始状态，保持级联删除的结果
   const handleCancelEditing = () => {
     if (editingStep !== null && originalAnswerBeforeEdit) {
-      switch (originalAnswerBeforeEdit.type) {
-        case 'address':
-          setAddress(originalAnswerBeforeEdit.value);
-          setIsAddressConfirmed(true);
-          break;
-        case 'foodType':
-          if (originalAnswerBeforeEdit.value !== '未选择') {
-            // 处理数组或字符串格式的值
-            const labels = Array.isArray(originalAnswerBeforeEdit.value) 
-              ? originalAnswerBeforeEdit.value 
-              : originalAnswerBeforeEdit.value.split(', ');
-            const ids = labels.map(label => {
-              const option = FOOD_TYPE_OPTIONS.find(opt => opt.label === label);
-              return option ? option.id : label;
-            });
-            setSelectedFoodType(ids);
-          }
-          break;
-        case 'allergy':
-          if (originalAnswerBeforeEdit.value !== '无忌口') {
-            // 处理数组或字符串格式的值
-            const labels = Array.isArray(originalAnswerBeforeEdit.value) 
-              ? originalAnswerBeforeEdit.value 
-              : originalAnswerBeforeEdit.value.split(', ');
-            const ids = labels.map(label => {
-              const option = ALLERGY_OPTIONS.find(opt => opt.label === label);
-              return option ? option.id : label;
-            });
-            setSelectedAllergies(ids);
-          } else {
-            setSelectedAllergies([]);
-          }
-          break;
-        case 'preference':
-          if (originalAnswerBeforeEdit.value !== '无特殊偏好') {
-            // 处理数组或字符串格式的值
-            const labels = Array.isArray(originalAnswerBeforeEdit.value) 
-              ? originalAnswerBeforeEdit.value 
-              : originalAnswerBeforeEdit.value.split(', ');
-            const ids = labels.map(label => {
-              const option = PREFERENCE_OPTIONS.find(opt => opt.label === label);
-              return option ? option.id : label;
-            });
-            setSelectedPreferences(ids);
-          } else {
-            setSelectedPreferences([]);
-          }
-          break;
-        case 'budget':
-          setBudget(originalAnswerBeforeEdit.value);
-          break;
+      // 恢复当前步骤的原始值
+      restoreEditingStepValues(originalAnswerBeforeEdit);
+      
+      // 特殊处理地址确认状态
+      if (originalAnswerBeforeEdit.type === 'address') {
+        setIsAddressConfirmed(true);
       }
       
+      // 清除编辑状态
       setEditingStep(null);
       setOriginalAnswerBeforeEdit(null);
+      
+      // 重新设置当前步骤为下一个需要完成的步骤
+      const nextIncompleteStep = findNextIncompleteStep();
+      if (nextIncompleteStep !== -1) {
+        setCurrentStep(nextIncompleteStep);
+      }
     }
+  };
+  
+  // 找到下一个未完成的步骤
+  const findNextIncompleteStep = (): number => {
+    for (let i = 0; i < STEP_CONTENT.length; i++) {
+      if (!completedAnswers[i]) {
+        return i;
+      }
+    }
+    return STEP_CONTENT.length; // 所有步骤都已完成
   };
 
   return {
