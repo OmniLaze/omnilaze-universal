@@ -534,7 +534,7 @@ const styles = StyleSheet.create({
       linear-gradient(-45deg, transparent 75%, #ddd 75%)
     `,
     backgroundSize: '8px 8px',
-    backgroundPosition: '0 0, 0 4px, 4px -4px, -4px 0px',
+    backgroundPosition: '0 0',
   },
   sliderThumb: {
     width: 20,

@@ -192,16 +192,11 @@ function LemonadeAppContent() {
             friction: 10, // 增加friction让动画更自然
             useNativeDriver: false,
           }).start(() => {
-            // 答案动画完成后，模拟下滑手势切换到新问题
+            // 答案动画完成后，保持在当前问题视图
             setTimeout(() => {
-              // 先上滑到已完成问题区域
-              if (focusMode === 'current' && Object.keys(completedAnswers).length > 0) {
-                handleFocusGesture('up');
-                
-                // 然后模拟下滑手势回到当前问题，触发新问题的打字机动画
-                setTimeout(() => {
-                  handleFocusGesture('down');
-                }, 300); // 300ms后下滑
+              // 确保始终在当前问题视图，不执行自动切换
+              if (focusMode !== 'current') {
+                switchToCurrentQuestion();
               }
               
               // 执行完成回调
@@ -212,14 +207,9 @@ function LemonadeAppContent() {
       } else {
         // 特殊步骤（如手机号，索引-1）的处理
         setTimeout(() => {
-          // 模拟下滑手势切换到新问题
-          if (focusMode === 'current' && Object.keys(completedAnswers).length > 0) {
-            handleFocusGesture('up');
-            
-            // 然后模拟下滑手势回到当前问题，触发新问题的打字机动画
-            setTimeout(() => {
-              handleFocusGesture('down');
-            }, 300); // 300ms后下滑
+          // 确保始终在当前问题视图，不执行自动切换
+          if (focusMode !== 'current') {
+            switchToCurrentQuestion();
           }
           
           // 执行完成回调
@@ -403,9 +393,49 @@ function LemonadeAppContent() {
 
   // 移除ScrollView引用，不再需要
   
+  // focusMode状态管理：保存到cookie
+  const [focusMode, setFocusMode] = useState<'current' | 'completed'>(() => {
+    // 页面加载时从localStorage恢复focusMode，默认为current
+    if (Platform.OS === 'web') {
+      try {
+        const saved = localStorage.getItem('omnilaze_focus_mode');
+        return saved === 'completed' ? 'completed' : 'current';
+      } catch (error) {
+        console.log('读取focusMode失败:', error);
+        return 'current';
+      }
+    }
+    return 'current';
+  });
+  
+  // 保存focusMode到localStorage
+  const saveFocusMode = (mode: 'current' | 'completed') => {
+    if (Platform.OS === 'web') {
+      try {
+        localStorage.setItem('omnilaze_focus_mode', mode);
+        console.log('focusMode已保存:', mode);
+      } catch (error) {
+        console.log('保存focusMode失败:', error);
+      }
+    }
+  };
+  
   // 状态管理：聚焦模式
-  const [focusMode, setFocusMode] = useState<'current' | 'completed'>('current'); // 聚焦模式：当前问题或已完成问题
-  const [focusTransition] = useState(new Animated.Value(0)); // 0=聚焦当前问题, 1=聚焦已完成问题
+  const getInitialFocusTransitionValue = () => {
+    // 根据保存的focusMode设置初始动画值
+    if (Platform.OS === 'web') {
+      try {
+        const savedMode = localStorage.getItem('omnilaze_focus_mode');
+        return savedMode === 'completed' ? 1 : 0;
+      } catch (error) {
+        console.log('读取focusTransition初始值失败:', error);
+        return 0;
+      }
+    }
+    return 0;
+  };
+  
+  const [focusTransition] = useState(new Animated.Value(getInitialFocusTransitionValue())); // 0=聚焦当前问题, 1=聚焦已完成问题
   const [autoPushOffset] = useState(new Animated.Value(0)); // 自动推送偏移量
   const [gestureTransition] = useState(new Animated.Value(0)); // 新增：手势跟随动画值
   const [completedQuestionsHeight, setCompletedQuestionsHeight] = useState(height * 0.3); // 已完成问题容器的实际高度
@@ -419,6 +449,7 @@ function LemonadeAppContent() {
   // 切换聚焦模式
   const switchToCurrentQuestion = () => {
     setFocusMode('current');
+    saveFocusMode('current'); // 保存到localStorage
     setIsDragging(false);
     Animated.spring(focusTransition, {
       toValue: 0,
@@ -472,6 +503,7 @@ function LemonadeAppContent() {
   
   const switchToCompletedQuestions = () => {
     setFocusMode('completed');
+    saveFocusMode('completed'); // 保存到localStorage
     setIsDragging(false);
     Animated.spring(focusTransition, {
       toValue: 1,
@@ -579,15 +611,10 @@ function LemonadeAppContent() {
       // 计算手势跟随的动画值（-1到1之间）
       const gestureProgress = clampedDy / maxGestureDistance;
       
-      // 根据当前聚焦模式调整手势方向
-      let gestureValue;
-      if (focusMode === 'current') {
-        // 在当前问题模式，向上滑动（负值）应该产生正向手势值
-        gestureValue = -gestureProgress;
-      } else {
-        // 在已完成问题模式，向下滑动（正值）应该产生负向手势值
-        gestureValue = gestureProgress;
-      }
+      // 简化手势跟随逻辑：直接使用手势进度，让用户感受到自然的跟随
+      // 向上滑动（负值）→ 正值 → 页面向上移动
+      // 向下滑动（正值）→ 负值 → 页面向下移动
+      const gestureValue = -gestureProgress;
       
       // 更新手势跟随动画值，使用更平滑的插值
       gestureTransition.setValue(gestureValue);
@@ -775,13 +802,9 @@ function LemonadeAppContent() {
     });
   }, [completedAnswers, isStateRestored]);
 
-  // 页面初始化视图检查 - 确保刷新后在当前问题视图
+  // 页面初始化视图检查 - 强制默认当前问题视图
   useEffect(() => {
     if (!isStateRestored) return;
-    
-    // 检查是否有已完成的答案且当前不在编辑状态
-    const hasCompletedAnswers = Object.keys(completedAnswers).length > 0;
-    const isNotEditing = editingStep === null;
     
     // 如果用户在编辑状态，不执行初始化视图切换
     if (editingStep !== null) {
@@ -789,24 +812,32 @@ function LemonadeAppContent() {
       return;
     }
     
-    // 无论当前 focusMode 状态如何，如果有已完成答案，强制确保在当前问题视图
-    if (hasCompletedAnswers && isNotEditing) {
-      console.log('页面初始化：检测到已完成答案，强制回到当前问题视图');
+    // 检查是否有已完成的答案
+    const hasCompletedAnswers = Object.keys(completedAnswers).length > 0;
+    
+    console.log('页面初始化检查:', {
+      hasCompletedAnswers,
+      focusMode,
+      editingStep
+    });
+    
+    // 如果有已完成答案，但默认策略是强制回到当前问题视图
+    if (hasCompletedAnswers) {
+      console.log('页面初始化：强制设置为当前问题视图（无论之前在哪个视图）');
       
       // 延迟执行，确保所有状态恢复完成
       setTimeout(() => {
-        // 不依赖 focusMode 状态，因为刷新后状态可能不准确
-        // 总是执行下滑手势，确保用户在当前问题视图
-        console.log('页面初始化：执行强制下滑手势，确保在当前问题视图');
-        
-        // 先切换到completed模式（确保有下滑的空间）
-        setFocusMode('completed');
-        focusTransition.setValue(1);
-        
-        // 然后立即执行下滑手势到current视图
-        setTimeout(() => {
-          handleFocusGesture('down');
-        }, 50); // 很短的延迟确保状态设置完成
+        // 强制切换到当前问题视图
+        if (focusMode !== 'current') {
+          console.log('页面初始化：当前不在current视图，切换到current');
+          switchToCurrentQuestion();
+        } else {
+          console.log('页面初始化：已在current视图，确保动画值正确');
+          // 即使已经是current模式，也确保动画值是正确的
+          focusTransition.setValue(0);
+          gestureTransition.setValue(0);
+          saveFocusMode('current');
+        }
       }, 100); // 短暂延迟确保状态稳定
     }
   }, [isStateRestored, editingStep]); // 依赖 editingStep 以便状态变化时重新检查
@@ -1106,7 +1137,7 @@ function LemonadeAppContent() {
                   // 主要的页面切换动画
                   focusTransition.interpolate({
                     inputRange: [0, 1],
-                    outputRange: [singleQuestionHeight, -completedQuestionsHeight+singleQuestionHeight], // 修正：避免过度移动导致输入组件消失
+                    outputRange: [-completedQuestionsHeight+singleQuestionHeight, singleQuestionHeight], // 交换：0=当前问题视图，1=已完成问题视图
                   }),
                   // 手势跟随动画（叠加效果）- 优化范围让手势更流畅
                   gestureTransition.interpolate({
@@ -1135,10 +1166,10 @@ function LemonadeAppContent() {
             paddingTop: 10,
             paddingBottom: 10,
             paddingHorizontal: 16,
-            // 添加基于焦点模式的透明度效果（互换：新问题页时已完成问题为黑色）
+            // 已完成问题区域透明度：当前问题视图时半透明，已完成问题视图时不透明
             opacity: focusTransition.interpolate({
               inputRange: [0, 1],
-              outputRange: [1.0, 0.4], // 新问题模式(0)时透明度1.0（黑色），已完成问题模式(1)时透明度0.4（灰色）
+              outputRange: [0.4, 1.0], // 当前问题模式(0)时已完成问题半透明，已完成问题模式(1)时已完成问题不透明
             }),
           }}
           onLayout={measureCompletedQuestionsHeight}
@@ -1200,10 +1231,10 @@ function LemonadeAppContent() {
           paddingHorizontal: 16,
           paddingTop: 10 , // 基础padding
           paddingBottom: 40,
-          // 添加基于焦点模式的透明度效果（互换：已完成问题页时当前问题为黑色）
+          // 当前问题区域透明度：当前问题视图时不透明，已完成问题视图时半透明
           opacity: focusTransition.interpolate({
             inputRange: [0, 1],
-            outputRange: [0.4, 1.0], // 新问题模式(0)时透明度1.0（黑色），已完成问题模式(1)时透明度0.4（灰色）
+            outputRange: [1.0, 0.4], // 当前问题模式(0)时当前问题不透明，已完成问题模式(1)时当前问题半透明
           }),
         }}>
           <View style={{
