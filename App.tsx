@@ -181,16 +181,16 @@ function LemonadeAppContent() {
         // 先播放问题动画，然后播放答案动画
         Animated.spring(questionAnimations[stepIndex], {
           toValue: 1,
-          tension: 80,
-          friction: 10,
-          useNativeDriver: false,
+          tension: 120,
+          friction: 12,
+          useNativeDriver: true,
         }).start(() => {
           // 问题动画完成后，开始答案动画
           Animated.spring(answerAnimations[stepIndex], {
             toValue: 1,
-            tension: 80,  // 增加tension让动画更快更有弹性
-            friction: 10, // 增加friction让动画更自然
-            useNativeDriver: false,
+            tension: 120,
+            friction: 12,
+            useNativeDriver: true,
           }).start(() => {
             // 答案动画完成后，保持在当前问题视图
             setTimeout(() => {
@@ -535,12 +535,12 @@ function LemonadeAppContent() {
       const isQuickScroll = Math.abs(event.deltaY) > 10;
       
       if (isQuickScroll && Object.keys(completedAnswers).length > 0) {
-        if (event.deltaY > 0 && focusMode === 'current') {
-          // 向下滚动（向上查看内容）且聚焦在当前问题
+        if (event.deltaY < 0 && focusMode === 'current') {
+          // 向上滚动且聚焦在当前问题 → 切换到已完成问题
           handleFocusGesture('up');
           event.preventDefault();
-        } else if (event.deltaY < 0 && focusMode === 'completed') {
-          // 向上滚动（向下查看内容）且聚焦在已完成问题
+        } else if (event.deltaY > 0 && focusMode === 'completed') {
+          // 向下滚动且聚焦在已完成问题 → 切换到当前问题
           handleFocusGesture('down');
           event.preventDefault();
         }
@@ -573,11 +573,11 @@ function LemonadeAppContent() {
     
     if (isQuickSwipe && Object.keys(completedAnswers).length > 0) {
       if (deltaY > 0 && focusMode === 'current') {
-        // 向上快速滑动且聚焦在当前问题
+        // 向上快速滑动且聚焦在当前问题 → 切换到已完成问题
         handleFocusGesture('up');
         event.preventDefault();
       } else if (deltaY < 0 && focusMode === 'completed') {
-        // 向下快速滑动且聚焦在已完成问题
+        // 向下快速滑动且聚焦在已完成问题 → 切换到当前问题
         handleFocusGesture('down');
         event.preventDefault();
       }
@@ -602,21 +602,20 @@ function LemonadeAppContent() {
     },
     onPanResponderMove: (evt, gestureState) => {
       // 性能优化：限制更新频率，避免过于频繁的动画更新
-      if (Math.abs(gestureState.dy) < 5) return; // 忽略小幅移动，减少计算
+      if (Math.abs(gestureState.dy) < 3) return; // 更敏感的阈值
       
       // 计算手势距离（限制在合理范围内）
-      const maxGestureDistance = height * 0.25; // 减少最大距离提升响应性
+      const maxGestureDistance = height * 0.2; // 优化距离
       const clampedDy = Math.max(-maxGestureDistance, Math.min(maxGestureDistance, gestureState.dy));
       
       // 计算手势跟随的动画值（-1到1之间）
       const gestureProgress = clampedDy / maxGestureDistance;
       
-      // 简化手势跟随逻辑：直接使用手势进度，让用户感受到自然的跟随
-      // 向上滑动（负值）→ 正值 → 页面向上移动
-      // 向下滑动（正值）→ 负值 → 页面向下移动
-      const gestureValue = -gestureProgress;
+      // 应用缓动函数，让手势跟随更自然
+      const easedProgress = gestureProgress * Math.abs(gestureProgress); // 二次缓动
+      const gestureValue = -easedProgress;
       
-      // 更新手势跟随动画值，使用更平滑的插值
+      // 更新手势跟随动画值
       gestureTransition.setValue(gestureValue);
     },
     onPanResponderRelease: (evt, gestureState) => {
@@ -626,18 +625,21 @@ function LemonadeAppContent() {
       const threshold = height * 0.15; // 从20%降低到15%，让切换更敏感
       const shouldSwitch = Math.abs(gestureState.dy) > threshold;
       
-      // 先重置手势跟随动画值（使用更快的动画参数）
-      Animated.timing(gestureTransition, {
+      // 先重置手势跟随动画值（使用平滑的spring动画）
+      Animated.spring(gestureTransition, {
         toValue: 0,
-        duration: 200, // 使用timing动画替代spring，更精确的控制
-        useNativeDriver: true, // 启用native driver提升性能
+        tension: 120,
+        friction: 12,
+        useNativeDriver: true,
       }).start();
       
       if (shouldSwitch) {
-        // 达到临界值，执行真正的页面切换
+        // 达到临界值，执行真正的页面切换（反转方向）
         if (gestureState.dy < -threshold && focusMode === 'current') {
+          // 向上滑动，在current模式 → 切换到completed（看历史）
           switchToCompletedQuestions();
         } else if (gestureState.dy > threshold && focusMode === 'completed') {
+          // 向下滑动，在completed模式 → 切换到current（看新内容）
           switchToCurrentQuestion();
         }
       }
@@ -650,14 +652,30 @@ function LemonadeAppContent() {
       // 回弹手势跟随动画值
       Animated.spring(gestureTransition, {
         toValue: 0,
-        tension: 100,
-        friction: 8,
-        useNativeDriver: false,
+        tension: 120,
+        friction: 12,
+        useNativeDriver: true,
       }).start();
     },
   });
 
   // AI流式问题过渡函数 - 更丝滑的现代效果
+  // 防止动画冲突的状态
+  const [isInputAnimating, setIsInputAnimating] = useState(false);
+  
+  const animateInputSection = (toValue: number, duration: number = 300) => {
+    if (isInputAnimating) return; // 防止冲突
+    
+    setIsInputAnimating(true);
+    Animated.timing(inputSectionAnimation, {
+      toValue,
+      duration,
+      useNativeDriver: true,
+    }).start(() => {
+      setIsInputAnimating(false);
+    });
+  };
+
   const handleQuestionTransition = (questionText: string, hasUserInput: boolean = false) => {
     // 重置动画状态，避免冲突
     inputSectionAnimation.setValue(0);
@@ -670,22 +688,14 @@ function LemonadeAppContent() {
         streaming: true,
         onComplete: () => {
           // 打字完成后，丝滑显示输入框
-          Animated.timing(inputSectionAnimation, {
-            toValue: 1,
-            duration: 400,
-            useNativeDriver: false,
-          }).start();
+          animateInputSection(1, 300);
         }
       });
     } else {
       // 有用户输入：直接显示文本，立即显示输入框
       setTextDirectly(questionText);
       // 立即显示输入框，因为已经有用户输入
-      Animated.timing(inputSectionAnimation, {
-        toValue: 1,
-        duration: 200,
-        useNativeDriver: false,
-      }).start();
+      animateInputSection(1, 200);
     }
   };
 
@@ -699,13 +709,8 @@ function LemonadeAppContent() {
       });
       
       if (currentInputValue === 0) {
-        // 打字机完成后立即显示输入框，无延迟
-        Animated.spring(inputSectionAnimation, {
-          toValue: 1,
-          tension: 60,
-          friction: 8,
-          useNativeDriver: false,
-        }).start();
+        // 打字机完成后立即显示输入框，使用统一的动画函数
+        animateInputSection(1, 250);
       }
       
       // 清理监听器
@@ -830,7 +835,15 @@ function LemonadeAppContent() {
         // 强制切换到当前问题视图
         if (focusMode !== 'current') {
           console.log('页面初始化：当前不在current视图，切换到current');
-          switchToCurrentQuestion();
+          // 使用更温和的切换，避免突兀的动画
+          setFocusMode('current');
+          saveFocusMode('current');
+          Animated.timing(focusTransition, {
+            toValue: 0,
+            duration: 200,
+            useNativeDriver: true,
+          }).start();
+          gestureTransition.setValue(0);
         } else {
           console.log('页面初始化：已在current视图，确保动画值正确');
           // 即使已经是current模式，也确保动画值是正确的
@@ -1142,7 +1155,7 @@ function LemonadeAppContent() {
                   // 手势跟随动画（叠加效果）- 优化范围让手势更流畅
                   gestureTransition.interpolate({
                     inputRange: [-1, 0, 1],
-                    outputRange: [80, 0, -80], // 增加跟随范围让手势感觉更直接
+                    outputRange: [80, 0, -80], // 优化范围，减少过度移动
                   })
                 )
               },
@@ -1170,6 +1183,7 @@ function LemonadeAppContent() {
             opacity: focusTransition.interpolate({
               inputRange: [0, 1],
               outputRange: [0.4, 1.0], // 当前问题模式(0)时已完成问题半透明，已完成问题模式(1)时已完成问题不透明
+              extrapolate: 'clamp',
             }),
           }}
           onLayout={measureCompletedQuestionsHeight}
@@ -1235,6 +1249,7 @@ function LemonadeAppContent() {
           opacity: focusTransition.interpolate({
             inputRange: [0, 1],
             outputRange: [1.0, 0.4], // 当前问题模式(0)时当前问题不透明，已完成问题模式(1)时当前问题半透明
+            extrapolate: 'clamp',
           }),
         }}>
           <View style={{
