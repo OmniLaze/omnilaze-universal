@@ -11,6 +11,8 @@ import {
   TouchableOpacity,
   Text,
   Dimensions,
+  Easing,
+  StyleSheet,
 } from 'react-native';
 
 const { height } = Dimensions.get('window');
@@ -95,7 +97,7 @@ function LemonadeAppContent() {
     originalAnswerBeforeEdit, currentOrderId, currentOrderNumber,
     currentUserSequenceNumber, isOrderSubmitting, isSearchingRestaurant,
     isOrderCompleted, orderMessage, showInviteModal, isFreeOrder, showFreeDrinkModal,
-    isQuickOrderMode,
+    isQuickOrderMode, movingQuestion,
     
     // 状态设置函数
     setAddress, setBudget, setSelectedAllergies, setSelectedPreferences,
@@ -105,7 +107,7 @@ function LemonadeAppContent() {
     setOriginalAnswerBeforeEdit, setCurrentOrderId, setCurrentOrderNumber,
     setCurrentUserSequenceNumber, setIsOrderSubmitting, setIsSearchingRestaurant,
     setIsOrderCompleted, setOrderMessage, setShowInviteModal, setIsFreeOrder, setShowFreeDrinkModal,
-    setIsQuickOrderMode,
+    setIsQuickOrderMode, setMovingQuestion,
     
     // 工具函数
     resetAllState
@@ -140,7 +142,41 @@ function LemonadeAppContent() {
   // 移除流动动画状态管理
   const [completedQuestionsHeight, setCompletedQuestionsHeight] = useState(300);
   const [singleQuestionHeight, setSingleQuestionHeight] = useState(80);
-  // 移除不再使用的引用
+  
+  // 动画系统所需的 refs
+  const currentQuestionRef = useRef<View>(null);
+  const completedQuestionsRef = useRef<View>(null);
+  // 移除重复的 scrollViewRef 声明，使用下面的那个
+  
+  // 位置测量辅助函数
+  const measureCurrentQuestionPosition = (): Promise<number> => {
+    return new Promise((resolve) => {
+      if (currentQuestionRef.current) {
+        currentQuestionRef.current.measureInWindow((x, y, width, height) => {
+          console.log('📍 测量当前问题位置:', { x, y, width, height });
+          resolve(y);
+        });
+      } else {
+        console.warn('⚠️ 当前问题 ref 未找到，使用默认位置');
+        resolve(height * 0.6); // 默认位置
+      }
+    });
+  };
+
+  const measureCompletedQuestionTargetPosition = (): Promise<number> => {
+    return new Promise((resolve) => {
+      if (completedQuestionsRef.current) {
+        completedQuestionsRef.current.measureInWindow((x, y, width, height) => {
+          console.log('📍 测量已完成问题区域位置:', { x, y, width, height });
+          // 目标位置是已完成问题区域的底部，新问题会从这里"进入"
+          resolve(y + height);
+        });
+      } else {
+        console.warn('⚠️ 已完成问题区域 ref 未找到，使用默认位置');
+        resolve(completedQuestionsHeight); // 默认位置
+      }
+    });
+  };
   
   // 简化的已完成问题状态管理
   const getEffectiveCompletedAnswers = () => {
@@ -162,8 +198,8 @@ function LemonadeAppContent() {
     }
   }, [isStateRestored]);
   
-  // 统一的回答管理函数 - 必须在 useFormSteps 之前定义
-  const handleAnswerSubmission = (
+  // 带动画的统一回答管理函数 - 方案A全局Overlay动画系统
+  const handleAnswerSubmission = async (
     stepIndex: number, 
     answer: any, 
     options: {
@@ -179,43 +215,122 @@ function LemonadeAppContent() {
       triggerShake();
       return false;
     }
-    
-    // 统一表情变化（除非是编辑模式）
-    if (!isEditing) {
-      changeEmotion('🎉');
-    }
-    
-    // 统一保存答案到 completedAnswers，但不立即更新显示
-    setCompletedAnswers(prev => ({
-      ...prev,
-      [stepIndex]: answer
-    }));
-    
-    // 简化动画处理 - 直接执行流动动画或完成回调
-    if (!skipAnimation && !isEditing && stepIndex >= 0) {
+
+    // 如果跳过动画、正在编辑，或者已经有动画在进行，使用原来的逻辑
+    if (skipAnimation || isEditing || movingQuestion) {
+      // 统一表情变化（除非是编辑模式）
+      if (!isEditing) {
+        changeEmotion('🎉');
+      }
+      
+      setCompletedAnswers(prev => ({
+        ...prev,
+        [stepIndex]: answer
+      }));
+      
       // 确保问题和答案立即可见
-      questionAnimations[stepIndex].setValue(1);
-      answerAnimations[stepIndex].setValue(1);
-      
-      const questionText = STEP_CONTENT[stepIndex]?.message || '';
-      
-      setTimeout(() => {
-        // 直接执行完成回调，无动画
-        triggerQuestionFlowAnimation(() => {
-          onComplete?.();
-        });
-      }, 500); // 500ms的停顿让用户能够看到答案
-    } else {
-      // 编辑模式或跳过动画的情况
       if (stepIndex >= 0) {
         questionAnimations[stepIndex].setValue(1);
         answerAnimations[stepIndex].setValue(1);
       }
+      
+      setTimeout(() => {
+        onComplete?.();
+      }, 500);
+      
+      return true;
+    }
+
+    // 动画流程 - 方案A全局Overlay传送
+    try {
+      console.log('🎬 开始执行方案A动画流程', { stepIndex, answer });
+      
+      // 1. 测量起点和终点位置（确保延迟一下让UI稳定）
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      const currentQuestionY = await measureCurrentQuestionPosition();
+      const targetY = await measureCompletedQuestionTargetPosition();
+      
+      console.log('📍 动画位置信息:', { 
+        start: currentQuestionY, 
+        end: targetY, 
+        distance: Math.abs(targetY - currentQuestionY) 
+      });
+
+      // 2. 表情变化
+      changeEmotion('🎉');
+
+      // 3. 获取问题文本
+      const questionText = stepIndex === -1 ? 
+        '你的手机号码是多少？' : 
+        STEP_CONTENT[stepIndex]?.message || '';
+
+      // 4. 启动动画 - 创建移动中的问题状态
+      const animationValue = new Animated.Value(0);
+      
+      setMovingQuestion({
+        stepIndex,
+        answer,
+        questionText,
+        startY: currentQuestionY,
+        endY: targetY,
+        animationValue
+      });
+
+      // 5. 播放位移动画
+      Animated.timing(animationValue, {
+        toValue: 1,
+        duration: 600, // 稍快一些，更自然
+        useNativeDriver: true,
+        easing: Easing.out(Easing.cubic) // 缓出效果，更自然
+      }).start(() => {
+        console.log('✅ 动画完成，进行数据迁移');
+        
+        // 6. 动画完成：真正的数据迁移（与当前系统完全一样！）
+        setCompletedAnswers(prev => ({
+          ...prev,
+          [stepIndex]: answer
+        }));
+
+        // 7. 确保问题和答案动画状态正确
+        if (stepIndex >= 0) {
+          questionAnimations[stepIndex].setValue(1);
+          answerAnimations[stepIndex].setValue(1);
+        }
+
+        // 8. 清理动画状态
+        setMovingQuestion(null);
+
+        // 9. 执行完成回调
+        setTimeout(() => {
+          onComplete?.();
+        }, 100); // 短暂延迟让状态更新完成
+      });
+
+    } catch (error) {
+      console.error('💥 动画执行失败，回退到直接更新:', error);
+      
+      // 回退机制：直接更新数据，确保功能正常
+      changeEmotion('🎉');
+      
+      setCompletedAnswers(prev => ({
+        ...prev,
+        [stepIndex]: answer
+      }));
+      
+      if (stepIndex >= 0) {
+        questionAnimations[stepIndex].setValue(1);
+        answerAnimations[stepIndex].setValue(1);
+      }
+      
+      // 清理可能的动画状态
+      setMovingQuestion(null);
+      
       setTimeout(() => {
         onComplete?.();
       }, 500);
     }
-    
+
     return true;
   };
 
@@ -738,7 +853,7 @@ function LemonadeAppContent() {
       const phoneAnswer = { type: 'phone', value: result.phoneNumber };
       
       // 手机号作为答案，触发答案动画
-      handleAnswerSubmission(-1, phoneAnswer, { 
+      await handleAnswerSubmission(-1, phoneAnswer, { 
         isEditing: false, 
         skipAnimation: false,
         onComplete: () => {
@@ -828,7 +943,7 @@ function LemonadeAppContent() {
     }
     
     // 常规流程：新用户或没有完整偏好的老用户
-    handleAnswerSubmission(-1, phoneAnswer, {
+    await handleAnswerSubmission(-1, phoneAnswer, {
       skipAnimation: true, // 认证不需要动画
       onComplete: () => {
         // 立即推进到第一步，无延迟
@@ -916,6 +1031,52 @@ function LemonadeAppContent() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <StatusBar barStyle="dark-content" backgroundColor={theme.BACKGROUND} />
+      
+      {/* 全局动画层 - 方案A Overlay传送层 */}
+      <View style={StyleSheet.absoluteFillObject} pointerEvents="none">
+        {movingQuestion && (
+          <Animated.View
+            style={{
+              position: 'absolute',
+              left: 0,
+              right: 0,
+              zIndex: 1000,
+              transform: [{
+                translateY: movingQuestion.animationValue.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [movingQuestion.startY, movingQuestion.endY]
+                })
+              }],
+              opacity: movingQuestion.animationValue.interpolate({
+                inputRange: [0, 0.1, 0.9, 1],
+                outputRange: [0, 1, 1, 0.9] // 从透明到显示，最后稍微淡化
+              }),
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 8 },
+              shadowOpacity: movingQuestion.animationValue.interpolate({
+                inputRange: [0, 1],
+                outputRange: [0.2, 0.4] // 移动时增强阴影效果
+              }),
+              shadowRadius: movingQuestion.animationValue.interpolate({
+                inputRange: [0, 1],
+                outputRange: [4, 12]
+              }),
+              elevation: 10,
+            }}
+          >
+            <CompletedQuestion
+              question={movingQuestion.questionText}
+              answer={movingQuestion.answer}
+              index={movingQuestion.stepIndex}
+              questionAnimation={new Animated.Value(1)}
+              answerAnimation={new Animated.Value(1)}
+              onEdit={() => {}} // 动画期间禁用编辑
+              formatAnswerDisplay={formSteps.formatAnswerDisplay}
+              canEdit={false} // 动画期间不可编辑
+            />
+          </Animated.View>
+        )}
+      </View>
       
       {/* 用户菜单 - 仅在登录后显示 */}
       {isAuthenticated && (
@@ -1009,6 +1170,7 @@ function LemonadeAppContent() {
             }
           ]}
           onLayout={measureCompletedQuestionsHeight} // 恢复高度测量
+          ref={completedQuestionsRef} // 添加ref用于位置测量
         >
           <View 
             style={{
@@ -1096,6 +1258,7 @@ function LemonadeAppContent() {
           }}>
             {/* 当前问题内容 */}
             <Animated.View
+              ref={currentQuestionRef} // 添加ref用于位置测量
               style={{
                 flex: 1,
                 // 动态调节内容颜色 - 当前问题页面的透明度
@@ -1104,6 +1267,10 @@ function LemonadeAppContent() {
                   outputRange: [1.0, 0.4], // scrollProgress=0(当前问题焦点)时完全不透明，scrollProgress=1(已完成问题焦点)时半透明
                   extrapolate: 'clamp',
                 }),
+                // 动画期间稍微降低透明度，提供视觉反馈
+                ...(movingQuestion && {
+                  opacity: 0.5
+                })
               }}
             >
               {/* 未认证状态 - 显示认证组件 */}

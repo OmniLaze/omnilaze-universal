@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Animated } from 'react-native';
 import { CookieManager } from '../utils/cookieManager';
 import { STEP_CONTENT } from '../data/stepContent';
 import { DEV_CONFIG } from '../constants';
@@ -55,6 +56,16 @@ export const useAppState = () => {
   // 快速下单模式状态
   const [isQuickOrderMode, setIsQuickOrderMode] = useState(false);
 
+  // 动画状态 - 方案A全局Overlay动画系统
+  const [movingQuestion, setMovingQuestion] = useState<{
+    stepIndex: number;
+    answer: Answer;
+    questionText: string;
+    startY: number;
+    endY: number;
+    animationValue: Animated.Value;
+  } | null>(null);
+
   // 重置所有状态到初始状态的函数
   const resetAllState = () => {
     setIsAuthenticated(false);
@@ -86,6 +97,7 @@ export const useAppState = () => {
     setShowFreeDrinkModal(false);
     setIsFreeOrder(false);
     setIsQuickOrderMode(false);
+    setMovingQuestion(null); // 重置动画状态
     setAuthQuestionText('请输入手机号获取验证码');
   };
 
@@ -258,6 +270,9 @@ export const useAppState = () => {
     
     // 快速下单模式状态
     isQuickOrderMode, setIsQuickOrderMode,
+    
+    // 动画状态
+    movingQuestion, setMovingQuestion,
     
     // 工具函数
     resetAllState,

@@ -50,7 +50,7 @@ interface UseFormStepsProps {
   answerAnimations: Animated.Value[];
   
   // Unified functions
-  handleAnswerSubmission: (stepIndex: number, answer: any, options?: { isEditing?: boolean; skipAnimation?: boolean; onComplete?: () => void }) => boolean;
+  handleAnswerSubmission: (stepIndex: number, answer: any, options?: { isEditing?: boolean; skipAnimation?: boolean; onComplete?: () => void }) => Promise<boolean>;
   handleStepProgression: (currentStepIndex: number) => void;
   
   // Validation & Animation functions
