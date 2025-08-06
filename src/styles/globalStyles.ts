@@ -106,7 +106,7 @@ export const createQuestionStyles = (theme: any = COLORS) => StyleSheet.create({
     borderRadius: 0,
     padding: 0,
     marginBottom: width > 768 ? 20 : 16, // 大幅减少底部间距
-    marginTop: width > 768 ? 10 : 5, // 移动端减少顶部间距
+    marginTop: 0, // 移除顶部间距，让两个区域紧贴
     minHeight: width > 768 ? 200 : 150, // 移动端减小最小高度
   },
   completedQuestionRow: {

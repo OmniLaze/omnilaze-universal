@@ -379,6 +379,7 @@ Recent improvements to address user experience issues:
   - Avatar fade-out effects during transition
 - **Implementation**: `App.tsx:148-243` and `src/hooks/index.ts:467-506`
 - **Result**: Seamless visual flow where completed questions naturally move from current area to completed area
+- **Current Issue**: Push-up animation (`completedQuestionsOffset`) may create gaps between completed questions area and current question area. Adjust `pushUpDistance` calculation in `handleAnswerSubmission()` to fine-tune spacing.
 
 ## Database Migrations
 

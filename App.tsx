@@ -997,7 +997,9 @@ function LemonadeAppContent() {
       <ScrollView
         ref={scrollViewRef}
         style={{ flex: 1 }}
-        contentContainerStyle={{ height: dynamicContentHeight }} // 使用动态计算的内容高度
+        contentContainerStyle={{ 
+          height: dynamicContentHeight, // 使用动态计算的内容高度
+        }}
         showsVerticalScrollIndicator={false}
         scrollEventThrottle={16}
         onScroll={handleScroll}
@@ -1097,6 +1099,7 @@ function LemonadeAppContent() {
               paddingBottom: 40,
               justifyContent: 'flex-start',
               backgroundColor: theme.BACKGROUND, // 保持一致的背景色
+              transform: [{ translateY: completedQuestionsOffset }] // 同步推动，消除空白
             }
           ]}
         >
