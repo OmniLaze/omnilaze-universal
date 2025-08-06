@@ -223,6 +223,7 @@ const ColorPalette: React.FC<ColorPaletteProps> = ({
   };
 
   const presetThemes = [
+    { name: '金色主题', primary: '#F4D03F', bg: '#CCCCCC', text: '#000000' },
     { name: '原始绿色', primary: '#66CC99', bg: '#F2F2F2', text: '#444444' },
     { name: '红色主题', primary: '#FF6B6B', bg: '#FFE5E5', text: '#8B0000' },
     { name: '青色主题', primary: '#4ECDC4', bg: '#E8F8F7', text: '#2C5530' },
