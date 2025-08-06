@@ -345,7 +345,9 @@ function LemonadeAppContent() {
     if (event && event.nativeEvent) {
       const { height: measuredHeight } = event.nativeEvent.layout;
       console.log('已完成问题容器高度:', measuredHeight);
-      setCompletedQuestionsHeight(measuredHeight + 60); // 加上一些padding
+      // 修复：直接使用测量的高度，不重复添加 padding
+      // padding 应该通过 CSS 样式来控制，而不是在这里累积
+      setCompletedQuestionsHeight(measuredHeight);
     }
   };
 
