@@ -56,15 +56,8 @@ export const useAppState = () => {
   // 快速下单模式状态
   const [isQuickOrderMode, setIsQuickOrderMode] = useState(false);
 
-  // 动画状态 - 方案A全局Overlay动画系统
-  const [movingQuestion, setMovingQuestion] = useState<{
-    stepIndex: number;
-    answer: Answer;
-    questionText: string;
-    startY: number;
-    endY: number;
-    animationValue: Animated.Value;
-  } | null>(null);
+  // 已完成问题列表上推动画状态
+  const [completedQuestionsOffset, setCompletedQuestionsOffset] = useState(() => new Animated.Value(0));
 
   // 重置所有状态到初始状态的函数
   const resetAllState = () => {
@@ -97,7 +90,7 @@ export const useAppState = () => {
     setShowFreeDrinkModal(false);
     setIsFreeOrder(false);
     setIsQuickOrderMode(false);
-    setMovingQuestion(null); // 重置动画状态
+    completedQuestionsOffset.setValue(0); // 重置上推偏移量
     setAuthQuestionText('请输入手机号获取验证码');
   };
 
@@ -272,7 +265,7 @@ export const useAppState = () => {
     isQuickOrderMode, setIsQuickOrderMode,
     
     // 动画状态
-    movingQuestion, setMovingQuestion,
+    completedQuestionsOffset, setCompletedQuestionsOffset,
     
     // 工具函数
     resetAllState,
