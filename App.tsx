@@ -1019,7 +1019,7 @@ function LemonadeAppContent() {
               paddingBottom: 20,
               justifyContent: 'flex-start',
               backgroundColor: theme.BACKGROUND, // 保持一致的背景色
-              transform: [{ translateY: completedQuestionsOffset }] // 添加上推动画
+              transform: [{ translateY: completedQuestionsOffset }] // 页面级别推动
             }
           ]}
           onLayout={measureCompletedQuestionsHeight} // 恢复高度测量
@@ -1099,7 +1099,7 @@ function LemonadeAppContent() {
               paddingBottom: 40,
               justifyContent: 'flex-start',
               backgroundColor: theme.BACKGROUND, // 保持一致的背景色
-              transform: [{ translateY: completedQuestionsOffset }] // 同步推动，消除空白
+              transform: [{ translateY: completedQuestionsOffset }] // 页面级别推动
             }
           ]}
         >
