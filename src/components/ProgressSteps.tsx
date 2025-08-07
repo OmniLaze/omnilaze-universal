@@ -1,8 +1,10 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View, Text, Dimensions, Platform } from 'react-native';
 import { createProgressStyles } from '../styles/globalStyles';
 import { useTheme } from '../contexts/ColorThemeContext';
 import { STEP_TITLES } from '../constants';
+
+const { width } = Dimensions.get('window');
 
 interface ProgressStepsProps {
   currentStep: number;
@@ -11,6 +13,11 @@ interface ProgressStepsProps {
 export const ProgressSteps: React.FC<ProgressStepsProps> = ({ currentStep }) => {
   const { theme } = useTheme();
   const progressStyles = createProgressStyles(theme);
+
+  // 只在网页端显示，移动端完全隐藏
+  if (Platform.OS === 'web' && width <= 768) {
+    return null;
+  }
 
   return (
     <View style={progressStyles.progressContainer}>

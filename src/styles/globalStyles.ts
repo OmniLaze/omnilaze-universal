@@ -120,16 +120,16 @@ export const createQuestionStyles = (theme: any = COLORS) => StyleSheet.create({
     marginBottom: 8, // 减少从16到8
   },
   questionText: {
-    fontSize: 24,
+    fontSize: Platform.OS === 'web' ? (width > 768 ? 18 : 16) : 16,
     color: theme.TEXT_PRIMARY, // 改为黑色，通过外层透明度控制弱化效果
-    lineHeight: 32,
+    lineHeight: Platform.OS === 'web' ? (width > 768 ? 26 : 22) : 22,
     flex: 1,
     // 移除opacity，通过外层容器控制透明度
   },
   currentQuestionText: {
-    fontSize: 24,
+    fontSize: Platform.OS === 'web' ? (width > 768 ? 20 : 18) : 18,
     color: theme.TEXT_PRIMARY,
-    lineHeight: 32,
+    lineHeight: Platform.OS === 'web' ? (width > 768 ? 28 : 24) : 24,
     flex: 1,
     fontWeight: '500',
   },
@@ -142,7 +142,7 @@ export const createQuestionStyles = (theme: any = COLORS) => StyleSheet.create({
   },
   errorText: {
     color: theme.ERROR,
-    fontSize: 28,
+    fontSize: Platform.OS === 'web' ? (width > 768 ? 16 : 14) : 14,
     marginTop: 4,
     marginLeft: 16,
   },
@@ -184,10 +184,10 @@ export const createAnswerStyles = (theme: any = COLORS) => StyleSheet.create({
     opacity: 0.8, // 整体降低透明度
   },
   answerValue: {
-    fontSize: 24,
+    fontSize: Platform.OS === 'web' ? (width > 768 ? 18 : 16) : 16,
     color: theme.TEXT_PRIMARY, // 改为黑色，通过外层透明度控制弱化效果
     fontWeight: '400',
-    lineHeight: 36,
+    lineHeight: Platform.OS === 'web' ? (width > 768 ? 26 : 22) : 22,
     // 移除opacity，通过外层容器控制透明度
   },
   answerWithEdit: {
@@ -232,6 +232,6 @@ export const loadingStyles = StyleSheet.create({
     justifyContent: 'center',
   },
   loadingEmoji: {
-    fontSize: 48,
+    fontSize: Platform.OS === 'web' ? (width > 768 ? 36 : 32) : 32,
   },
 });

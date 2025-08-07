@@ -39,13 +39,14 @@ export const BUDGET_OPTIONS = ['20', '30', '40', '50'] as const;
 
 // 根据食物类型的不同预算选项
 export const BUDGET_OPTIONS_FOOD = ['20', '30', '50', '100'] as const;
-export const BUDGET_OPTIONS_DRINK = ['10', '15', '20', '30'] as const;
+export const BUDGET_OPTIONS_DRINK = ['15', '20', '30'] as const;
 
 export const STEP_TITLES = [
-  "配送地址",
-  "忌口说明",
-  "口味偏好", 
-  "预算设置"
+  "配送地址",   // 步骤0: 想在哪里收到你的外卖？
+  "食物类型",   // 步骤1: 喝奶茶还是吃饭呢？（保持配送地址标题）
+  "忌口说明",   // 步骤2: 有忌口或者过敏源嘛？
+  "口味偏好",   // 步骤3: 想吃什么口味的？
+  "预算设置"    // 步骤4: 这一顿打算花多少钱？
 ] as const;
 
 export const VALIDATION = {
@@ -69,5 +70,5 @@ export const DEV_CONFIG = {
   // 开发模式固定验证码
   DEV_VERIFICATION_CODE: '100000',
   // 调色板调试工具开关
-  ENABLE_COLOR_PALETTE: true, // 设置为true开启调色板功能，false完全禁用
+  ENABLE_COLOR_PALETTE: false, // 设置为true开启调色板功能，false完全禁用
 } as const;

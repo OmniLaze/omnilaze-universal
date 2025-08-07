@@ -1,5 +1,7 @@
-import { StyleSheet, Platform } from 'react-native';
+import { StyleSheet, Platform, Dimensions } from 'react-native';
 import { COLORS, LAYOUT } from '../constants';
+
+const { width } = Dimensions.get('window');
 
 // 创建平台特定的阴影样式
 const createShadowStyle = (shadowColor: string, shadowOffset: {width: number, height: number}, shadowOpacity: number, shadowRadius: number, elevation: number) => {
@@ -115,7 +117,7 @@ export const createBudgetStyles = (theme: any = COLORS) => StyleSheet.create({
     borderColor: theme.PRIMARY,
   },
   budgetOptionText: {
-    fontSize: 28,
+    fontSize: Platform.OS === 'web' ? (width > 768 ? 20 : 18) : 18,
     fontWeight: '500',
     color: theme.TEXT_PRIMARY,
   },
@@ -150,7 +152,7 @@ export const createButtonStyles = (theme: any = COLORS) => StyleSheet.create({
     ...createShadowStyle('#000', { width: 0, height: 0 }, 0, 0, 0),
   },
   simpleButtonText: {
-    fontSize: 21,
+    fontSize: Platform.OS === 'web' ? (width > 768 ? 18 : 16) : 16,
     fontWeight: '500',
     textAlign: 'center',
   },
@@ -177,7 +179,7 @@ export const createButtonStyles = (theme: any = COLORS) => StyleSheet.create({
   },
   nextSimpleButtonText: {
     color: theme.WHITE,
-    fontSize: 21,
+    fontSize: Platform.OS === 'web' ? (width > 768 ? 18 : 16) : 16,
     fontWeight: '500',
     textAlign: 'center',
   },

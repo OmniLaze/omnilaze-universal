@@ -78,15 +78,15 @@ export const UserMenu: React.FC<UserMenuProps> = ({
 
   return (
     <View style={styles.container}>
-      {/* 邀请提示气泡 */}
-      {showBubble && (
+      {/* 邀请提示气泡 - 只在网页端显示，移动端隐藏 */}
+      {showBubble && width > 768 && (
         <TouchableOpacity
           style={styles.inviteBubble}
           onPress={handleBubbleClick}
           activeOpacity={0.8}
         >
           <View style={styles.bubbleContent}>
-            <Text style={styles.bubbleText}>邀请新用户免单奶茶哦 🎉</Text>
+            <Text style={styles.bubbleText}>邀请新用户送奶茶～🎉</Text>
           </View>
           <View style={styles.bubbleArrow} />
         </TouchableOpacity>
@@ -221,7 +221,7 @@ export const UserMenu: React.FC<UserMenuProps> = ({
 const createStyles = (theme: any) => StyleSheet.create({
   container: {
     position: 'absolute',
-    top: width > 768 ? 120 : 70,
+    top: width > 768 ? 150 : 100,
     right: width > 768 ? 185 : 16,
     zIndex: 1000,
   },
@@ -326,13 +326,14 @@ const createStyles = (theme: any) => StyleSheet.create({
   bubbleContent: {
     alignItems: 'center',
     justifyContent: 'center',
+    width: 170,
   },
   bubbleText: {
     color: theme.WHITE,
-    fontSize: width > 768 ? 14 : 12, // 调整字体大小
-    fontWeight: '500',
+    fontSize: width > 768 ? 16 : 8, // 调整字体大小
+    fontWeight: '400',
     textAlign: 'center',
-    lineHeight: width > 768 ? 16 : 14,
+    lineHeight: width > 768 ? 16 : 8,
   },
   bubbleArrow: {
     position: 'absolute',

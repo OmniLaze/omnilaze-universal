@@ -15,13 +15,14 @@ import {
   StyleSheet,
 } from 'react-native';
 
-const { height } = Dimensions.get('window');
+const { height, width } = Dimensions.get('window');
 
 // 导入全局CSS样式来移除焦点边框
 import './src/styles/global.css';
 
 // Components
 import { ProgressSteps } from './src/components/ProgressSteps';
+import { MobileHeader } from './src/components/MobileHeader';
 import { CompletedQuestion } from './src/components/CompletedQuestion';
 import { CurrentQuestion } from './src/components/CurrentQuestion';
 import { AuthComponent } from './src/components/AuthComponent';
@@ -57,6 +58,89 @@ import { createGlobalStyles, rightContentStyles, createProgressStyles, createQue
 import { TIMING, DEV_CONFIG } from './src/constants';
 
 function LemonadeAppContent() {
+  // 修复React Native Web字体缩放问题 + 移动端强制适配
+  useEffect(() => {
+    if (Platform.OS === 'web') {
+      // 1. 强制viewport设置
+      const existingViewport = document.querySelector('meta[name="viewport"]');
+      if (existingViewport) {
+        existingViewport.setAttribute('content', 
+          'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover'
+        );
+      }
+      
+      // 2. 检测移动设备
+      const isMobileDevice = () => {
+        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+               window.innerWidth <= 768 ||
+               ('ontouchstart' in window) ||
+               (navigator.maxTouchPoints && navigator.maxTouchPoints > 0);
+      };
+
+      // 3. 强制移动端布局适配
+      if (isMobileDevice()) {
+        document.documentElement.classList.add('force-mobile');
+        document.body.classList.add('force-mobile-layout');
+        
+        // 添加移动端专用CSS规则
+        const mobileStyle = document.createElement('style');
+        mobileStyle.id = 'mobile-adaptation';
+        mobileStyle.textContent = `
+          html.force-mobile, body.force-mobile-layout {
+            width: 100vw !important;
+            max-width: 100vw !important;
+            overflow-x: hidden !important;
+          }
+          
+          .force-mobile-layout * {
+            max-width: 100vw !important;
+            box-sizing: border-box !important;
+          }
+          
+          /* 强制移动端字体大小 */
+          .force-mobile div[style*="font-size: 20px"] { font-size: 17px !important; }
+          .force-mobile div[style*="font-size: 24px"] { font-size: 17px !important; }
+          .force-mobile div[style*="font-size: 28px"] { font-size: 19px !important; }
+          
+          /* 移动端触摸优化 */
+          .force-mobile-layout {
+            -webkit-touch-callout: none;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+          }
+        `;
+        
+        // 移除旧的样式，添加新的
+        const oldStyle = document.getElementById('mobile-adaptation');
+        if (oldStyle) oldStyle.remove();
+        document.head.appendChild(mobileStyle);
+      }
+      
+      // 4. 强制设置文本大小调整
+      document.documentElement.style.setProperty('-webkit-text-size-adjust', '100%', 'important');
+      document.documentElement.style.setProperty('-moz-text-size-adjust', '100%', 'important');  
+      document.documentElement.style.setProperty('text-size-adjust', '100%', 'important');
+      document.body.style.setProperty('-webkit-text-size-adjust', '100%', 'important');
+      document.body.style.setProperty('-moz-text-size-adjust', '100%', 'important');
+      document.body.style.setProperty('text-size-adjust', '100%', 'important');
+      
+      // 5. 监听窗口大小变化
+      const handleResize = () => {
+        if (window.innerWidth <= 768) {
+          document.body.classList.add('force-mobile-layout');
+        } else {
+          document.body.classList.remove('force-mobile-layout');
+        }
+      };
+
+      window.addEventListener('resize', handleResize);
+      
+      console.log('🔧 已应用移动端强制适配 + 字体缩放修复');
+      
+      return () => window.removeEventListener('resize', handleResize);
+    }
+  }, []);
+
   // 使用状态管理hook
   const appState = useAppState();
   
@@ -113,6 +197,26 @@ function LemonadeAppContent() {
     resetAllState
   } = appState;
 
+  // 移动端专用状态：用于步骤变化动画
+  const [previousStep, setPreviousStep] = useState<number | undefined>(undefined);
+
+  // 包装setCurrentStep以支持移动端动画
+  const updateCurrentStep = (newStep: number) => {
+    setPreviousStep(currentStep);
+    setCurrentStep(newStep);
+  };
+
+  // 获取移动端头部标题
+  const getStepTitle = (step: number) => {
+    const titles = ['配送地址', '食物类型', '忌口说明', '口味偏好', '预算设置'];
+    // 步骤0: 配送地址
+    // 步骤1: 食物类型
+    // 步骤2: 忌口说明
+    // 步骤3: 口味偏好  
+    // 步骤4: 预算设置
+    return titles[step] || '懒得点外卖';
+  };
+
   // Custom hooks - AI流式打字机效果
   const { 
     displayedText, 
@@ -161,12 +265,81 @@ function LemonadeAppContent() {
     console.log('📏 已完成问题区域高度更新:', completedQuestionsHeight);
   }, [completedQuestionsHeight]);
   
+  // 强制重置订单状态（临时调试用）
+  const resetOrderState = () => {
+    console.log('🔧 重置订单状态');
+    setIsOrderCompleted(false);
+    setOrderMessage('');
+    setIsSearchingRestaurant(false);
+    clearText();
+    inputSectionAnimation.setValue(1);
+    // 强制触发问题显示
+    setTimeout(() => {
+      if (isAuthenticated && currentStep < STEP_CONTENT.length) {
+        const stepData = formSteps.getCurrentStepData();
+        if (stepData) {
+          handleQuestionTransition(stepData.message, false);
+        }
+      }
+    }, 100);
+  };
+
+  // 强制重置和重新显示当前问题（用于调试）
+  const forceRefreshCurrentQuestion = () => {
+    // 清空打字机文本
+    clearText();
+    // 重置输入框动画
+    inputSectionAnimation.setValue(0);
+    // 重置问题动画
+    currentQuestionAnimation.setValue(1);
+    
+    // 延迟100ms后重新触发问题显示
+    setTimeout(() => {
+      if (isAuthenticated && currentStep < STEP_CONTENT.length && !isOrderCompleted) {
+        const stepData = formSteps.getCurrentStepData();
+        if (stepData) {
+          console.log('🔧 强制刷新问题:', stepData.message);
+          handleQuestionTransition(stepData.message, false);
+        }
+      }
+    }, 100);
+  };
+  
+  // 确保输入框在非订单完成状态下显示
+  useEffect(() => {
+    // 如果不是订单完成状态，且有文本显示，确保输入框也显示
+    if (!isOrderCompleted && displayedText && !isTyping && editingStep === null) {
+      const currentInputValue = inputSectionAnimation._value;
+      console.log('🔍 检查输入框状态:', { 
+        currentInputValue, 
+        displayedText: !!displayedText, 
+        isOrderCompleted,
+        isTyping
+      });
+      
+      if (currentInputValue !== 1) {
+        console.log('⚡ 强制显示输入框');
+        inputSectionAnimation.setValue(1);
+      }
+    }
+  }, [displayedText, isTyping, isOrderCompleted, editingStep]);
+
   // 页面刷新时的状态恢复
   useEffect(() => {
     if (isStateRestored && Object.keys(completedAnswers).length > 0) {
-      console.log('📄 页面刷新状态恢复，已完成答案数量:', Object.keys(completedAnswers).length);
+      // 如果订单已完成，不需要强制刷新问题
+      if (isOrderCompleted && orderMessage) {
+        return;
+      }
+      
+      // 如果状态恢复了但是没有显示文本，强制刷新当前问题
+      setTimeout(() => {
+        if (!displayedText && !isTyping && isAuthenticated && !isOrderCompleted) {
+          forceRefreshCurrentQuestion();
+        }
+      }, 500);
     }
-  }, [isStateRestored]);
+  }, [isStateRestored, displayedText, isTyping, isAuthenticated, isOrderCompleted, orderMessage]);
   
   // 带动画的统一回答管理函数 - 直接上推动画，无飞行
   const handleAnswerSubmission = async (
@@ -440,18 +613,23 @@ function LemonadeAppContent() {
   
   // 滚动阈值和页面高度 - 基于动态内容高度
   const pageHeight = height - 100; // 减去状态栏和padding
-  // 🔥 修正：补偿推动造成的空间损失，确保滚动能看到所有内容
-  const dynamicContentHeight = completedQuestionsHeight + pageHeight + Math.abs(currentPushOffset);
+  const bufferContainerHeight = 300; // 缓冲容器高度，更新为和实际容器一致
   const SNAP_THRESHOLD = 200; // 使用单个问题高度作为吸附阈值
   
-  // 🎯 当前问题页位置调整 - 改这个数值就能调整所有地方的当前问题页位置
-  const CURRENT_PAGE_OFFSET = 167; // 向上偏移50px，让当前问题页不那么靠上
-  const getCurrentPagePosition = () => completedQuestionsHeight - CURRENT_PAGE_OFFSET;
+  // 🎯 当前问题页位置调整 - 包含缓冲容器偏移
+  const CURRENT_PAGE_OFFSET = 167; // 向上偏移167px，让当前问题页不那么靠上
+  const getCurrentPagePosition = () => bufferContainerHeight + completedQuestionsHeight - CURRENT_PAGE_OFFSET;
+  
+  // 🔥 修正：限制滚动范围，只允许在两个容器间滚动  
+  const maxScrollPosition = getCurrentPagePosition(); // 最大滚动到当前问题页面位置
+  const minScrollPosition = 0; // 最小滚动位置，允许看到缓冲区内容
+  const dynamicContentHeight = Math.max(maxScrollPosition + pageHeight, bufferContainerHeight + completedQuestionsHeight + pageHeight);
   
   // 当前滚动进度 (1 = 已完成问题页面在焦点, 0 = 当前问题页面在焦点)
+  // 基于两个容器间的滚动范围计算
   const scrollProgress = scrollPosition.interpolate({
-    inputRange: [0, getCurrentPagePosition()], // 基于调整后的当前页面位置
-    outputRange: [1, 0], // 滚动到顶部(0)时已完成问题在焦点(1)，滚动到底部时当前问题在焦点(0)
+    inputRange: [bufferContainerHeight, getCurrentPagePosition()], // 从已完成问题页面顶部到当前问题页面
+    outputRange: [1, 0], // 在已完成问题页面时为1，在当前问题页面时为0
     extrapolate: 'clamp',
   });
   
@@ -459,63 +637,81 @@ function LemonadeAppContent() {
   const handleScroll = (event: any) => {
     const offsetY = event.nativeEvent.contentOffset.y;
     scrollPosition.setValue(offsetY);
+    
+    // 添加调试日志，每100px输出一次
+    if (offsetY % 100 < 5) {
+      console.log('📜 滚动中:', { 
+        offsetY: Math.round(offsetY),
+        maxScroll: Math.round(dynamicContentHeight - height),
+        isAtTop: offsetY < 10,
+        isAtBottom: offsetY > (dynamicContentHeight - height - 10)
+      });
+    }
   };
   
-  // 滚动结束时的自动吸附 - 增强吸附效果
+  // 滚动结束时的自动吸附 - 只在已完成问题页面和当前问题页面之间切换
   const handleScrollEnd = (event: any) => {
     setIsScrolling(false);
     const offsetY = event.nativeEvent.contentOffset.y;
     
-    // 判断应该吸附到哪个页面 - 修复逻辑重叠问题
-    let targetOffset;
-    
-    // 计算有效的吸附阈值，避免重叠
-    const effectiveThreshold = Math.min(SNAP_THRESHOLD, completedQuestionsHeight / 3);
-    
-    if (offsetY <= effectiveThreshold) {
-      // 吸附到已完成问题页面（顶部）
-      targetOffset = 0;
-      setFocusMode('completed');
-      saveFocusMode('completed');
-    } else if (offsetY >= getCurrentPagePosition() - effectiveThreshold) {
-      // 吸附到当前问题页面
-      targetOffset = getCurrentPagePosition();
-      setFocusMode('current');
-      saveFocusMode('current');
-    } else {
-      // 根据距离决定吸附方向 - 中间区域
-      const midPoint = getCurrentPagePosition() * 0.5; // 使用50%作为中点
-      if (offsetY < midPoint) {
-        targetOffset = 0;
-        setFocusMode('completed');
-        saveFocusMode('completed');
-      } else {
-        targetOffset = getCurrentPagePosition();
-        setFocusMode('current');
-        saveFocusMode('current');
-      }
-    }
-    
-    console.log('滚动吸附:', { 
-      offsetY, 
-      effectiveThreshold, 
+    console.log('🔍 滚动结束，开始吸附判断:', { 
+      offsetY,
+      bufferContainerHeight,
       completedQuestionsHeight,
-      currentPagePosition: getCurrentPagePosition(), 
-      targetOffset, 
-      SNAP_THRESHOLD 
+      dynamicContentHeight
     });
     
-    // 平滑吸附动画 - 调整动画参数让吸附更明显
+    // 定义两个吸附位置：
+    // 1. 已完成问题页面顶部（跳过空白缓冲区）
+    const completedPagePosition = bufferContainerHeight;
+    // 2. 当前问题页面位置
+    const currentPagePosition = getCurrentPagePosition();
+    
+    console.log('📍 吸附位置计算:', {
+      completedPagePosition,
+      currentPagePosition,
+      getCurrentPagePositionCalc: `${bufferContainerHeight} + ${completedQuestionsHeight} - ${CURRENT_PAGE_OFFSET} = ${currentPagePosition}`
+    });
+    
+    // 计算中点，用于判断吸附方向
+    const midPoint = (completedPagePosition + currentPagePosition) / 2;
+    
+    let targetOffset;
+    let targetMode;
+    
+    // 基于中点判断吸附方向
+    if (offsetY < midPoint) {
+      // 吸附到已完成问题页面（缓冲区底部）
+      targetOffset = completedPagePosition;
+      targetMode = 'completed';
+      setFocusMode('completed');
+      saveFocusMode('completed');
+    } else {
+      // 吸附到当前问题页面
+      targetOffset = currentPagePosition;
+      targetMode = 'current';
+      setFocusMode('current');
+      saveFocusMode('current');
+    }
+    
+    console.log('🎯 吸附决策:', { 
+      offsetY, 
+      midPoint,
+      targetOffset,
+      targetMode,
+      willSnap: Math.abs(offsetY - targetOffset) > 10 ? 'YES' : 'NO'
+    });
+    
+    // 平滑吸附动画
     scrollViewRef.current?.scrollTo({
       y: targetOffset,
       animated: true,
-      // 可以考虑添加更快的动画速度
     });
   };
   
   // 程序化切换页面
   const scrollToPage = (page: 'current' | 'completed') => {
-    const targetOffset = page === 'completed' ? 0 : getCurrentPagePosition();
+    const targetOffset = page === 'completed' ? bufferContainerHeight : getCurrentPagePosition();
     scrollViewRef.current?.scrollTo({
       y: targetOffset,
       animated: true,
@@ -547,7 +743,7 @@ function LemonadeAppContent() {
     let initialOffset;
     if (focusMode === 'completed' && Object.keys(completedAnswers).length > 0) {
       // 只有在明确保存了completed模式且有已完成答案时，才显示已完成问题页面
-      initialOffset = 0;
+      initialOffset = bufferContainerHeight; // 滚动到已完成问题页面顶部，跳过缓冲区
     } else {
       // 其他情况都显示当前问题页面
       initialOffset = getCurrentPagePosition();
@@ -590,6 +786,7 @@ function LemonadeAppContent() {
   const animateInputSection = (toValue: number, duration: number = 300) => {
     if (isInputAnimating) return; // 防止冲突
     
+    console.log('🎯 动画输入框:', { toValue, duration, currentValue: inputSectionAnimation._value });
     setIsInputAnimating(true);
     Animated.timing(inputSectionAnimation, {
       toValue,
@@ -597,29 +794,34 @@ function LemonadeAppContent() {
       useNativeDriver: true,
     }).start(() => {
       setIsInputAnimating(false);
+      console.log('✅ 输入框动画完成，当前值:', inputSectionAnimation._value);
     });
   };
 
   const handleQuestionTransition = (questionText: string, hasUserInput: boolean = false) => {
+    console.log('🔄 问题过渡:', { questionText, hasUserInput });
     // 重置动画状态，避免冲突
-    inputSectionAnimation.setValue(0);
+    inputSectionAnimation.setValue(1); // 直接设置为1，确保输入框可见
     currentQuestionAnimation.setValue(1);
     
     if (!hasUserInput) {
       // 无用户输入：使用AI流式打字机效果
+      console.log('📝 开始打字机效果');
       typeText(questionText, { 
         instant: false,
         streaming: true,
         onComplete: () => {
-          // 打字完成后，丝滑显示输入框
-          animateInputSection(1, 300);
+          // 打字完成后，确保输入框可见
+          console.log('⚡ 打字机完成，确保输入框可见');
+          inputSectionAnimation.setValue(1);
         }
       });
     } else {
-      // 有用户输入：直接显示文本，立即显示输入框
+      // 有用户输入：直接显示文本，确保输入框可见
+      console.log('⚡ 直接显示文本和输入框');
       setTextDirectly(questionText);
-      // 立即显示输入框，因为已经有用户输入
-      animateInputSection(1, 200);
+      // 确保输入框可见
+      inputSectionAnimation.setValue(1);
     }
   };
 
@@ -646,16 +848,32 @@ function LemonadeAppContent() {
 
   // Effects - 统一的打字机效果管理
   useEffect(() => {
+    console.log('🔄 主要 useEffect 检查:', {
+      isStateRestored,
+      orderMessage: !!orderMessage,
+      isOrderCompleted,
+      displayedText: !!displayedText,
+      isTyping,
+      editingStep,
+      isAuthenticated,
+      currentStep,
+    });
+    
     if (!isStateRestored) return;
     
     // 如果有持久化的订单消息，优先显示
-    if (orderMessage && isOrderCompleted && !displayedText && !isTyping) {
-      setTextDirectly(orderMessage);
+    if (orderMessage && isOrderCompleted) {
+      if (!displayedText || displayedText !== orderMessage) {
+        console.log('📝 显示订单消息');
+        setTextDirectly(orderMessage);
+      }
+      console.log('✅ 订单完成，跳过其他逻辑');
       return;
     }
     
     // 未认证状态 - 显示认证问题
     if (editingStep === null && !isAuthenticated && !isTyping) {
+      console.log('🔐 显示认证问题');
       handleQuestionTransition(authQuestionText);
       return;
     }
@@ -663,6 +881,7 @@ function LemonadeAppContent() {
     // 已认证状态 - 显示表单问题
     if (editingStep === null && isAuthenticated && currentStep < STEP_CONTENT.length && !completedAnswers[currentStep] && !isTyping) {
       const stepData = formSteps.getCurrentStepData();
+      console.log('📋 准备显示表单问题:', { currentStep, stepData: !!stepData });
       
       // 统一检查用户输入状态
       let hasUserInput = false;
@@ -684,9 +903,19 @@ function LemonadeAppContent() {
           break;
       }
       
+      console.log('💡 触发问题显示:', { message: stepData.message, hasUserInput });
       handleQuestionTransition(stepData.message, hasUserInput);
+    } else {
+      console.log('❌ 未满足表单问题显示条件:', {
+        editingStep,
+        isAuthenticated,
+        currentStep,
+        stepContentLength: STEP_CONTENT.length,
+        hasCompletedAnswer: !!completedAnswers[currentStep],
+        isTyping
+      });
     }
-  }, [currentStep, editingStep, isAuthenticated, selectedFoodType, authQuestionText, isStateRestored, isFreeOrder]);
+  }, [currentStep, editingStep, isAuthenticated, selectedFoodType, authQuestionText, isStateRestored, isFreeOrder, orderMessage, isOrderCompleted, displayedText, isTyping, address, selectedAllergies, selectedPreferences, budget]);
 
   // 编辑模式效果 - 使用统一的问题管理
   useEffect(() => {
@@ -934,54 +1163,36 @@ function LemonadeAppContent() {
       
       {/* 移除全局动画层 - 已不再需要飞行动画 */}
       
-      {/* 用户菜单 - 仅在登录后显示 */}
+      {/* 调试重置按钮 - 临时添加 */}
+      <TouchableOpacity
+        style={{
+          position: 'absolute',
+          top: Platform.OS === 'ios' ? 120 : 100,
+          left: 20,
+          backgroundColor: '#ff4444',
+          paddingHorizontal: 12,
+          paddingVertical: 6,
+          borderRadius: 8,
+          zIndex: 1000,
+        }}
+        onPress={resetOrderState}
+        activeOpacity={0.7}
+      >
+        <Text style={{ color: 'white', fontSize: 12, fontWeight: '600' }}>
+          重置订单
+        </Text>
+      </TouchableOpacity>
+
+      {/* 用户菜单 - 仅网页端显示，移动端使用MobileHeader */}
       {isAuthenticated && (
         <UserMenu
-          isVisible={true}
+          isVisible={Platform.OS === 'web' && width > 768}
           onLogout={handleLogout}
           onInvite={handleInvite}
           phoneNumber={authResult?.phoneNumber || ''}
         />
       )}
       
-      {/* 临时调色板调试按钮 - 方便测试 */}
-      <View style={{
-        position: 'absolute',
-        top: 50,
-        right: 20,
-        zIndex: 9999,
-        backgroundColor: 'rgba(255,255,255,0.9)',
-        padding: 10,
-        borderRadius: 8,
-      }}>
-        <Text style={{ fontSize: 12, marginBottom: 5 }}>
-          调色板开关: {DEV_CONFIG.ENABLE_COLOR_PALETTE ? '开启' : '关闭'}
-        </Text>
-        <Text style={{ fontSize: 12, marginBottom: 5 }}>
-          调试模式: {isDebugMode ? '是' : '否'}
-        </Text>
-        {DEV_CONFIG.ENABLE_COLOR_PALETTE && (
-          <TouchableOpacity
-            style={{
-              width: 60,
-              height: 60,
-              borderRadius: 30,
-              backgroundColor: theme.PRIMARY,
-              justifyContent: 'center',
-              alignItems: 'center',
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.3,
-              shadowRadius: 8,
-              elevation: 8,
-              marginTop: 5,
-            }}
-            onPress={toggleDebugMode}
-          >
-            <Text style={{ color: 'white', fontSize: 28 }}>🎨</Text>
-          </TouchableOpacity>
-        )}
-      </View>
       
       {/* 邀请免单弹窗 */}
       {authResult && (
@@ -994,10 +1205,24 @@ function LemonadeAppContent() {
         />
       )}
       
-      {/* 进度条 - 仅在登录后显示 */}
+      {/* 进度条 - 仅网页端显示，移动端完全不显示 */}
       {isAuthenticated && (
         <ProgressSteps currentStep={currentStep} />
       )}  
+
+      {/* 移动端头部 - 头像、标题、手机尾号、进度条 */}
+      {isAuthenticated && (
+        <MobileHeader
+          title={getStepTitle(currentStep)}
+          phoneNumber={authResult?.phoneNumber}
+          emotionAnimation={emotionAnimation}
+          onMenuPress={() => setShowFreeDrinkModal(true)}
+          onLogout={handleLogout}
+          onInvite={() => setShowInviteModal(true)}
+          currentStep={currentStep}
+          previousStep={previousStep}
+        />
+      )}
 
       {/* 连续滚动容器 - 新的滚动体验 */}
       <ScrollView
@@ -1015,6 +1240,19 @@ function LemonadeAppContent() {
         decelerationRate={0.92} // 调整减速率，让滚动停止更快，吸附更明显
         // 暂时移除snapToOffsets，使用自定义吸附逻辑
       >
+        {/* ========== 空白缓冲容器（732px） - 为推动内容提供可滚动空间 ========== */}
+        <Animated.View 
+          style={[
+            {
+              height: 300, // 缓冲空间，足够容纳推动的内容
+              backgroundColor: theme.BACKGROUND, // 保持一致的背景色
+              transform: [{ translateY: completedQuestionsOffset }] // 与其他容器同步推动
+            }
+          ]}
+        >
+          {/* 纯空白容器，不渲染任何内容 */}
+        </Animated.View>
+
         {/* ========== 已完成问题页面（动态高度） ========== */}
         <Animated.View 
           style={[
