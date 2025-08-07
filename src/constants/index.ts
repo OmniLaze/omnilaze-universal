@@ -23,15 +23,15 @@ export const TIMING = {
 } as const;
 
 export const COLORS = {
-  PRIMARY: '#F4D03F',
-  BACKGROUND: '#CCCCCC',
+  PRIMARY: '#FF9944',
+  BACKGROUND: '#FEFCF4',
   WHITE: '#FFFFFF',
   TEXT_PRIMARY: '#000000',
-  TEXT_SECONDARY: '#6b7280',
-  TEXT_MUTED: '#9ca3af',
+  TEXT_SECONDARY: '#555555',
+  TEXT_MUTED: '#AAAAAA',
   ERROR: '#ef4444',
   ERROR_BACKGROUND: '#FEF2F2',
-  BORDER: '#CCCCCC',
+  BORDER: '#AAAAAA',
   SHADOW: '#000',
 } as const;
 

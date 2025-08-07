@@ -123,26 +123,26 @@ const DEFAULT_THEME_STATE: ThemeState = {
     INFO: '#339af0',
     INFO_LIGHT: '#E0F2FE',
     
-    // 灰色系统
-    GRAY_50: '#f9fafb',
-    GRAY_100: '#f3f4f6',
-    GRAY_200: '#e5e7eb',
-    GRAY_300: '#d1d5db',
-    GRAY_400: '#9ca3af',
-    GRAY_500: '#6b7280',
-    GRAY_600: '#4b5563',
+    // 灰色系统 - 使用新的色卡颜色
+    GRAY_50: '#f9fafb',          // 保持浅色
+    GRAY_100: '#f3f4f6',         
+    GRAY_200: '#FEFCF4',         // 浅黄色
+    GRAY_300: '#DDDDDD',         // 浅灰色
+    GRAY_400: '#AAAAAA',         // 中灰色  
+    GRAY_500: '#555555',         // 深灰色
+    GRAY_600: '#4b5563',         
     GRAY_700: '#374151',
     GRAY_800: '#1f2937',
-    GRAY_900: '#111827',
+    GRAY_900: '#000000',         // 黑色
     
     // 界面元素颜色
     BORDER: COLORS.BORDER,
-    BORDER_LIGHT: '#f0f0f0',
+    BORDER_LIGHT: '#FEFCF4',
     SHADOW: COLORS.SHADOW,
-    CARD_BACKGROUND: '#f8f9fa',
-    DISABLED_BACKGROUND: '#f8fafc',
-    DISABLED_TEXT: '#94a3b8',
-    PLACEHOLDER_TEXT: '#b0b0b0',
+    CARD_BACKGROUND: '#FEFCF4',
+    DISABLED_BACKGROUND: '#FEFCF4',
+    DISABLED_TEXT: '#AAAAAA',
+    PLACEHOLDER_TEXT: '#AAAAAA',
     
     // 特殊效果颜色
     OVERLAY: 'rgba(0, 0, 0, 0.5)',
@@ -151,11 +151,11 @@ const DEFAULT_THEME_STATE: ThemeState = {
     TRANSPARENT: 'transparent',
     
     // 常用的UI颜色
-    DIVIDER: '#e5e7eb',
-    HOVER: 'rgba(0, 0, 0, 0.05)',
+    DIVIDER: '#AAAAAA',
+    HOVER: 'rgba(255, 153, 68, 0.1)',
     FOCUS: lightenColor(COLORS.PRIMARY, 30),
     SELECTED: lightenColor(COLORS.PRIMARY, 40),
-    HIGHLIGHT: '#fef3c7',
+    HIGHLIGHT: '#FEFCF4',
   },
   opacity: {
     primary: 1.0,

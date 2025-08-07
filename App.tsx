@@ -97,7 +97,7 @@ function LemonadeAppContent() {
     originalAnswerBeforeEdit, currentOrderId, currentOrderNumber,
     currentUserSequenceNumber, isOrderSubmitting, isSearchingRestaurant,
     isOrderCompleted, orderMessage, showInviteModal, isFreeOrder, showFreeDrinkModal,
-    isQuickOrderMode, completedQuestionsOffset,
+    isQuickOrderMode, completedQuestionsOffset, currentPushOffset,
     
     // 状态设置函数
     setAddress, setBudget, setSelectedAllergies, setSelectedPreferences,
@@ -107,7 +107,7 @@ function LemonadeAppContent() {
     setOriginalAnswerBeforeEdit, setCurrentOrderId, setCurrentOrderNumber,
     setCurrentUserSequenceNumber, setIsOrderSubmitting, setIsSearchingRestaurant,
     setIsOrderCompleted, setOrderMessage, setShowInviteModal, setIsFreeOrder, setShowFreeDrinkModal,
-    setIsQuickOrderMode, setCompletedQuestionsOffset,
+    setIsQuickOrderMode, setCompletedQuestionsOffset, setCurrentPushOffset,
     
     // 工具函数
     resetAllState
@@ -207,6 +207,7 @@ function LemonadeAppContent() {
     if (!skipAnimation && !isEditing) {
       console.log('🎬 开始上推动画，为下一个问题腾出空间');
       const pushUpDistance = singleQuestionHeight + 10; // 上推一个问题的高度加上间距
+      const newPushOffset = currentPushOffset + pushUpDistance;
       
       Animated.timing(completedQuestionsOffset, {
         toValue: completedQuestionsOffset._value - pushUpDistance,
@@ -216,6 +217,10 @@ function LemonadeAppContent() {
       }).start(() => {
         console.log('✅ 上推动画完成');
       });
+      
+      // 🔥 关键：同步更新推动偏移跟踪状态
+      setCurrentPushOffset(newPushOffset);
+      console.log('📊 更新推动偏移:', newPushOffset);
     }
     
     // 4. 执行完成回调
@@ -435,7 +440,8 @@ function LemonadeAppContent() {
   
   // 滚动阈值和页面高度 - 基于动态内容高度
   const pageHeight = height - 100; // 减去状态栏和padding
-  const dynamicContentHeight = completedQuestionsHeight + pageHeight; // 基于实际内容的总高度
+  // 🔥 修正：补偿推动造成的空间损失，确保滚动能看到所有内容
+  const dynamicContentHeight = completedQuestionsHeight + pageHeight + Math.abs(currentPushOffset);
   const SNAP_THRESHOLD = 200; // 使用单个问题高度作为吸附阈值
   
   // 🎯 当前问题页位置调整 - 改这个数值就能调整所有地方的当前问题页位置

@@ -58,6 +58,8 @@ export const useAppState = () => {
 
   // 已完成问题列表上推动画状态
   const [completedQuestionsOffset, setCompletedQuestionsOffset] = useState(() => new Animated.Value(0));
+  // 跟踪当前推动偏移值用于高度计算
+  const [currentPushOffset, setCurrentPushOffset] = useState(0);
 
   // 重置所有状态到初始状态的函数
   const resetAllState = () => {
@@ -91,6 +93,7 @@ export const useAppState = () => {
     setIsFreeOrder(false);
     setIsQuickOrderMode(false);
     completedQuestionsOffset.setValue(0); // 重置上推偏移量
+    setCurrentPushOffset(0); // 重置推动偏移跟踪
     setAuthQuestionText('请输入手机号获取验证码');
   };
 
@@ -266,6 +269,7 @@ export const useAppState = () => {
     
     // 动画状态
     completedQuestionsOffset, setCompletedQuestionsOffset,
+    currentPushOffset, setCurrentPushOffset,
     
     // 工具函数
     resetAllState,
