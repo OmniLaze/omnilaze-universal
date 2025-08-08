@@ -24,7 +24,7 @@ export const TIMING = {
 
 export const COLORS = {
   PRIMARY: '#FF9944',
-  BACKGROUND: '#FEFCF4',
+  BACKGROUND: '#FFFFFF',
   WHITE: '#FFFFFF',
   TEXT_PRIMARY: '#000000',
   TEXT_SECONDARY: '#555555',

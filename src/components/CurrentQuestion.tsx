@@ -62,11 +62,12 @@ export const CurrentQuestion: React.FC<CurrentQuestionProps> = ({
               paddingHorizontal: 20,
               paddingTop: 8,
             }}>
-              {/* 顶部头像（居中） */}
+              {/* 顶部头像（左对齐） */}
               <Animated.View
                 style={{
-                  alignSelf: 'center',
+                  alignSelf: 'flex-start',
                   marginBottom: 12,
+                  marginLeft: 0,
                   transform: [
                     { scale: emotionAnimation || new Animated.Value(1) },
                   ],

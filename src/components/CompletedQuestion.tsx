@@ -132,25 +132,20 @@ export const CompletedQuestion: React.FC<CompletedQuestionProps> = ({
                       </Text>
                       {canEdit && (
                         isMobile ? (
-                          // 移动端：始终显示的编辑按钮
-                          <TouchableOpacity 
+                          // 移动端：极简图标（无外框），更贴近系统原生视觉
+                          <TouchableOpacity
                             onPress={onEdit}
                             style={[
                               answerStyles.editAnswerButton,
-                              {
-                                opacity: 1,
-                                backgroundColor: theme.GRAY_100,
-                                borderRadius: 6,
-                                marginLeft: 8,
-                                padding: 8,
-                              }
+                              { padding: 0, marginLeft: 6, backgroundColor: 'transparent' }
                             ]}
-                            hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}
+                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                            activeOpacity={0.6}
                           >
-                            <SimpleIcon 
-                              name="edit" 
-                              size={16} 
-                              color={theme.GRAY_600} 
+                            <SimpleIcon
+                              name="edit"
+                              size={18}
+                              color={theme.TEXT_SECONDARY}
                             />
                           </TouchableOpacity>
                         ) : (
