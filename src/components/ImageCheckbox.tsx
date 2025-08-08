@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, Image, Animated, TextInput, Dimensions, Pressable, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, Image, Animated, TextInput, Dimensions, Pressable, Platform, Vibration } from 'react-native';
 import { SimpleIcon } from './SimpleIcon';
 import { StyleSheet } from 'react-native';
 import { COLORS } from '../constants';
@@ -41,6 +41,16 @@ export const ImageCheckbox: React.FC<ImageCheckboxProps> = ({
   const [otherInputAnimation] = useState(new Animated.Value(0)); // 使用useState保持动画实例
   const [hoveredId, setHoveredId] = useState<string | null>(null); // Web 悬停态
   const [pressedId, setPressedId] = useState<string | null>(null); // 按下反馈
+
+  const triggerHaptic = () => {
+    try {
+      if (Platform.OS === 'web') {
+        (navigator as any)?.vibrate?.(10);
+      } else {
+        Vibration.vibrate?.(10);
+      }
+    } catch (_) {}
+  };
   
   // 为每个选项创建独立的动画值
   const cardAnimations = useRef<Animated.Value[]>([]);
@@ -243,7 +253,7 @@ export const ImageCheckbox: React.FC<ImageCheckboxProps> = ({
                 disabled={disabled}
                 onHoverIn={() => setHoveredId(option.id)}
                 onHoverOut={() => setHoveredId(null)}
-                onPressIn={() => setPressedId(option.id)}
+                onPressIn={() => { setPressedId(option.id); triggerHaptic(); }}
                 onPressOut={() => setPressedId(null)}
               >
                 <View style={styles.imageContainer}>
