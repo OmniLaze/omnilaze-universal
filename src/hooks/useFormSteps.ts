@@ -248,11 +248,11 @@ export const useFormSteps = (props: UseFormStepsProps) => {
   };
 
   // 处理下一步 - 使用统一的回答管理
-  const handleNext = () => {
+  const handleNext = async () => {
     const currentAnswer = getCurrentAnswer();
     
     // 使用统一的回答提交函数
-    const success = handleAnswerSubmission(currentStep, currentAnswer, {
+    const success = await handleAnswerSubmission(currentStep, currentAnswer, {
       onComplete: () => handleStepProgression(currentStep)
     });
     
@@ -420,18 +420,25 @@ export const useFormSteps = (props: UseFormStepsProps) => {
         isEditing: true,
         skipAnimation: true, // 编辑模式不需要动画
         onComplete: () => {
+          console.log('✅ 编辑完成回调执行');
+          
           // 编辑完成后的基本处理
           if (editingStep === 0) {
             setIsAddressConfirmed(true);
           }
           
+          const currentEditingStep = editingStep;
+          
           // 清除编辑状态
           setEditingStep(null);
           setOriginalAnswerBeforeEdit(null);
           
-          // 继续到下一步（如果有的话）
-          if (editingStep !== null && editingStep < STEP_CONTENT.length - 1) {
-            setCurrentStep(editingStep + 1);
+          // 🔑 关键修复：使用handleStepProgression来推进步骤并显示新问题
+          if (currentEditingStep !== null && currentEditingStep < STEP_CONTENT.length - 1) {
+            console.log('🔄 编辑完成，调用handleStepProgression推进到下一步');
+            handleStepProgression(currentEditingStep);
+          } else {
+            console.log('📝 编辑完成，已经是最后一步，无需推进');
           }
         }
       });

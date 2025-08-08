@@ -460,6 +460,19 @@ const labels = Array.isArray(answerValue)
 })
 ```
 
+#### 5. Question Switching Logic Issues
+**Problem**: After answering a question, the next question doesn't display properly
+**Root Causes**: 
+- `handleAnswerSubmission` is async but not properly awaited in `handleNext`
+- Circular dependencies in useEffect that can cause infinite loops
+- `displayedText` state conflicts preventing new questions from showing
+
+**Solutions**:
+- Always `await` async functions: `const success = await handleAnswerSubmission(...)`
+- Remove `displayedText` and `isTyping` from useEffect dependencies to prevent loops
+- Use `clearText()` before `setCurrentStep()` in `handleStepProgression` to ensure new questions can display
+- Add comprehensive debug logging to track the question switching flow
+
 ## Development Workflow
 
 ### Quick Start (Development Mode)
@@ -525,6 +538,23 @@ No specific lint/typecheck commands are configured in package.json. The project 
 - **Animation Issues**: All timing conflicts have been eliminated - animations should be smooth without flashing
 - **Database Issues**: Use `wrangler d1 execute omnilaze-orders --command="SELECT * FROM table_name" --remote` to inspect data
 - **Flow Animations**: Look for console logs with 🎬 prefix for animation debugging
+
+### Question Flow Debugging
+When debugging question switching issues, look for these console log patterns:
+```
+🚀 handleStepProgression 被调用: { currentStepIndex: 0, currentStep: 0 }
+🔄 步骤推进: 0 -> 1
+🧹 已清空文本，即将更新步骤
+✅ 步骤已更新为: 1
+🔍 主useEffect触发: { currentStep: 1, ... }
+💡 满足显示条件，显示问题: [下一个问题文本]
+```
+
+**If questions aren't switching properly:**
+1. Check that `handleNext` properly awaits `handleAnswerSubmission`
+2. Verify `clearText()` is called before `setCurrentStep()` in `handleStepProgression`  
+3. Ensure main useEffect dependencies don't include `displayedText` or `isTyping`
+4. Look for `❌ 不满足显示条件` logs to see which condition is failing
 
 ## Address Autocomplete Implementation
 

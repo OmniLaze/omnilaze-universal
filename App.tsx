@@ -262,7 +262,7 @@ function LemonadeAppContent() {
   // 监听已完成问题区域高度变化，更新滚动系统
   useEffect(() => {
     // 当已完成问题区域高度变化时，更新动态内容高度
-    console.log('📏 已完成问题区域高度更新:', completedQuestionsHeight);
+    // console.log('📏 已完成问题区域高度更新:', completedQuestionsHeight);
   }, [completedQuestionsHeight]);
   
   // 强制重置订单状态（临时调试用）
@@ -271,11 +271,20 @@ function LemonadeAppContent() {
     setIsOrderCompleted(false);
     setOrderMessage('');
     setIsSearchingRestaurant(false);
+    
+    // 重置到有效的步骤范围
+    if (currentStep >= STEP_CONTENT.length) {
+      setCurrentStep(0);
+      console.log('🔧 重置步骤到0');
+    }
+    
     clearText();
     inputSectionAnimation.setValue(1);
+    
     // 强制触发问题显示
     setTimeout(() => {
-      if (isAuthenticated && currentStep < STEP_CONTENT.length) {
+      const validStep = currentStep >= STEP_CONTENT.length ? 0 : currentStep;
+      if (isAuthenticated && validStep < STEP_CONTENT.length) {
         const stepData = formSteps.getCurrentStepData();
         if (stepData) {
           handleQuestionTransition(stepData.message, false);
@@ -310,15 +319,8 @@ function LemonadeAppContent() {
     // 如果不是订单完成状态，且有文本显示，确保输入框也显示
     if (!isOrderCompleted && displayedText && !isTyping && editingStep === null) {
       const currentInputValue = inputSectionAnimation._value;
-      console.log('🔍 检查输入框状态:', { 
-        currentInputValue, 
-        displayedText: !!displayedText, 
-        isOrderCompleted,
-        isTyping
-      });
       
       if (currentInputValue !== 1) {
-        console.log('⚡ 强制显示输入框');
         inputSectionAnimation.setValue(1);
       }
     }
@@ -332,14 +334,11 @@ function LemonadeAppContent() {
         return;
       }
       
-      // 如果状态恢复了但是没有显示文本，强制刷新当前问题
-      setTimeout(() => {
-        if (!displayedText && !isTyping && isAuthenticated && !isOrderCompleted) {
-          forceRefreshCurrentQuestion();
-        }
-      }, 500);
+      // 🔧 修复：完全移除强制刷新逻辑，避免与编辑模式冲突
+      // 现在主 useEffect 已经能够正确处理所有问题显示场景
+      console.log('📍 页面状态已恢复，依靠主 useEffect 处理问题显示');
     }
-  }, [isStateRestored, displayedText, isTyping, isAuthenticated, isOrderCompleted, orderMessage]);
+  }, [isStateRestored]);
   
   // 带动画的统一回答管理函数 - 直接上推动画，无飞行
   const handleAnswerSubmission = async (
@@ -353,8 +352,11 @@ function LemonadeAppContent() {
   ) => {
     const { isEditing = false, skipAnimation = false, onComplete } = options;
     
+    console.log('📝 handleAnswerSubmission 开始:', { stepIndex, answer, currentStep, isEditing });
+    
     // 统一验证
     if (!validateInput(stepIndex, answer?.value).isValid) {
+      console.log('❌ 验证失败, 触发震动');
       triggerShake();
       return false;
     }
@@ -365,6 +367,7 @@ function LemonadeAppContent() {
     }
     
     // 1. 立即更新数据
+    console.log('💾 保存答案到 completedAnswers[' + stepIndex + ']:', answer);
     setCompletedAnswers(prev => ({
       ...prev,
       [stepIndex]: answer
@@ -397,10 +400,13 @@ function LemonadeAppContent() {
     }
     
     // 4. 执行完成回调
+    console.log('⏰ 设置100ms延迟后执行onComplete回调');
     setTimeout(() => {
+      console.log('🎯 执行onComplete回调');
       onComplete?.();
     }, 100);
     
+    console.log('✅ handleAnswerSubmission 完成，返回 true');
     return true;
   };
 
@@ -408,6 +414,13 @@ function LemonadeAppContent() {
 
   // 统一的步骤推进函数
   const handleStepProgression = (currentStepIndex: number) => {
+    console.log('🚀 handleStepProgression 被调用:', { currentStepIndex, currentStep });
+    console.log('📊 当前状态:', {
+      completedAnswersKeys: Object.keys(completedAnswers),
+      displayedText: displayedText ? displayedText.substring(0, 30) + '...' : 'null',
+      isTyping
+    });
+    
     // 立即推进，无延迟
     let nextStep = currentStepIndex + 1;
     
@@ -417,17 +430,42 @@ function LemonadeAppContent() {
       if (isSelectedDrink) {
         // 不论免单还是普通模式，选择奶茶都跳到预算步骤
         nextStep = 4;
+        console.log('🥤 检测到选择奶茶，跳转到预算步骤');
       }
     }
     
     // 免单模式在预算步骤后结束流程
     if (isFreeOrder && currentStepIndex === 4) {
-      // 免单流程完成，不再推进步骤
+      console.log('🆓 免单流程完成，不再推进步骤');
       return;
     }
     
     if (nextStep < STEP_CONTENT.length) {
+      console.log('🔄 步骤推进:', currentStepIndex, '->', nextStep);
+      console.log('📝 当前displayedText:', displayedText ? displayedText.substring(0, 30) + '...' : 'null');
+      
+      // 🔑 新的修复方案：立即清空文本并更新步骤，然后强制显示新问题
+      console.log('🧹 立即清空文本');
+      clearText();
+      
+      console.log('✏️ 立即更新步骤到:', nextStep);
       setCurrentStep(nextStep);
+      
+      // 强制在下一个事件循环中显示新问题，不依赖useEffect
+      setTimeout(() => {
+        console.log('💡 强制显示新问题');
+        const stepData = STEP_CONTENT[nextStep];
+        if (stepData) {
+          console.log('🎯 直接调用handleQuestionTransition:', stepData.message);
+          // 🔧 编辑模式修复：检查当前步骤是否有答案，如果有答案则认为有用户输入
+          const hasUserInput = !!completedAnswers[nextStep];
+          console.log('📋 检查用户输入状态:', { nextStep, hasUserInput, hasAnswer: !!completedAnswers[nextStep] });
+          handleQuestionTransition(stepData.message, hasUserInput);
+        }
+      }, 10); // 很短的延迟，确保状态更新完成
+      
+    } else {
+      console.log('🏁 已到达最后步骤，无法继续推进');
     }
   };
   
@@ -786,7 +824,6 @@ function LemonadeAppContent() {
   const animateInputSection = (toValue: number, duration: number = 300) => {
     if (isInputAnimating) return; // 防止冲突
     
-    console.log('🎯 动画输入框:', { toValue, duration, currentValue: inputSectionAnimation._value });
     setIsInputAnimating(true);
     Animated.timing(inputSectionAnimation, {
       toValue,
@@ -794,31 +831,26 @@ function LemonadeAppContent() {
       useNativeDriver: true,
     }).start(() => {
       setIsInputAnimating(false);
-      console.log('✅ 输入框动画完成，当前值:', inputSectionAnimation._value);
     });
   };
 
   const handleQuestionTransition = (questionText: string, hasUserInput: boolean = false) => {
-    console.log('🔄 问题过渡:', { questionText, hasUserInput });
     // 重置动画状态，避免冲突
     inputSectionAnimation.setValue(1); // 直接设置为1，确保输入框可见
     currentQuestionAnimation.setValue(1);
     
     if (!hasUserInput) {
       // 无用户输入：使用AI流式打字机效果
-      console.log('📝 开始打字机效果');
       typeText(questionText, { 
         instant: false,
         streaming: true,
         onComplete: () => {
           // 打字完成后，确保输入框可见
-          console.log('⚡ 打字机完成，确保输入框可见');
           inputSectionAnimation.setValue(1);
         }
       });
     } else {
       // 有用户输入：直接显示文本，确保输入框可见
-      console.log('⚡ 直接显示文本和输入框');
       setTextDirectly(questionText);
       // 确保输入框可见
       inputSectionAnimation.setValue(1);
@@ -848,40 +880,68 @@ function LemonadeAppContent() {
 
   // Effects - 统一的打字机效果管理
   useEffect(() => {
-    console.log('🔄 主要 useEffect 检查:', {
+    console.log('🔍 主useEffect触发:', {
       isStateRestored,
-      orderMessage: !!orderMessage,
-      isOrderCompleted,
-      displayedText: !!displayedText,
-      isTyping,
+      currentStep,
       editingStep,
       isAuthenticated,
-      currentStep,
+      isOrderCompleted,
+      displayedText: displayedText ? displayedText.substring(0, 20) + '...' : 'null',
+      isTyping,
+      completedAnswersForCurrentStep: completedAnswers[currentStep] ? '已存在' : '不存在'
     });
-    
+
     if (!isStateRestored) return;
+    
+    // 修复步骤超出范围的问题
+    if (currentStep >= STEP_CONTENT.length && !isOrderCompleted) {
+      console.log('🔧 步骤超出范围，重置到最后一个有效步骤');
+      setCurrentStep(STEP_CONTENT.length - 1);
+      return;
+    }
     
     // 如果有持久化的订单消息，优先显示
     if (orderMessage && isOrderCompleted) {
       if (!displayedText || displayedText !== orderMessage) {
-        console.log('📝 显示订单消息');
+        console.log('📝 显示订单消息:', orderMessage);
         setTextDirectly(orderMessage);
       }
-      console.log('✅ 订单完成，跳过其他逻辑');
       return;
     }
     
     // 未认证状态 - 显示认证问题
-    if (editingStep === null && !isAuthenticated && !isTyping) {
-      console.log('🔐 显示认证问题');
+    if (editingStep === null && !isAuthenticated && !isTyping && !displayedText) {
+      console.log('🔐 显示认证问题:', authQuestionText);
       handleQuestionTransition(authQuestionText);
       return;
     }
     
     // 已认证状态 - 显示表单问题
-    if (editingStep === null && isAuthenticated && currentStep < STEP_CONTENT.length && !completedAnswers[currentStep] && !isTyping) {
+    const shouldShowQuestion = (
+      editingStep === null && 
+      isAuthenticated && 
+      currentStep < STEP_CONTENT.length && 
+      !completedAnswers[currentStep] && 
+      !isTyping && 
+      !displayedText
+    );
+    
+    console.log('🔍 检查是否应该显示问题:', {
+      shouldShowQuestion,
+      editingStep: editingStep,
+      isAuthenticated,
+      currentStepValid: currentStep < STEP_CONTENT.length,
+      currentStep,
+      stepContentLength: STEP_CONTENT.length,
+      hasCompletedAnswerForCurrentStep: !!completedAnswers[currentStep],
+      completedAnswerForCurrentStep: completedAnswers[currentStep],
+      isTyping,
+      displayedTextLength: displayedText?.length || 0,
+      displayedText: displayedText ? displayedText.substring(0, 20) + '...' : 'null'
+    });
+    
+    if (shouldShowQuestion) {
       const stepData = formSteps.getCurrentStepData();
-      console.log('📋 准备显示表单问题:', { currentStep, stepData: !!stepData });
       
       // 统一检查用户输入状态
       let hasUserInput = false;
@@ -903,19 +963,27 @@ function LemonadeAppContent() {
           break;
       }
       
-      console.log('💡 触发问题显示:', { message: stepData.message, hasUserInput });
+      console.log('💡 满足显示条件，显示问题:', stepData.message, 'hasUserInput:', hasUserInput);
       handleQuestionTransition(stepData.message, hasUserInput);
     } else {
-      console.log('❌ 未满足表单问题显示条件:', {
-        editingStep,
-        isAuthenticated,
-        currentStep,
-        stepContentLength: STEP_CONTENT.length,
-        hasCompletedAnswer: !!completedAnswers[currentStep],
-        isTyping
-      });
+      console.log('❌ 不满足显示条件，跳过问题显示');
     }
-  }, [currentStep, editingStep, isAuthenticated, selectedFoodType, authQuestionText, isStateRestored, isFreeOrder, orderMessage, isOrderCompleted, displayedText, isTyping, address, selectedAllergies, selectedPreferences, budget]);
+  }, [currentStep, editingStep, isAuthenticated, authQuestionText, isStateRestored, isFreeOrder, orderMessage, isOrderCompleted, address, selectedAllergies, selectedPreferences, budget, selectedFoodType]);
+
+  // 专门监听displayedText变化的useEffect，用于调试
+  useEffect(() => {
+    console.log('📝 displayedText 发生变化:', {
+      displayedText: displayedText ? displayedText.substring(0, 30) + '...' : 'null',
+      length: displayedText?.length || 0,
+      isEmpty: !displayedText,
+      isTyping
+    });
+    
+    // 如果文本被清空且不在打字状态，尝试触发主useEffect重新检查
+    if (!displayedText && !isTyping && isStateRestored && isAuthenticated) {
+      console.log('🔄 文本已清空，主useEffect应该重新检查显示条件');
+    }
+  }, [displayedText, isTyping]);
 
   // 编辑模式效果 - 使用统一的问题管理
   useEffect(() => {
@@ -1163,26 +1231,6 @@ function LemonadeAppContent() {
       
       {/* 移除全局动画层 - 已不再需要飞行动画 */}
       
-      {/* 调试重置按钮 - 临时添加 */}
-      <TouchableOpacity
-        style={{
-          position: 'absolute',
-          top: Platform.OS === 'ios' ? 120 : 100,
-          left: 20,
-          backgroundColor: '#ff4444',
-          paddingHorizontal: 12,
-          paddingVertical: 6,
-          borderRadius: 8,
-          zIndex: 1000,
-        }}
-        onPress={resetOrderState}
-        activeOpacity={0.7}
-      >
-        <Text style={{ color: 'white', fontSize: 12, fontWeight: '600' }}>
-          重置订单
-        </Text>
-      </TouchableOpacity>
-
       {/* 用户菜单 - 仅网页端显示，移动端使用MobileHeader */}
       {isAuthenticated && (
         <UserMenu
