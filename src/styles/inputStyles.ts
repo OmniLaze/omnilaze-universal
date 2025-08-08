@@ -30,10 +30,12 @@ export const createInputStyles = (theme: any = COLORS) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: theme.WHITE,
-    borderWidth: 0,
-    borderRadius: LAYOUT.BORDER_RADIUS,
+    borderWidth: 1,
+    borderColor: 'BEBAB7',
+    borderLeftWidth: width > 768 ? 1 : 2,
+    borderRadius: width > 768 ? 12 : 8,
     paddingHorizontal: 16,
-    paddingVertical: 2,
+    paddingVertical: 12,
     minHeight: 56,
     width: '100%',
     ...createShadowStyle(theme.SHADOW, { width: 0, height: 4 }, 0.06, 6, 2),
@@ -49,9 +51,9 @@ export const createInputStyles = (theme: any = COLORS) => StyleSheet.create({
   },
   simpleTextInput: {
     flex: 1,
-    fontSize: 18,
+    fontSize: Platform.OS === 'web' ? (width > 768 ? 18 : 16) : 16,
     color: theme.TEXT_PRIMARY,
-    paddingVertical: 16,
+    paddingVertical: 0,
     paddingHorizontal: 0,
     fontWeight: '400',
     letterSpacing: 0.5,
@@ -67,7 +69,9 @@ export const createInputStyles = (theme: any = COLORS) => StyleSheet.create({
   },
   errorSimpleInputWrapper: {
     backgroundColor: theme.ERROR_BACKGROUND,
-    ...createShadowStyle(theme.ERROR, { width: 0, height: 0 }, 0.15, 8, 4),
+    borderColor: theme.ERROR,
+    borderLeftColor: theme.ERROR,
+    ...createShadowStyle(theme.ERROR, { width: 0, height: 0 }, 0.12, 8, 4),
   },
   simpleInputClearButton: {
     padding: 4,
@@ -131,19 +135,23 @@ export const budgetStyles = createBudgetStyles();
 
 export const createButtonStyles = (theme: any = COLORS) => StyleSheet.create({
   simpleButton: {
-    borderRadius: LAYOUT.BORDER_RADIUS,
-    paddingHorizontal: 32, // 从24增加到32，给更多横向空间
+    borderRadius: 12,
+    paddingHorizontal: 24,
     paddingVertical: 14,
-    minWidth: 120, // 添加最小宽度确保文字不被压缩
-    alignItems: 'center', // 确保文字居中
+    minWidth: 120,
+    alignItems: 'center',
     alignSelf: 'flex-start',
-    marginTop: 8, // 从12减少到8
-    marginLeft: 0, // 移除左边距，因为现在头像独立放置
-    ...createShadowStyle(theme.SHADOW, { width: 0, height: 4 }, 0.08, 6, 2),
+    marginTop: 8,
+    marginLeft: 0,
+    backgroundColor: theme.WHITE,
+    borderWidth: 1,
+    borderColor: theme.GRAY_300,
+    ...createShadowStyle(theme.SHADOW, { width: 0, height: 10 }, 0.06, 20, 2),
   },
   activeSimpleButton: {
-    backgroundColor: theme.PRIMARY_WITH_OPACITY || theme.PRIMARY,
-    ...createShadowStyle(theme.PRIMARY, { width: 0, height: 4 }, 0.12, 8, 3),
+    backgroundColor: '#FAFAFA',
+    borderColor: theme.GRAY_300,
+    ...createShadowStyle(theme.SHADOW, { width: 0, height: 12 }, 0.08, 24, 3),
   },
   disabledSimpleButton: {
     backgroundColor: '#F8FAFC',
@@ -151,14 +159,22 @@ export const createButtonStyles = (theme: any = COLORS) => StyleSheet.create({
     borderColor: '#E2E8F0',
     ...createShadowStyle('#000', { width: 0, height: 0 }, 0, 0, 0),
   },
+  hoverSimpleButton: {
+    ...(Platform.OS === 'web' && {
+      transform: [{ translateY: -2 }],
+      boxShadow: '0 6px 20px rgba(0,0,0,0.12)',
+      borderColor: theme.PRIMARY,
+    } as any),
+  } as any,
   simpleButtonText: {
     fontSize: Platform.OS === 'web' ? (width > 768 ? 18 : 16) : 16,
-    fontWeight: '500',
+    fontWeight: '600',
     textAlign: 'center',
+    color: theme.TEXT_PRIMARY,
   },
   activeSimpleButtonText: {
-    color: theme.WHITE,
-    fontWeight: '600',
+    color: theme.TEXT_PRIMARY,
+    fontWeight: '700',
     letterSpacing: 0.3,
   },
   disabledSimpleButtonText: {
@@ -167,20 +183,23 @@ export const createButtonStyles = (theme: any = COLORS) => StyleSheet.create({
     letterSpacing: 0.2,
   },
   nextSimpleButton: {
-    backgroundColor: theme.PRIMARY_WITH_OPACITY || theme.PRIMARY,
-    borderRadius: 8,
-    paddingHorizontal: 28, // 从20增加到28
+    backgroundColor: theme.WHITE,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: theme.GRAY_300,
+    paddingHorizontal: 24,
     paddingVertical: 12,
-    minWidth: 120, // 添加最小宽度
-    alignItems: 'center', // 确保文字居中
+    minWidth: 120,
+    alignItems: 'center',
     alignSelf: 'flex-start',
-    marginTop: 4, // 从8减少到4
-    marginLeft: 0, // 移除左边距，因为现在头像独立放置
+    marginTop: 4,
+    marginLeft: 0,
+    ...createShadowStyle(theme.SHADOW, { width: 0, height: 10 }, 0.06, 20, 2),
   },
   nextSimpleButtonText: {
-    color: theme.WHITE,
+    color: theme.TEXT_PRIMARY,
     fontSize: Platform.OS === 'web' ? (width > 768 ? 18 : 16) : 16,
-    fontWeight: '500',
+    fontWeight: '600',
     textAlign: 'center',
   },
 });

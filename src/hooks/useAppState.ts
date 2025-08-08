@@ -48,7 +48,7 @@ export const useAppState = () => {
   const [orderMessage, setOrderMessage] = useState<string>('');
   
   // UI状态
-  const [showInviteModal, setShowInviteModal] = useState(false);
+  // const [showInviteModal, setShowInviteModal] = useState(false); // 🗑️ 已移除，使用showFreeDrinkModal代替
   const [isFreeOrder, setIsFreeOrder] = useState(false);
   const [showFreeDrinkModal, setShowFreeDrinkModal] = useState(false);
   const [authResetTrigger, setAuthResetTrigger] = useState(0);
@@ -259,7 +259,7 @@ export const useAppState = () => {
     orderMessage, setOrderMessage,
     
     // UI状态
-    showInviteModal, setShowInviteModal,
+    // showInviteModal, setShowInviteModal, // 🗑️ 已移除，使用showFreeDrinkModal代替
     isFreeOrder, setIsFreeOrder,
     showFreeDrinkModal, setShowFreeDrinkModal,
     authResetTrigger, setAuthResetTrigger,

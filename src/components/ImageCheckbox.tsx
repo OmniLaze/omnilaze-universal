@@ -335,13 +335,6 @@ const createStyles = (theme: any) => StyleSheet.create({
     justifyContent: width > 768 ? 'space-between' : 'flex-start',
     flexDirection: width > 768 ? 'column' : 'row',
     position: 'relative',
-    shadowColor: theme.SHADOW,
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
     elevation: 2,
   },
   selectedCard: {
@@ -396,7 +389,7 @@ const createStyles = (theme: any) => StyleSheet.create({
     height: width > 768 ? 22 : 18,
     borderRadius: 4,
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: '#BEBAB7',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: theme.WHITE,
@@ -425,13 +418,6 @@ const createStyles = (theme: any) => StyleSheet.create({
     fontSize: width > 768 ? 16 : 14, // 移动端调整字体大小
     backgroundColor: theme.WHITE,
     color: theme.TEXT_PRIMARY,
-    shadowColor: theme.SHADOW,
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
     elevation: 2,
     minHeight: width > 768 ? 44 : 40, // 设置最小高度便于点击
   },

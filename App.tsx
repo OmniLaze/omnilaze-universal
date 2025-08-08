@@ -180,7 +180,7 @@ function LemonadeAppContent() {
     selectedAddressSuggestion, currentStep, completedAnswers, editingStep,
     originalAnswerBeforeEdit, currentOrderId, currentOrderNumber,
     currentUserSequenceNumber, isOrderSubmitting, isSearchingRestaurant,
-    isOrderCompleted, orderMessage, showInviteModal, isFreeOrder, showFreeDrinkModal,
+    isOrderCompleted, orderMessage, isFreeOrder, showFreeDrinkModal,
     isQuickOrderMode, completedQuestionsOffset, currentPushOffset,
     
     // 状态设置函数
@@ -1287,7 +1287,7 @@ function LemonadeAppContent() {
           emotionAnimation={emotionAnimation}
           onMenuPress={() => setShowFreeDrinkModal(true)}
           onLogout={handleLogout}
-          onInvite={() => setShowInviteModal(true)}
+          onInvite={handleInvite} // 🔧 修正：使用正确的handleInvite函数
           currentStep={currentStep}
           previousStep={previousStep}
         />

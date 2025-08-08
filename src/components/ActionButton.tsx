@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, Animated } from 'react-native';
+import { View, Text, Pressable, Animated, Platform } from 'react-native';
 import { createButtonStyles } from '../styles/inputStyles';
 import { useTheme } from '../contexts/ColorThemeContext';
 
@@ -22,6 +22,7 @@ export const ActionButton: React.FC<ActionButtonProps> = ({
 }) => {
   const { theme } = useTheme();
   const buttonStyles = createButtonStyles(theme);
+  const [isHovered, setIsHovered] = React.useState(false);
   
   const getButtonStyle = () => {
     if (variant === 'next') {
@@ -66,15 +67,15 @@ export const ActionButton: React.FC<ActionButtonProps> = ({
 
   return (
     <WrapperComponent {...wrapperProps}>
-      <TouchableOpacity
+      <Pressable
         onPress={onPress}
         disabled={disabled}
-        style={getButtonStyle()}
+        onHoverIn={() => setIsHovered(true)}
+        onHoverOut={() => setIsHovered(false)}
+        style={[getButtonStyle(), (Platform.OS === 'web' && isHovered) && buttonStyles.hoverSimpleButton]}
       >
-        <Text style={getTextStyle()}>
-          {title}
-        </Text>
-      </TouchableOpacity>
+        <Text style={getTextStyle()}>{title}</Text>
+      </Pressable>
     </WrapperComponent>
   );
 };
