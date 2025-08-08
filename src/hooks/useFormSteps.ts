@@ -288,8 +288,13 @@ export const useFormSteps = (props: UseFormStepsProps) => {
     
     setOriginalAnswerBeforeEdit(answerToEdit);
     
-    // 核心逻辑：清除所有后续步骤的已完成答案
+    // 核心逻辑：清除当前编辑步骤及其后的所有已完成答案
     const newCompletedAnswers = { ...completedAnswers };
+    
+    // 删除当前编辑步骤
+    if (newCompletedAnswers.hasOwnProperty(stepIndex)) {
+      delete newCompletedAnswers[stepIndex];
+    }
     
     // 删除所有大于当前编辑步骤的已完成答案
     Object.keys(newCompletedAnswers).forEach(key => {
