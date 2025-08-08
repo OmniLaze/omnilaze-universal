@@ -149,6 +149,8 @@ export const InviteModalWithFreeDrink: React.FC<InviteModalWithFreeDrinkProps> =
   };
 
   const inviteCode = inviteStats?.user_invite_code || generateInviteCode(userPhoneNumber);
+  const currentUses = inviteStats?.current_uses || 0;
+  const maxUses = inviteStats?.max_uses || 3; // 兜底为3，与后端一致
   const inviteText = `懒得点外卖？就用懒得！使用我的邀请码 ${inviteCode} 到order.omnilaze.co注册，邀请${maxUses}位新用户注册可获得免费奶茶一杯哦！🧋`;
 
   // 复制功能
@@ -178,8 +180,6 @@ export const InviteModalWithFreeDrink: React.FC<InviteModalWithFreeDrinkProps> =
   const handleCopyInviteCode = () => copyToClipboard(inviteCode);
   const handleCopyInviteText = () => copyToClipboard(inviteText);
 
-  const currentUses = inviteStats?.current_uses || 0;
-  const maxUses = inviteStats?.max_uses || 3; // 🔧 修正：兜底值改为3，与后端默认值一致
   const isCompleted = currentUses >= maxUses;
 
   return (
