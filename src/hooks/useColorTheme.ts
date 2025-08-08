@@ -40,6 +40,7 @@ interface ColorTheme {
   GRAY_700: string;        
   GRAY_800: string;
   GRAY_900: string;        // 最深灰
+  GRAY_1000: string;
   
   // 界面元素颜色
   BORDER: string;
@@ -134,6 +135,7 @@ const DEFAULT_THEME_STATE: ThemeState = {
     GRAY_700: '#374151',
     GRAY_800: '#1f2937',
     GRAY_900: '#000000',         // 黑色
+    GRAY_1000: '#e1e1e1',
     
     // 界面元素颜色
     BORDER: COLORS.BORDER,

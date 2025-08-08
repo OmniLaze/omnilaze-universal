@@ -31,8 +31,9 @@ export const createInputStyles = (theme: any = COLORS) => StyleSheet.create({
     alignItems: 'center',
     backgroundColor: theme.WHITE,
     borderWidth: 1,
-    borderColor: 'BEBAB7',
-    borderLeftWidth: width > 768 ? 1 : 2,
+    borderColor: '#E2E8F0',
+    // 保持左右边框一致宽度
+    borderLeftWidth: 1,
     borderRadius: width > 768 ? 12 : 8,
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -161,9 +162,11 @@ export const createButtonStyles = (theme: any = COLORS) => StyleSheet.create({
   },
   hoverSimpleButton: {
     ...(Platform.OS === 'web' && {
-      transform: [{ translateY: -2 }],
-      boxShadow: '0 6px 20px rgba(0,0,0,0.12)',
-      borderColor: theme.PRIMARY,
+      // 只加深边框和轻微背景，不做上浮
+      transform: [{ translateY: 0 }],
+      boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+      borderColor: '#D1D5DB',
+      backgroundColor: '#FCFCFC',
     } as any),
   } as any,
   simpleButtonText: {

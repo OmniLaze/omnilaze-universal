@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, Image, Animated, TextInput, Dimensions } from 'react-native';
+import { View, Text, TouchableOpacity, Image, Animated, TextInput, Dimensions, Pressable, Platform } from 'react-native';
 import { SimpleIcon } from './SimpleIcon';
 import { StyleSheet } from 'react-native';
 import { COLORS } from '../constants';
@@ -39,6 +39,7 @@ export const ImageCheckbox: React.FC<ImageCheckboxProps> = ({
   const [otherText, setOtherText] = useState('');
   const [showOtherInput, setShowOtherInput] = useState(false);
   const [otherInputAnimation] = useState(new Animated.Value(0)); // 使用useState保持动画实例
+  const [hoveredId, setHoveredId] = useState<string | null>(null); // Web 悬停态
   
   // 为每个选项创建独立的动画值
   const cardAnimations = useRef<Animated.Value[]>([]);
@@ -228,16 +229,18 @@ export const ImageCheckbox: React.FC<ImageCheckboxProps> = ({
                 }
               ]}
             >
-              <TouchableOpacity
+              <Pressable
                 style={[
                   styles.optionCard,
                   isSelected && styles.selectedCard,
                   disabled && styles.disabledCard,
+                  (Platform.OS === 'web' && hoveredId === option.id) && styles.optionCardHover,
                   { width: '100%', height: '100%' } // 填满父容器
                 ]}
                 onPress={() => toggleOption(option.id)}
-                activeOpacity={disabled ? 1 : 0.7}
                 disabled={disabled}
+                onHoverIn={() => setHoveredId(option.id)}
+                onHoverOut={() => setHoveredId(null)}
               >
                 <View style={styles.imageContainer}>
                   <Image 
@@ -275,7 +278,7 @@ export const ImageCheckbox: React.FC<ImageCheckboxProps> = ({
                   />
                 )}
               </View>
-            </TouchableOpacity>
+              </Pressable>
             </Animated.View>
           );
         })}
@@ -327,9 +330,9 @@ const createStyles = (theme: any) => StyleSheet.create({
   optionCard: {
     backgroundColor: theme.WHITE,
     borderRadius: width > 768 ? 12 : 8,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderLeftWidth: width > 768 ? 1 : 2, // 移动端统一左边框宽度
+    borderWidth: 1.8,
+    borderColor: '#EEEAE7', // 与示例图接近的浅灰边框
+    // 保持左右边框一致宽度，避免视觉不对称
     padding: width > 768 ? 12 : 12,
     alignItems: 'center',
     justifyContent: width > 768 ? 'space-between' : 'flex-start',
@@ -337,9 +340,15 @@ const createStyles = (theme: any) => StyleSheet.create({
     position: 'relative',
     elevation: 2,
   },
+  optionCardHover: Platform.select({
+    web: {
+      backgroundColor: '#f9f9f9',
+      boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
+    },
+    default: {}
+  }) as any,
   selectedCard: {
     borderColor: theme.PRIMARY,
-    borderLeftColor: theme.PRIMARY, // 确保选中时左边框也是主色
   },
   imageContainer: {
     width: width > 768 ? 160 : 80, // 移动端放大图片容器
@@ -388,8 +397,8 @@ const createStyles = (theme: any) => StyleSheet.create({
     width: width > 768 ? 22 : 18,
     height: width > 768 ? 22 : 18,
     borderRadius: 4,
-    borderWidth: 1,
-    borderColor: '#BEBAB7',
+    borderWidth: 2.5,
+    borderColor: '#EEEAE7', // 与卡片边框保持一致
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: theme.WHITE,
