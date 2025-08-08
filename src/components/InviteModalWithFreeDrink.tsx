@@ -149,7 +149,7 @@ export const InviteModalWithFreeDrink: React.FC<InviteModalWithFreeDrinkProps> =
   };
 
   const inviteCode = inviteStats?.user_invite_code || generateInviteCode(userPhoneNumber);
-  const inviteText = `懒得点外卖？就用懒得！使用我的邀请码 ${inviteCode} 到order.omnilaze.co注册，邀请三位新用户注册可获得免费奶茶一杯哦！🧋`;
+  const inviteText = `懒得点外卖？就用懒得！使用我的邀请码 ${inviteCode} 到order.omnilaze.co注册，邀请${maxUses}位新用户注册可获得免费奶茶一杯哦！🧋`;
 
   // 复制功能
   const copyToClipboard = async (text: string) => {
@@ -179,7 +179,7 @@ export const InviteModalWithFreeDrink: React.FC<InviteModalWithFreeDrinkProps> =
   const handleCopyInviteText = () => copyToClipboard(inviteText);
 
   const currentUses = inviteStats?.current_uses || 0;
-  const maxUses = inviteStats?.max_uses || 2;
+  const maxUses = inviteStats?.max_uses || 3; // 🔧 修正：兜底值改为3，与后端默认值一致
   const isCompleted = currentUses >= maxUses;
 
   return (
@@ -302,7 +302,7 @@ export const InviteModalWithFreeDrink: React.FC<InviteModalWithFreeDrinkProps> =
                           恭喜您获得免单奶茶！
                         </Text>
                         <Text style={styles.freeDrinkSubtitle}>
-                          成功邀请2位好友的奖励
+                          成功邀请{maxUses}位好友的奖励
                         </Text>
                         <Text style={styles.freeDrinkQuota}>
                           仅限前{freeDrinksRemaining}名，立即领取！

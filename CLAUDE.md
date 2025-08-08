@@ -233,7 +233,7 @@ Complex gamification system with:
 
 ### Quick Order System Architecture
 Advanced user experience optimization for returning users:
-- **Preference Detection**: System checks if user has complete preferences via `/preferences-completeness/{user_id}`
+- **Preference Detection**: System checks if user has complete preferences via `/preferences/{user_id}/complete`
 - **Auto-fill Flow**: If preferences exist, automatically fills all form fields and skips to payment
 - **Streamlined UX**: Quick order mode bypasses confirmation cards and goes directly to order submission
 - **Fallback Handling**: New users or users without complete preferences follow normal flow
@@ -269,7 +269,15 @@ Advanced user experience optimization for returning users:
   - `SPUG_URL` - SMS service URL for production SMS sending
 - Uses D1 database for persistent storage and KV for temporary verification codes
 
-## API Integration
+### Real-Time Statistics System
+The invite and free drink systems now use real-time D1 database calculations:
+- **Dynamic Quota Calculation**: Free drink remaining counts are calculated in real-time from actual order data
+- **Automatic Synchronization**: System automatically syncs between `free_drink_config` table and actual usage in `orders` table
+- **D1 Aggregation Queries**: Uses `COUNT(*)` queries to calculate actual usage statistics
+- **No Hardcoded Values**: All statistics (free drinks remaining, invite counts) are dynamically generated
+- **Implementation**: Updated in `handleFreeDrinksRemaining`, `handleGetUserInviteStats`, and `handleClaimFreeDrink` functions
+
+### API Integration
 
 The backend provides authentication and order management endpoints:
 
@@ -285,24 +293,26 @@ The backend provides authentication and order management endpoints:
 - `GET /orders/{user_id}` - Get user's order history
 
 ### Invite System APIs
-- `GET /user-invite-stats/{user_id}` - Get user's invite statistics and eligibility
-- `GET /invite-progress/{user_id}` - Get detailed invite progress and history
-- `GET /free-drinks-remaining` - Get global free drink quota
-- `POST /claim-free-drink` - Claim free drink reward
+- `GET /get-user-invite-stats?user_id={user_id}` - Get user's invite statistics and eligibility
+- `GET /get-invite-progress?user_id={user_id}` - Get detailed invite progress and history
+- `GET /free-drinks-remaining` - Get global free drink quota (now with real-time D1 database calculation)
+- `POST /claim-free-drink` - Claim free drink reward (now updates real-time statistics)
 
 ### Preferences System APIs
 - `POST /preferences` - Save user preferences (address, food type, allergies, preferences, budget)
 - `GET /preferences/{user_id}` - Get user preferences
 - `PUT /preferences/{user_id}` - Update user preferences  
 - `DELETE /preferences/{user_id}` - Delete user preferences
-- `GET /preferences-completeness/{user_id}` - Check if user has complete preferences for quick ordering
+- `GET /preferences/{user_id}/complete` - Check if user has complete preferences for quick ordering
+- `GET /preferences/{user_id}/form-data` - Get user preferences formatted as form data for quick order mode
 
 ### Health Check
 - `GET /health` - Service health status and environment info
 
 ### Development vs Production Behavior
 - **Development Mode**: Uses in-memory/Supabase storage, displays verification codes in console/response
-- **Production Mode**: Uses D1 database, sends real SMS through configured service
+- **Production Mode**: Uses D1 database with real-time statistics calculations, sends real SMS through configured service
+- **Statistics**: Both modes now use dynamic calculations instead of hardcoded values for invite and free drink statistics
 
 The API base URL is configurable via `REACT_APP_API_URL` environment variable (defaults to `localhost:5001` for Flask, or Workers URL for production).
 
