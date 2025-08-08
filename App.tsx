@@ -318,7 +318,7 @@ function LemonadeAppContent() {
   useEffect(() => {
     // 如果不是订单完成状态，且有文本显示，确保输入框也显示
     if (!isOrderCompleted && displayedText && !isTyping && editingStep === null) {
-      const currentInputValue = inputSectionAnimation._value;
+      const currentInputValue: number = (inputSectionAnimation as any)?.__getValue?.() ?? 0;
       
       if (currentInputValue !== 1) {
         inputSectionAnimation.setValue(1);
@@ -386,7 +386,7 @@ function LemonadeAppContent() {
       const newPushOffset = currentPushOffset + pushUpDistance;
       
       Animated.timing(completedQuestionsOffset, {
-        toValue: completedQuestionsOffset._value - pushUpDistance,
+        toValue: (completedQuestionsOffset as any)?.__getValue?.() - pushUpDistance,
         duration: 400,
         useNativeDriver: true,
         easing: Easing.out(Easing.quad)
@@ -650,9 +650,10 @@ function LemonadeAppContent() {
   const [hasInitializedScroll, setHasInitializedScroll] = useState(false);
   
   // 滚动阈值和页面高度 - 基于动态内容高度
-  const pageHeight = height - 100; // 减去状态栏和padding
+  const pageHeight = height - 60; // 减少当前页高度，配合更薄的移动端头部
   const bufferContainerHeight = 300; // 缓冲容器高度，更新为和实际容器一致
   const SNAP_THRESHOLD = 200; // 使用单个问题高度作为吸附阈值
+  const FOCUS_HYSTERESIS = 60; // 焦点切换滞后，避免在中间抖动
   
   // 🎯 当前问题页位置调整 - 包含缓冲容器偏移
   const CURRENT_PAGE_OFFSET = 167; // 向上偏移167px，让当前问题页不那么靠上
@@ -670,11 +671,38 @@ function LemonadeAppContent() {
     outputRange: [1, 0], // 在已完成问题页面时为1，在当前问题页面时为0
     extrapolate: 'clamp',
   });
+
+  // 基于 focusMode 的页面不透明度，避免空白缓冲容器影响视觉弱化判断
+  const completedPageOpacity = focusMode === 'completed' ? 1 : 0.4;
+  const currentPageOpacity = focusMode === 'current' ? 1 : 0.4;
   
   // 滚动处理函数
   const handleScroll = (event: any) => {
     const offsetY = event.nativeEvent.contentOffset.y;
     scrollPosition.setValue(offsetY);
+    
+    // 动态焦点态判断：仅在两页之间切换，忽略空白缓冲容器
+    const completedPagePosition = bufferContainerHeight;
+    const currentPagePosition = getCurrentPagePosition();
+    const midPoint = (completedPagePosition + currentPagePosition) / 3;
+    let nextMode: 'current' | 'completed' = focusMode;
+    
+    if (focusMode === 'current') {
+      // 仅当滚动明显靠近已完成页时才切换，且需要有已完成答案
+      if (offsetY < midPoint - FOCUS_HYSTERESIS && Object.keys(completedAnswers).length > 0) {
+        nextMode = 'completed';
+      }
+    } else {
+      // 从已完成页回到当前页需超过滞后阈值
+      if (offsetY > midPoint + FOCUS_HYSTERESIS) {
+        nextMode = 'current';
+      }
+    }
+    
+    if (nextMode !== focusMode) {
+      setFocusMode(nextMode);
+      saveFocusMode(nextMode);
+    }
     
     // 添加调试日志，每100px输出一次
     if (offsetY % 100 < 5) {
@@ -860,19 +888,12 @@ function LemonadeAppContent() {
   // 当打字机效果完成后显示输入框 - 立即触发版本
   useEffect(() => {
     if (displayedText && !isTyping && editingStep === null) {
-      // 检查动画值是否为0，然后显示输入框
-      let currentInputValue = 0;
-      const listener = inputSectionAnimation.addListener(({ value }) => {
-        currentInputValue = value;
-      });
-      
+      // 读取当前动画值（避免直接访问私有属性）
+      const currentInputValue: number = (inputSectionAnimation as any)?.__getValue?.() ?? 0;
       if (currentInputValue === 0) {
         // 打字机完成后立即显示输入框，使用统一的动画函数
         animateInputSection(1, 250);
       }
-      
-      // 清理监听器
-      inputSectionAnimation.removeListener(listener);
     }
   }, [displayedText, isTyping, editingStep]);
 
@@ -1355,11 +1376,7 @@ function LemonadeAppContent() {
                         }}
                         style={{
                           // 动态调节内容颜色 - 已完成问题页面的透明度
-                          opacity: scrollProgress.interpolate({
-                            inputRange: [0, 1],
-                            outputRange: [0.4, 1.0], // scrollProgress=0(当前问题焦点)时已完成问题半透明，scrollProgress=1(已完成问题焦点)时完全不透明
-                            extrapolate: 'clamp',
-                          }),
+                          opacity: completedPageOpacity,
                         }}
                       >
                         <CompletedQuestion
@@ -1406,11 +1423,7 @@ function LemonadeAppContent() {
               style={{
                 flex: 1,
                 // 动态调节内容颜色 - 当前问题页面的透明度
-                opacity: scrollProgress.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [1.0, 0.4], // scrollProgress=0(当前问题焦点)时完全不透明，scrollProgress=1(已完成问题焦点)时半透明
-                  extrapolate: 'clamp',
-                }),
+                opacity: currentPageOpacity,
                 // 动画期间稍微降低透明度，提供视觉反馈
                 // Note: movingQuestion removed as flow animation system was simplified
               }}

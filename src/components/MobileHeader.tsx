@@ -125,9 +125,9 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
   const headerStyles = {
     container: {
       backgroundColor: theme.BACKGROUND,
-      paddingTop: Platform.OS === 'ios' ? 50 : 20,
-      paddingBottom: 20,
-      paddingHorizontal: 20,
+      paddingTop: Platform.OS === 'ios' ? 28 : 12,
+      paddingBottom: 10,
+      paddingHorizontal: 16,
       zIndex: 100,
     },
     flexRow: {
@@ -152,7 +152,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
     dotsContainer: {
       flexDirection: 'row' as const,
       alignItems: 'center' as const,
-      marginBottom: 6, // 进度点和标题之间的间距
+      marginBottom: 2,
     },
     menuButtonContainer: {
       position: 'relative' as const,
@@ -160,17 +160,17 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
     menuButton: {
       flexDirection: 'row' as const,
       alignItems: 'center' as const,
-      paddingHorizontal: 8,
-      paddingVertical: 4,
+      paddingHorizontal: 6,
+      paddingVertical: 2,
     },
     phoneText: {
-      fontSize: 14,
+      fontSize: 12,
       color: theme.TEXT_SECONDARY,
       marginRight: 8,
       fontWeight: '400' as const,
     },
     menuDots: {
-      fontSize: 16,
+      fontSize: 14,
       color: theme.TEXT_SECONDARY,
       fontWeight: '400' as const,
     },
@@ -302,10 +302,10 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
       marginBottom: 20,
     },
     dot: {
-      width: 8,
-      height: 8,
-      borderRadius: 4,
-      marginHorizontal: 3,
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+      marginHorizontal: 2,
     },
     activeDot: {
       backgroundColor: theme.PRIMARY,
@@ -315,16 +315,16 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
     },
     currentDot: {
       backgroundColor: theme.PRIMARY,
-      width: 12,
-      height: 12,
-      borderRadius: 6,
+      width: 8,
+      height: 8,
+      borderRadius: 4,
     },
     titleText: {
-      fontSize: 12, // 从16缩小到12
+      fontSize: 11,
       fontWeight: '400' as const, // 从500调整到400，让字体更轻
       color: theme.TEXT_SECONDARY, // 使用次级文本颜色，让它不那么突出
       textAlign: 'center' as const,
-      marginTop: 2, // 稍微增加与进度点的间距
+      marginTop: 0,
     },
   };
 
