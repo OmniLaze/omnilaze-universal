@@ -839,6 +839,29 @@ async function handleGetUserInviteStats(request, env) {
     const freeOrderResult = await env.DB.prepare(freeOrderQuery).bind(userId).first();
     const hasClaimedFreeDrink = !!freeOrderResult;
     
+    // 🔧 获取全局免单剩余数量（实时计算）
+    const globalFreeDrinksQuery = `
+      SELECT total_quota, used_quota, remaining_quota
+      FROM free_drink_config 
+      WHERE id = 1
+    `;
+    const globalFreeDrinksResult = await env.DB.prepare(globalFreeDrinksQuery).first();
+    
+    // 实时统计实际使用的免单数量
+    const actualUsedCountQuery = `
+      SELECT COUNT(*) as actual_used_count
+      FROM orders 
+      WHERE budget_amount = 0 
+        AND metadata LIKE '%"isFreeOrder":true%'
+        AND is_deleted = 0
+    `;
+    const actualUsedResult = await env.DB.prepare(actualUsedCountQuery).first();
+    const actualUsedCount = actualUsedResult?.actual_used_count || 0;
+    
+    // 计算全局免单剩余数量
+    const globalTotalQuota = globalFreeDrinksResult?.total_quota || 100;
+    const globalFreeDrinksRemaining = Math.max(0, globalTotalQuota - actualUsedCount);
+    
     return new Response(JSON.stringify({
       success: true,
       user_invite_code: userResult.user_invite_code,
@@ -847,7 +870,12 @@ async function handleGetUserInviteStats(request, env) {
       remaining_uses: maxUses - currentUses,
       eligible_for_free_drink: isEligibleForFreeDrink,
       free_drink_claimed: hasClaimedFreeDrink,
-      free_drinks_remaining: 100 // 简化版本，暂时硬编码
+      free_drinks_remaining: globalFreeDrinksRemaining, // 🔧 使用实时计算的全局免单剩余数量
+      global_quota_info: {
+        total_quota: globalTotalQuota,
+        used_quota: actualUsedCount,
+        remaining_quota: globalFreeDrinksRemaining
+      }
     }), {
       headers: { 'Content-Type': 'application/json' }
     });
@@ -1032,11 +1060,32 @@ async function handleClaimFreeDrink(request, env) {
         0
       ).run();
 
+      // 🔧 实时计算剩余免单数量
+      const globalFreeDrinksQuery = `
+        SELECT total_quota FROM free_drink_config WHERE id = 1
+      `;
+      const globalFreeDrinksResult = await env.DB.prepare(globalFreeDrinksQuery).first();
+      
+      // 实时统计实际使用的免单数量（包括刚创建的这个）
+      const actualUsedCountQuery = `
+        SELECT COUNT(*) as actual_used_count
+        FROM orders 
+        WHERE budget_amount = 0 
+          AND metadata LIKE '%"isFreeOrder":true%'
+          AND is_deleted = 0
+      `;
+      const actualUsedResult = await env.DB.prepare(actualUsedCountQuery).first();
+      const actualUsedCount = actualUsedResult?.actual_used_count || 0;
+      
+      // 计算全局免单剩余数量
+      const globalTotalQuota = globalFreeDrinksResult?.total_quota || 100;
+      const freeDrinksRemaining = Math.max(0, globalTotalQuota - actualUsedCount);
+
       return new Response(JSON.stringify({
         success: true,
         message: '免单领取成功！',
         free_order_id: freeOrderId,
-        free_drinks_remaining: 99 // 简化版本，暂时硬编码
+        free_drinks_remaining: freeDrinksRemaining // 🔧 使用实时计算的剩余数量
       }), {
         headers: { 'Content-Type': 'application/json' }
       });
@@ -1074,14 +1123,69 @@ async function handleFreeDrinksRemaining(request, env) {
   }
 
   try {
-    // TODO: 从数据库获取实际的免单剩余数量
-    // 目前返回硬编码值
-    const freeDrinksRemaining = 100;
+    // 🔧 从数据库获取实际的免单剩余数量
+    // 1. 从 free_drink_config 表获取配置的总配额和已使用配额
+    const configQuery = `
+      SELECT total_quota, used_quota, remaining_quota 
+      FROM free_drink_config 
+      WHERE id = 1
+    `;
+    const configResult = await env.DB.prepare(configQuery).first();
+    
+    // 2. 如果配置表不存在或没有数据，使用默认值并初始化
+    if (!configResult) {
+      // 初始化配置
+      const initQuery = `
+        INSERT OR IGNORE INTO free_drink_config (id, total_quota, used_quota) 
+        VALUES (1, 100, 0)
+      `;
+      await env.DB.prepare(initQuery).run();
+      
+      return new Response(JSON.stringify({
+        success: true,
+        free_drinks_remaining: 100,
+        total_quota: 100,
+        used_quota: 0,
+        message: `还有 100 个免单名额`
+      }), {
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // 3. 实时计算已使用的免单数量（从orders表统计）
+    const usedCountQuery = `
+      SELECT COUNT(*) as actual_used_count
+      FROM orders 
+      WHERE budget_amount = 0 
+        AND metadata LIKE '%"isFreeOrder":true%'
+        AND is_deleted = 0
+    `;
+    const usedResult = await env.DB.prepare(usedCountQuery).first();
+    const actualUsedCount = usedResult?.actual_used_count || 0;
+
+    // 4. 如果实际使用数量与配置不一致，更新配置表
+    if (actualUsedCount !== configResult.used_quota) {
+      const updateConfigQuery = `
+        UPDATE free_drink_config 
+        SET used_quota = ?, updated_at = datetime('now')
+        WHERE id = 1
+      `;
+      await env.DB.prepare(updateConfigQuery).bind(actualUsedCount).run();
+    }
+
+    // 5. 计算剩余数量
+    const totalQuota = configResult.total_quota;
+    const freeDrinksRemaining = Math.max(0, totalQuota - actualUsedCount);
     
     return new Response(JSON.stringify({
       success: true,
       free_drinks_remaining: freeDrinksRemaining,
-      message: `还有 ${freeDrinksRemaining} 个免单名额`
+      total_quota: totalQuota,
+      used_quota: actualUsedCount,
+      message: `还有 ${freeDrinksRemaining} 个免单名额`,
+      // 额外的调试信息
+      config_used_quota: configResult.used_quota,
+      actual_used_count: actualUsedCount
     }), {
       headers: { 'Content-Type': 'application/json' }
     });
@@ -1089,7 +1193,8 @@ async function handleFreeDrinksRemaining(request, env) {
     console.error('Get free drinks remaining error:', error);
     return new Response(JSON.stringify({
       success: false,
-      message: '获取免单剩余数量失败'
+      message: '获取免单剩余数量失败',
+      error: error.message
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
