@@ -40,6 +40,7 @@ export const ImageCheckbox: React.FC<ImageCheckboxProps> = ({
   const [showOtherInput, setShowOtherInput] = useState(false);
   const [otherInputAnimation] = useState(new Animated.Value(0)); // 使用useState保持动画实例
   const [hoveredId, setHoveredId] = useState<string | null>(null); // Web 悬停态
+  const [pressedId, setPressedId] = useState<string | null>(null); // 按下反馈
   
   // 为每个选项创建独立的动画值
   const cardAnimations = useRef<Animated.Value[]>([]);
@@ -235,12 +236,15 @@ export const ImageCheckbox: React.FC<ImageCheckboxProps> = ({
                   isSelected && styles.selectedCard,
                   disabled && styles.disabledCard,
                   (Platform.OS === 'web' && hoveredId === option.id) && styles.optionCardHover,
+                  (pressedId === option.id) && styles.optionCardPressed,
                   { width: '100%', height: '100%' } // 填满父容器
                 ]}
                 onPress={() => toggleOption(option.id)}
                 disabled={disabled}
                 onHoverIn={() => setHoveredId(option.id)}
                 onHoverOut={() => setHoveredId(null)}
+                onPressIn={() => setPressedId(option.id)}
+                onPressOut={() => setPressedId(null)}
               >
                 <View style={styles.imageContainer}>
                   <Image 
@@ -268,6 +272,7 @@ export const ImageCheckbox: React.FC<ImageCheckboxProps> = ({
               
               <View style={[
                 styles.checkbox,
+                (pressedId === option.id) && styles.checkboxPressed,
                 isSelected && styles.checkedBox
               ]}>
                 {isSelected && (
@@ -347,6 +352,17 @@ const createStyles = (theme: any) => StyleSheet.create({
     },
     default: {}
   }) as any,
+  optionCardPressed: Platform.select({
+    web: {
+      borderColor: '#D1D5DB',
+      backgroundColor: '#F3F4F6',
+      boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+      transform: [{ translateY: 1 }],
+    },
+    default: {
+      transform: [{ scale: 0.98 }],
+    }
+  }) as any,
   selectedCard: {
     borderColor: theme.PRIMARY,
   },
@@ -409,6 +425,16 @@ const createStyles = (theme: any) => StyleSheet.create({
     backgroundColor: theme.PRIMARY,
     borderColor: theme.PRIMARY,
   },
+  checkboxPressed: Platform.select({
+    web: {
+      borderColor: '#D1D5DB',
+      backgroundColor: '#F3F4F6',
+    },
+    default: {
+      borderColor: '#D1D5DB',
+      backgroundColor: '#F3F4F6',
+    }
+  }) as any,
   disabledCard: {
     opacity: 0.8,
     backgroundColor: '#f8f9fa',
