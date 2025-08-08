@@ -1,12 +1,12 @@
 import React from 'react';
-import { View, Animated } from 'react-native';
+import { View, Animated, Dimensions } from 'react-native';
 import { AddressAutocomplete } from './AddressAutocomplete';
 import { ImageCheckbox } from './ImageCheckbox';
 import { BudgetInput } from './BudgetInput';
 import { PaymentComponent } from './PaymentComponent';
 import { ActionButton } from './ActionButton';
 import { ALLERGY_OPTIONS, PREFERENCE_OPTIONS, FOOD_TYPE_OPTIONS } from '../data/checkboxOptions';
-import { BUDGET_OPTIONS_FOOD, BUDGET_OPTIONS_DRINK } from '../constants';
+import { BUDGET_OPTIONS_FOOD, BUDGET_OPTIONS_DRINK, LAYOUT } from '../constants';
 import type { AddressSuggestion } from '../types';
 
 interface FormInputContainerProps {
@@ -201,10 +201,13 @@ export const FormActionButtonContainer: React.FC<FormActionButtonContainerProps>
   handleNext,
   inputSectionAnimation
 }) => {
+  const { width } = Dimensions.get('window');
+  const isMobile = width <= 768;
+  const topGap = isMobile ? LAYOUT.BUTTON_HEIGHT / 2 : 0; // 移动端与上方输入组件拉开 1/2 个按钮高度
   // 编辑模式下的按钮
   if (editingStep !== null) {
     return (
-      <View style={{ flexDirection: 'row', gap: 12 }}>
+      <View style={{ flexDirection: 'row', gap: 12, marginTop: topGap }}>
         <ActionButton
           onPress={handleFinishEditing}
           title="保存"
@@ -226,13 +229,15 @@ export const FormActionButtonContainer: React.FC<FormActionButtonContainerProps>
   // 地址确认按钮
   if (currentStep === 0) {
     return (
-      <ActionButton
-        onPress={handleAddressConfirm}
-        title="确认"
-        disabled={!address.trim() || address.trim().length < 5}
-        isActive={!!address.trim() && address.trim().length >= 5}
-        animationValue={inputSectionAnimation}
-      />
+      <View style={{ marginTop: topGap }}>
+        <ActionButton
+          onPress={handleAddressConfirm}
+          title="确认"
+          disabled={!address.trim() || address.trim().length < 5}
+          isActive={!!address.trim() && address.trim().length >= 5}
+          animationValue={inputSectionAnimation}
+        />
+      </View>
     );
   }
   
@@ -244,12 +249,14 @@ export const FormActionButtonContainer: React.FC<FormActionButtonContainerProps>
   // 通用下一步按钮
   if (canProceed) {
     return (
-      <ActionButton
-        onPress={handleNext}
-        title="确认"
-        variant="next"
-        animationValue={inputSectionAnimation}
-      />
+      <View style={{ marginTop: topGap }}>
+        <ActionButton
+          onPress={handleNext}
+          title="确认"
+          variant="next"
+          animationValue={inputSectionAnimation}
+        />
+      </View>
     );
   }
   
