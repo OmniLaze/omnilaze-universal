@@ -90,7 +90,6 @@ export const FormInputContainer: React.FC<FormInputContainerProps> = ({
           editable={!isAddressConfirmed || editingStep === 0}
           isDisabled={isAddressConfirmed && editingStep !== 0}
           animationValue={inputSectionAnimation}
-          errorMessage={inputError}
         />
       </View>
     );

@@ -190,7 +190,7 @@ function LemonadeAppContent() {
     setCurrentStep, setCompletedAnswers, setEditingStep,
     setOriginalAnswerBeforeEdit, setCurrentOrderId, setCurrentOrderNumber,
     setCurrentUserSequenceNumber, setIsOrderSubmitting, setIsSearchingRestaurant,
-    setIsOrderCompleted, setOrderMessage, setShowInviteModal, setIsFreeOrder, setShowFreeDrinkModal,
+    setIsOrderCompleted, setOrderMessage, setIsFreeOrder, setShowFreeDrinkModal,
     setIsQuickOrderMode, setCompletedQuestionsOffset, setCurrentPushOffset,
     
     // 工具函数
@@ -1493,8 +1493,15 @@ function LemonadeAppContent() {
                       {/* Input Section */}
                       {renderCurrentInput()}
 
-                      {/* Action Button */}
-                      {renderActionButton()}
+                      {/* Action Button 在输入组件出现后再显示 */}
+                      <Animated.View style={{
+                        opacity: inputSectionAnimation,
+                        transform: [{
+                          translateY: inputSectionAnimation.interpolate({ inputRange: [0,1], outputRange: [100,0] })
+                        }]
+                      }}>
+                        {renderActionButton()}
+                      </Animated.View>
                     </CurrentQuestion>
                   )
                 )
@@ -1518,8 +1525,13 @@ function LemonadeAppContent() {
                   {/* Input Section */}
                   {renderCurrentInput()}
 
-                  {/* Action Button */}
-                  {renderActionButton()}
+                  {/* Action Button 在输入组件出现后再显示 */}
+                  <Animated.View style={{
+                    opacity: inputSectionAnimation,
+                    transform: [{ translateY: inputSectionAnimation.interpolate({ inputRange: [0,1], outputRange: [10,0] }) }]
+                  }}>
+                    {renderActionButton()}
+                  </Animated.View>
                 </CurrentQuestion>
               )}
             </Animated.View>
