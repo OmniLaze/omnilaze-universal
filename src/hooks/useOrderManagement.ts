@@ -90,16 +90,28 @@ export const useOrderManagement = (props: UseOrderManagementProps) => {
               selectedAddressSuggestion: selectedAddressSuggestion
             };
             
-            console.log('💾 保存用户偏好以便下次快速下单...');
+            // 🔧 生产环境日志清理：条件性日志输出
+            if (process.env.NODE_ENV === 'development') {
+              console.log('💾 保存用户偏好以便下次快速下单...');
+            }
             const preferencesResult = await saveUserPreferences(authResult.userId, formData);
             
             if (preferencesResult.success) {
-              console.log('✅ 用户偏好保存成功，下次登录可快速下单');
+              // 🔧 生产环境日志清理：条件性日志输出
+              if (process.env.NODE_ENV === 'development') {
+                console.log('✅ 用户偏好保存成功，下次登录可快速下单');
+              }
             } else {
-              console.warn('⚠️ 偏好保存失败:', preferencesResult.message);
+              // 🔧 生产环境日志清理：条件性日志输出
+              if (process.env.NODE_ENV === 'development') {
+                console.warn('⚠️ 偏好保存失败:', preferencesResult.message);
+              }
             }
           } catch (preferencesError) {
-            console.warn('⚠️ 保存偏好时出错:', preferencesError);
+            // 🔧 生产环境日志清理：条件性日志输出
+            if (process.env.NODE_ENV === 'development') {
+              console.warn('⚠️ 保存偏好时出错:', preferencesError);
+            }
             // 偏好保存失败不影响订单流程
           }
         }

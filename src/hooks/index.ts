@@ -446,7 +446,10 @@ export const useAnimations = () => {
   const triggerQuestionFlowAnimation = (
     callback?: () => void
   ) => {
-    console.log('🎬 流动逻辑执行（无动画）');
+    // 🔧 生产环境日志清理：条件性日志输出
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🎬 流动逻辑执行（无动画）');
+    }
     // 直接执行回调，不再有动画
     callback?.();
   };

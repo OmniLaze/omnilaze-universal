@@ -203,7 +203,10 @@ export const useColorTheme = () => {
         setThemeState({ ...DEFAULT_THEME_STATE, ...parsedTheme });
       }
     } catch (error) {
-      console.log('Failed to load theme:', error);
+      // 🔧 生产环境日志清理：条件性日志输出
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Failed to load theme:', error);
+      }
     }
   };
 
@@ -214,7 +217,10 @@ export const useColorTheme = () => {
         setIsDebugMode(JSON.parse(debugMode));
       }
     } catch (error) {
-      console.log('Failed to load debug mode:', error);
+      // 🔧 生产环境日志清理：条件性日志输出
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Failed to load debug mode:', error);
+      }
     }
   };
 
@@ -235,7 +241,10 @@ export const useColorTheme = () => {
       setThemeState(updatedThemeState);
       await CookieManager.saveItem(STORAGE_KEY, JSON.stringify(updatedThemeState));
     } catch (error) {
-      console.log('Failed to save theme:', error);
+      // 🔧 生产环境日志清理：条件性日志输出
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Failed to save theme:', error);
+      }
     }
   };
 
@@ -312,7 +321,10 @@ export const useColorTheme = () => {
     try {
       await CookieManager.saveItem('colorDebugMode', JSON.stringify(newDebugMode));
     } catch (error) {
-      console.log('Failed to save debug mode:', error);
+      // 🔧 生产环境日志清理：条件性日志输出
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Failed to save debug mode:', error);
+      }
     }
   };
 

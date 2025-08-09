@@ -120,13 +120,76 @@ const getApiBaseUrl = () => {
 
 const API_BASE_URL = getApiBaseUrl();
 
+/**
+ * 统一错误处理函数，提供用户友好的错误信息
+ */
+function handleApiError(error: any, context: string): string {
+  // 🔧 生产环境日志清理：条件性日志输出
+  if (process.env.NODE_ENV === 'development') {
+    console.error(`API错误 [${context}]:`, error);
+  }
+  
+  if (error instanceof Error) {
+    const message = error.message.toLowerCase();
+    
+    // 网络连接错误
+    if (message.includes('network') || message.includes('fetch')) {
+      return '网络连接不稳定，请检查网络后重试';
+    }
+    
+    // 服务器错误
+    if (message.includes('500') || message.includes('internal server')) {
+      return '服务暂时不可用，请稍后再试';
+    }
+    
+    // 超时错误
+    if (message.includes('timeout')) {
+      return '请求超时，请检查网络后重试';
+    }
+    
+    // 授权错误
+    if (message.includes('401') || message.includes('unauthorized')) {
+      return '身份验证失败，请重新登录';
+    }
+    
+    // 返回原始错误信息或默认信息
+    return error.message || '网络错误，请重试';
+  }
+  
+  // 未知错误类型
+  return '网络错误，请重试';
+}
+
+/**
+ * 增强的fetch函数，包含超时和错误处理
+ */
+async function enhancedFetch(url: string, options: RequestInit, timeout: number = 10000): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
+  
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+    return response;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new Error('请求超时，请检查网络后重试');
+    }
+    throw error;
+  }
+}
+
 
 /**
  * 发送手机验证码
  */
 export async function sendVerificationCode(phoneNumber: string): Promise<ApiResponse> {
   try {
-    const response = await fetch(`${API_BASE_URL}/send-verification-code`, {
+    const response = await enhancedFetch(`${API_BASE_URL}/send-verification-code`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -144,10 +207,9 @@ export async function sendVerificationCode(phoneNumber: string): Promise<ApiResp
 
     return data;
   } catch (error) {
-    // 发送验证码失败时静默处理
     return {
       success: false,
-      message: error instanceof Error ? error.message : '网络错误，请重试'
+      message: handleApiError(error, '发送验证码')
     };
   }
 }
@@ -157,7 +219,7 @@ export async function sendVerificationCode(phoneNumber: string): Promise<ApiResp
  */
 export async function verifyCodeAndLogin(phoneNumber: string, code: string): Promise<VerificationResponse> {
   try {
-    const response = await fetch(`${API_BASE_URL}/login-with-phone`, {
+    const response = await enhancedFetch(`${API_BASE_URL}/login-with-phone`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -176,10 +238,9 @@ export async function verifyCodeAndLogin(phoneNumber: string, code: string): Pro
 
     return data;
   } catch (error) {
-    // 验证码验证失败时静默处理
     return {
       success: false,
-      message: error instanceof Error ? error.message : '网络错误，请重试'
+      message: handleApiError(error, '验证码验证')
     };
   }
 }
@@ -363,7 +424,7 @@ function getFallbackResults(keywords: string): AddressSearchResponse {
  */
 export async function createOrder(userId: string, phoneNumber: string, formData: OrderData): Promise<CreateOrderResponse> {
   try {
-    const response = await fetch(`${API_BASE_URL}/create-order`, {
+    const response = await enhancedFetch(`${API_BASE_URL}/create-order`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -383,10 +444,9 @@ export async function createOrder(userId: string, phoneNumber: string, formData:
 
     return data;
   } catch (error) {
-    // 创建订单失败时静默处理
     return {
       success: false,
-      message: error instanceof Error ? error.message : '网络错误，请重试'
+      message: handleApiError(error, '创建订单')
     };
   }
 }
@@ -396,7 +456,7 @@ export async function createOrder(userId: string, phoneNumber: string, formData:
  */
 export async function submitOrder(orderId: string): Promise<SubmitOrderResponse> {
   try {
-    const response = await fetch(`${API_BASE_URL}/submit-order`, {
+    const response = await enhancedFetch(`${API_BASE_URL}/submit-order`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -414,10 +474,9 @@ export async function submitOrder(orderId: string): Promise<SubmitOrderResponse>
 
     return data;
   } catch (error) {
-    // 提交订单失败时静默处理
     return {
       success: false,
-      message: error instanceof Error ? error.message : '网络错误，请重试'
+      message: handleApiError(error, '提交订单')
     };
   }
 }
@@ -628,7 +687,7 @@ export async function getUserPreferences(userId: string): Promise<PreferencesRes
  */
 export async function saveUserPreferences(userId: string, formData: any): Promise<PreferencesResponse> {
   try {
-    const response = await fetch(`${API_BASE_URL}/preferences`, {
+    const response = await enhancedFetch(`${API_BASE_URL}/preferences`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -649,7 +708,7 @@ export async function saveUserPreferences(userId: string, formData: any): Promis
   } catch (error) {
     return {
       success: false,
-      message: error instanceof Error ? error.message : '网络错误，请重试'
+      message: handleApiError(error, '保存用户偏好')
     };
   }
 }
@@ -659,7 +718,7 @@ export async function saveUserPreferences(userId: string, formData: any): Promis
  */
 export async function checkPreferencesCompleteness(userId: string): Promise<PreferencesCompletenessResponse> {
   try {
-    const response = await fetch(`${API_BASE_URL}/preferences/${userId}/complete`, {
+    const response = await enhancedFetch(`${API_BASE_URL}/preferences/${userId}/complete`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -679,7 +738,7 @@ export async function checkPreferencesCompleteness(userId: string): Promise<Pref
       has_preferences: false,
       is_complete: false,
       can_quick_order: false,
-      message: error instanceof Error ? error.message : '网络错误，请重试'
+      message: handleApiError(error, '检查偏好完整性')
     };
   }
 }

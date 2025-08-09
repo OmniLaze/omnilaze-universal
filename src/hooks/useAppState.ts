@@ -88,7 +88,6 @@ export const useAppState = () => {
     setIsOrderCompleted(false);
     setOrderMessage('');
     
-    setShowInviteModal(false);
     setShowFreeDrinkModal(false);
     setIsFreeOrder(false);
     setIsQuickOrderMode(false);
@@ -139,10 +138,15 @@ export const useAppState = () => {
       // 开发模式下也需要恢复对话状态
       const savedConversation = CookieManager.getConversationState();
       
-      console.log('🔄 页面刷新状态恢复 (开发模式):', { savedConversation });
+      // 🔧 生产环境日志清理：条件性日志输出
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🔄 页面刷新状态恢复 (开发模式):', { savedConversation });
+      }
       
       if (savedConversation) {
-        console.log('✅ 恢复对话状态:', { completedAnswers: savedConversation.completedAnswers });
+        if (process.env.NODE_ENV === 'development') {
+          console.log('✅ 恢复对话状态:', { completedAnswers: savedConversation.completedAnswers });
+        }
         setCurrentStep(savedConversation.currentStep || 0);
         setCompletedAnswers(prev => ({
           ...prev,

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, Image, Animated, StyleSheet, Platform } from 'react-native';
 import { ActionButton } from './ActionButton';
 import { COLORS } from '../constants';
@@ -23,6 +23,9 @@ export const PaymentComponent: React.FC<PaymentComponentProps> = ({
   const styles = createStyles(theme);
   
   const [showPaymentContent, setShowPaymentContent] = useState(false);
+
+  // 🔧 性能优化：使用 useRef 避免重复创建 Animated.Value
+  const buttonAnimationValue = useRef(new Animated.Value(1)).current;
 
   // 监听打字机状态，打字完成后延迟显示支付内容
   useEffect(() => {
@@ -105,7 +108,7 @@ export const PaymentComponent: React.FC<PaymentComponentProps> = ({
               onPress={onConfirmOrder}
               title={isFreeOrder ? "确认免单" : "确认下单"}
               isActive={true}
-              animationValue={new Animated.Value(1)}
+              animationValue={buttonAnimationValue}
             />
           </View>
         </>

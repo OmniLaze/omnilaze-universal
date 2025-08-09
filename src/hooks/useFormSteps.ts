@@ -283,7 +283,10 @@ export const useFormSteps = (props: UseFormStepsProps) => {
     if (hasSubsequentAnswers) {
       // 可以在这里添加用户提示，例如：
       // showMessage('编辑此问题将清除后续所有答案');
-      console.log(`编辑第${stepIndex + 1}个问题将清除后续所有答案`);
+      // 🔧 生产环境日志清理：条件性日志输出
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`编辑第${stepIndex + 1}个问题将清除后续所有答案`);
+      }
     }
     
     setOriginalAnswerBeforeEdit(answerToEdit);
@@ -425,7 +428,10 @@ export const useFormSteps = (props: UseFormStepsProps) => {
         isEditing: true,
         skipAnimation: true, // 编辑模式不需要动画
         onComplete: () => {
-          console.log('✅ 编辑完成回调执行');
+          // 🔧 生产环境日志清理：条件性日志输出
+          if (process.env.NODE_ENV === 'development') {
+            console.log('✅ 编辑完成回调执行');
+          }
           
           // 编辑完成后的基本处理
           if (editingStep === 0) {
@@ -440,10 +446,16 @@ export const useFormSteps = (props: UseFormStepsProps) => {
           
           // 🔑 关键修复：使用handleStepProgression来推进步骤并显示新问题
           if (currentEditingStep !== null && currentEditingStep < STEP_CONTENT.length - 1) {
-            console.log('🔄 编辑完成，调用handleStepProgression推进到下一步');
+            // 🔧 生产环境日志清理：条件性日志输出
+            if (process.env.NODE_ENV === 'development') {
+              console.log('🔄 编辑完成，调用handleStepProgression推进到下一步');
+            }
             handleStepProgression(currentEditingStep);
           } else {
-            console.log('📝 编辑完成，已经是最后一步，无需推进');
+            // 🔧 生产环境日志清理：条件性日志输出
+            if (process.env.NODE_ENV === 'development') {
+              console.log('📝 编辑完成，已经是最后一步，无需推进');
+            }
           }
         }
       });

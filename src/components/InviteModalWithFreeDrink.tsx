@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Modal, Platform, ScrollView, Animated, Easing } from 'react-native';
 import { SimpleIcon } from './SimpleIcon';
 import { COLORS } from '../constants';
@@ -20,7 +20,8 @@ interface InviteModalWithFreeDrinkProps {
   userId: string;
 }
 
-export const InviteModalWithFreeDrink: React.FC<InviteModalWithFreeDrinkProps> = ({
+// 🔧 性能优化：使用 React.memo 避免不必要的重渲染
+export const InviteModalWithFreeDrink: React.FC<InviteModalWithFreeDrinkProps> = React.memo(({
   isVisible,
   onClose,
   onFreeDrinkClaim,
@@ -67,7 +68,8 @@ export const InviteModalWithFreeDrink: React.FC<InviteModalWithFreeDrinkProps> =
     }
   }, [inviteStats, loading, freeDrinksRemaining]);
 
-  const loadAllData = async () => {
+  // 🔧 性能优化：使用 useCallback 稳定函数引用
+  const loadAllData = useCallback(async () => {
     setLoading(true);
     try {
       const [statsResponse, progressResponse, freeDrinksResponse] = await Promise.all([
@@ -92,9 +94,10 @@ export const InviteModalWithFreeDrink: React.FC<InviteModalWithFreeDrinkProps> =
     } finally {
       setLoading(false);
     }
-  };
+  }, [userId]);
 
-  const triggerFreeDrinkAnimation = () => {
+  // 🔧 性能优化：使用 useCallback 稳定函数引用
+  const triggerFreeDrinkAnimation = useCallback(() => {
     setShowFreeDrinkOffer(true);
     
     // 第一阶段：渐隐进度条
@@ -125,9 +128,10 @@ export const InviteModalWithFreeDrink: React.FC<InviteModalWithFreeDrinkProps> =
         })
       ]).start();
     });
-  };
+  }, [progressOpacity, freeDrinkOpacity, scaleAnim, slideAnim]);
 
-  const handleFreeDrinkClaim = async () => {
+  // 🔧 性能优化：使用 useCallback 稳定函数引用
+  const handleFreeDrinkClaim = useCallback(async () => {
     try {
       const response = await claimFreeDrink(userId);
       if (response.success) {
@@ -137,24 +141,31 @@ export const InviteModalWithFreeDrink: React.FC<InviteModalWithFreeDrinkProps> =
     } catch (error) {
       // 领取失败时静默处理
     }
-  };
+  }, [userId, onFreeDrinkClaim, onClose]);
 
   // 生成邀请码（fallback）
-  const generateInviteCode = (phoneNumber: string): string => {
+  // 🔧 性能优化：使用 useCallback 稳定函数引用
+  const generateInviteCode = useCallback((phoneNumber: string): string => {
     const hash = phoneNumber.split('').reduce((a, b) => {
       a = ((a << 5) - a) + b.charCodeAt(0);
       return a & a;
     }, 0);
     return `INV${Math.abs(hash).toString().substr(0, 6)}`;
-  };
+  }, []);
 
-  const inviteCode = inviteStats?.user_invite_code || generateInviteCode(userPhoneNumber);
-  const currentUses = inviteStats?.current_uses || 0;
-  const maxUses = inviteStats?.max_uses || 3; // 兜底为3，与后端一致
-  const inviteText = `懒得点外卖？就用懒得！使用我的邀请码 ${inviteCode} 到order.omnilaze.co注册，邀请${maxUses}位新用户注册可获得免费奶茶一杯哦！🧋`;
+  // 🔧 性能优化：使用 useMemo 缓存计算值
+  const inviteCodeData = useMemo(() => {
+    const inviteCode = inviteStats?.user_invite_code || generateInviteCode(userPhoneNumber);
+    const currentUses = inviteStats?.current_uses || 0;
+    const maxUses = inviteStats?.max_uses || 3; // 兜底为3，与后端一致
+    const inviteText = `懒得点外卖？就用懒得！使用我的邀请码 ${inviteCode} 到order.omnilaze.co注册，邀请${maxUses}位新用户注册可获得免费奶茶一杯哦！🧋`;
+    
+    return { inviteCode, currentUses, maxUses, inviteText };
+  }, [inviteStats, generateInviteCode, userPhoneNumber]);
 
   // 复制功能
-  const copyToClipboard = async (text: string) => {
+  // 🔧 性能优化：使用 useCallback 稳定函数引用
+  const copyToClipboard = useCallback(async (text: string) => {
     try {
       if (Platform.OS === 'web') {
         if (navigator.clipboard) {
@@ -175,12 +186,12 @@ export const InviteModalWithFreeDrink: React.FC<InviteModalWithFreeDrinkProps> =
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
-  };
+  }, []);
 
-  const handleCopyInviteCode = () => copyToClipboard(inviteCode);
-  const handleCopyInviteText = () => copyToClipboard(inviteText);
+  const handleCopyInviteCode = useCallback(() => copyToClipboard(inviteCodeData.inviteCode), [copyToClipboard, inviteCodeData.inviteCode]);
+  const handleCopyInviteText = useCallback(() => copyToClipboard(inviteCodeData.inviteText), [copyToClipboard, inviteCodeData.inviteText]);
 
-  const isCompleted = currentUses >= maxUses;
+  const isCompleted = inviteCodeData.currentUses >= inviteCodeData.maxUses;
 
   return (
     <Modal
@@ -225,7 +236,7 @@ export const InviteModalWithFreeDrink: React.FC<InviteModalWithFreeDrinkProps> =
                 <View style={styles.inviteCodeContainer}>
                   <Text style={styles.inviteCodeLabel}>你的邀请码</Text>
                   <View style={styles.inviteCodeBox}>
-                    <Text style={styles.inviteCodeText}>{inviteCode}</Text>
+                    <Text style={styles.inviteCodeText}>{inviteCodeData.inviteCode}</Text>
                     <TouchableOpacity
                       style={styles.copyButton}
                       onPress={handleCopyInviteCode}
@@ -250,14 +261,14 @@ export const InviteModalWithFreeDrink: React.FC<InviteModalWithFreeDrinkProps> =
                         ]}
                       >
                         <Text style={styles.statsText}>
-                          已邀请 {currentUses}/{maxUses} 人
+                          已邀请 {inviteCodeData.currentUses}/{inviteCodeData.maxUses} 人
                         </Text>
                         <View style={styles.progressBar}>
                           <View 
                             style={[
                               styles.progressFill, 
                               { 
-                                width: `${(currentUses / maxUses) * 100}%`,
+                                width: `${(inviteCodeData.currentUses / inviteCodeData.maxUses) * 100}%`,
                                 backgroundColor: isCompleted ? theme.SUCCESS : theme.PRIMARY
                               }
                             ]} 
@@ -302,7 +313,7 @@ export const InviteModalWithFreeDrink: React.FC<InviteModalWithFreeDrinkProps> =
                           恭喜您获得免单奶茶！
                         </Text>
                         <Text style={styles.freeDrinkSubtitle}>
-                          成功邀请{maxUses}位好友的奖励
+                          成功邀请{inviteCodeData.maxUses}位好友的奖励
                         </Text>
                         <Text style={styles.freeDrinkQuota}>
                           仅限前{freeDrinksRemaining}名，立即领取！
@@ -351,7 +362,7 @@ export const InviteModalWithFreeDrink: React.FC<InviteModalWithFreeDrinkProps> =
                 <View style={styles.inviteTextContainer}>
                   <Text style={styles.inviteTextLabel}>分享文本</Text>
                   <View style={styles.inviteTextBox}>
-                    <Text style={styles.inviteText}>{inviteText}</Text>
+                    <Text style={styles.inviteText}>{inviteCodeData.inviteText}</Text>
                   </View>
                   <TouchableOpacity
                     style={styles.copyTextButton}
@@ -369,7 +380,10 @@ export const InviteModalWithFreeDrink: React.FC<InviteModalWithFreeDrinkProps> =
       </View>
     </Modal>
   );
-};
+});
+
+// 🔧 性能优化：为 React.memo 添加显示名称，便于调试
+InviteModalWithFreeDrink.displayName = 'InviteModalWithFreeDrink';
 
 const createStyles = (theme: any) => StyleSheet.create({
   overlay: {

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Animated, Dimensions } from 'react-native';
 import { AddressAutocomplete } from './AddressAutocomplete';
 import { ImageCheckbox } from './ImageCheckbox';
@@ -77,6 +77,11 @@ export const FormInputContainer: React.FC<FormInputContainerProps> = ({
   isTyping,
   renderActionButton
 }) => {
+  // 🔧 性能优化：使用 useMemo 缓存预算选项，避免重复计算
+  const budgetOptions = useMemo(() => {
+    const isSelectedDrink = selectedFoodType.includes('drink');
+    return isSelectedDrink ? BUDGET_OPTIONS_DRINK : BUDGET_OPTIONS_FOOD;
+  }, [selectedFoodType]);
   // 地址输入
   if (stepData.showAddressInput) {
     return (
@@ -115,9 +120,6 @@ export const FormInputContainer: React.FC<FormInputContainerProps> = ({
   
   // 预算输入
   if (stepData.showBudgetInput) {
-    const isSelectedDrink = selectedFoodType.includes('drink');
-    const budgetOptions = isSelectedDrink ? BUDGET_OPTIONS_DRINK : BUDGET_OPTIONS_FOOD;
-    
     return (
       <View>
         <BudgetInput

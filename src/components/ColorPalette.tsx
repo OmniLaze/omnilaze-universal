@@ -536,8 +536,10 @@ const styles = StyleSheet.create({
       linear-gradient(-45deg, transparent 75%, #ddd 75%)
     ` : undefined,
     backgroundSize: Platform.OS === 'web' ? '8px 8px' : undefined,
+    // Remove invalid backgroundPosition for React Native Web compatibility
     ...(Platform.OS === 'web' && {
-      backgroundPosition: '0px 0px, 0px 4px, 4px -4px, -4px 0px',
+      // Use a single background position instead of multiple values
+      backgroundPosition: '0px 0px',
     }),
   },
   sliderThumb: {

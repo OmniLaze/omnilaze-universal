@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -252,10 +252,39 @@ function LemonadeAppContent() {
   
   // 移除位置测量辅助函数 - 已不再需要飞行动画
   
-  // 简化的已完成问题状态管理
-  const getEffectiveCompletedAnswers = () => {
+  // 🔧 优化：使用 useMemo 避免每次渲染创建新对象
+  const effectiveCompletedAnswers = useMemo(() => {
     return { ...completedAnswers };
-  };
+  }, [completedAnswers]);
+
+  // 🔧 优化：使用 useMemo 缓存动态计算的高度和滚动位置
+  const scrollDimensions = useMemo(() => {
+    const pageHeight = height - 60; // 减少当前页高度，配合更薄的移动端头部
+    const bufferContainerHeight = 300; // 缓冲容器高度，更新为和实际容器一致
+    const SNAP_THRESHOLD = 200; // 使用单个问题高度作为吸附阈值
+    const FOCUS_HYSTERESIS = 60; // 焦点切换滞后，避免在中间抖动
+    
+    // 🎯 当前问题页位置调整 - 包含缓冲容器偏移
+    const CURRENT_PAGE_OFFSET = 167; // 向上偏移167px，让当前问题页不那么靠上
+    const getCurrentPagePosition = () => bufferContainerHeight + completedQuestionsHeight - CURRENT_PAGE_OFFSET;
+    
+    // 🔥 修正：限制滚动范围，只允许在两个容器间滚动  
+    const maxScrollPosition = getCurrentPagePosition(); // 最大滚动到当前问题页面位置
+    const minScrollPosition = 0; // 最小滚动位置，允许看到缓冲区内容
+    const dynamicContentHeight = Math.max(maxScrollPosition + pageHeight, bufferContainerHeight + completedQuestionsHeight + pageHeight);
+    
+    return {
+      pageHeight,
+      bufferContainerHeight,
+      SNAP_THRESHOLD,
+      FOCUS_HYSTERESIS,
+      CURRENT_PAGE_OFFSET,
+      getCurrentPagePosition,
+      maxScrollPosition,
+      minScrollPosition,
+      dynamicContentHeight
+    };
+  }, [height, completedQuestionsHeight]);
 
   // 移除不再使用的流动函数
   
@@ -340,8 +369,8 @@ function LemonadeAppContent() {
     }
   }, [isStateRestored]);
   
-  // 带动画的统一回答管理函数 - 直接上推动画，无飞行
-  const handleAnswerSubmission = async (
+  // 🔧 优化：使用 useCallback 稳定函数引用，避免子组件不必要的重渲染
+  const handleAnswerSubmission = useCallback(async (
     stepIndex: number, 
     answer: any, 
     options: {
@@ -352,11 +381,16 @@ function LemonadeAppContent() {
   ) => {
     const { isEditing = false, skipAnimation = false, onComplete } = options;
     
-    console.log('📝 handleAnswerSubmission 开始:', { stepIndex, answer, currentStep, isEditing });
+    // 🔧 生产环境关闭调试日志
+    if (process.env.NODE_ENV === 'development') {
+      console.log('📝 handleAnswerSubmission 开始:', { stepIndex, answer, currentStep, isEditing });
+    }
     
     // 统一验证
     if (!validateInput(stepIndex, answer?.value).isValid) {
-      console.log('❌ 验证失败, 触发震动');
+      if (process.env.NODE_ENV === 'development') {
+        console.log('❌ 验证失败, 触发震动');
+      }
       triggerShake();
       return false;
     }
@@ -367,7 +401,9 @@ function LemonadeAppContent() {
     }
     
     // 1. 立即更新数据
-    console.log('💾 保存答案到 completedAnswers[' + stepIndex + ']:', answer);
+    if (process.env.NODE_ENV === 'development') {
+      console.log('💾 保存答案到 completedAnswers[' + stepIndex + ']:', answer);
+    }
     setCompletedAnswers(prev => ({
       ...prev,
       [stepIndex]: answer
@@ -381,7 +417,9 @@ function LemonadeAppContent() {
     
     // 3. 如果不跳过动画且不是编辑模式，执行上推动画
     if (!skipAnimation && !isEditing) {
-      console.log('🎬 开始上推动画，为下一个问题腾出空间');
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🎬 开始上推动画，为下一个问题腾出空间');
+      }
       const pushUpDistance = singleQuestionHeight + 10; // 上推一个问题的高度加上间距
       const newPushOffset = currentPushOffset + pushUpDistance;
       
@@ -391,35 +429,71 @@ function LemonadeAppContent() {
         useNativeDriver: true,
         easing: Easing.out(Easing.quad)
       }).start(() => {
-        console.log('✅ 上推动画完成');
+        if (process.env.NODE_ENV === 'development') {
+          console.log('✅ 上推动画完成');
+        }
       });
       
       // 🔥 关键：同步更新推动偏移跟踪状态
       setCurrentPushOffset(newPushOffset);
-      console.log('📊 更新推动偏移:', newPushOffset);
+      if (process.env.NODE_ENV === 'development') {
+        console.log('📊 更新推动偏移:', newPushOffset);
+      }
     }
     
     // 4. 执行完成回调
-    console.log('⏰ 设置100ms延迟后执行onComplete回调');
+    if (process.env.NODE_ENV === 'development') {
+      console.log('⏰ 设置100ms延迟后执行onComplete回调');
+    }
     setTimeout(() => {
-      console.log('🎯 执行onComplete回调');
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🎯 执行onComplete回调');
+      }
       onComplete?.();
     }, 100);
     
-    console.log('✅ handleAnswerSubmission 完成，返回 true');
+    if (process.env.NODE_ENV === 'development') {
+      console.log('✅ handleAnswerSubmission 完成，返回 true');
+    }
     return true;
-  };
+  }, [validateInput, triggerShake, changeEmotion, setCompletedAnswers, questionAnimations, answerAnimations, singleQuestionHeight, currentPushOffset, completedQuestionsOffset, setCurrentPushOffset, currentStep]);
 
   // 移除页面状态管理，改为流动式布局
 
-  // 统一的步骤推进函数
-  const handleStepProgression = (currentStepIndex: number) => {
-    console.log('🚀 handleStepProgression 被调用:', { currentStepIndex, currentStep });
-    console.log('📊 当前状态:', {
-      completedAnswersKeys: Object.keys(completedAnswers),
-      displayedText: displayedText ? displayedText.substring(0, 30) + '...' : 'null',
-      isTyping
-    });
+  // 🔧 优化：使用 useCallback 稳定函数引用 - AI流式问题过渡函数
+  const handleQuestionTransition = useCallback((questionText: string, hasUserInput: boolean = false) => {
+    // 重置动画状态，避免冲突
+    inputSectionAnimation.setValue(1); // 直接设置为1，确保输入框可见
+    currentQuestionAnimation.setValue(1);
+    
+    if (!hasUserInput) {
+      // 无用户输入：使用AI流式打字机效果
+      typeText(questionText, { 
+        instant: false,
+        streaming: true,
+        onComplete: () => {
+          // 打字完成后，确保输入框可见
+          inputSectionAnimation.setValue(1);
+        }
+      });
+    } else {
+      // 有用户输入：直接显示文本，确保输入框可见
+      setTextDirectly(questionText);
+      // 确保输入框可见
+      inputSectionAnimation.setValue(1);
+    }
+  }, [inputSectionAnimation, currentQuestionAnimation, typeText, setTextDirectly]);
+
+  // 🔧 优化：使用 useCallback 稳定函数引用
+  const handleStepProgression = useCallback((currentStepIndex: number) => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🚀 handleStepProgression 被调用:', { currentStepIndex, currentStep });
+      console.log('📊 当前状态:', {
+        completedAnswersKeys: Object.keys(completedAnswers),
+        displayedText: displayedText ? displayedText.substring(0, 30) + '...' : 'null',
+        isTyping
+      });
+    }
     
     // 立即推进，无延迟
     let nextStep = currentStepIndex + 1;
@@ -430,19 +504,25 @@ function LemonadeAppContent() {
       if (isSelectedDrink) {
         // 不论免单还是普通模式，选择奶茶都跳到预算步骤
         nextStep = 4;
-        console.log('🥤 检测到选择奶茶，跳转到预算步骤');
+        if (process.env.NODE_ENV === 'development') {
+          console.log('🥤 检测到选择奶茶，跳转到预算步骤');
+        }
       }
     }
     
     // 免单模式在预算步骤后结束流程
     if (isFreeOrder && currentStepIndex === 4) {
-      console.log('🆓 免单流程完成，不再推进步骤');
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🆓 免单流程完成，不再推进步骤');
+      }
       return;
     }
     
     if (nextStep < STEP_CONTENT.length) {
-      console.log('🔄 步骤推进:', currentStepIndex, '->', nextStep);
-      console.log('📝 当前displayedText:', displayedText ? displayedText.substring(0, 30) + '...' : 'null');
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🔄 步骤推进:', currentStepIndex, '->', nextStep);
+        console.log('📝 当前displayedText:', displayedText ? displayedText.substring(0, 30) + '...' : 'null');
+      }
       
       // 🔑 新的修复方案：立即清空文本并更新步骤，然后强制显示新问题
       console.log('🧹 立即清空文本');
@@ -467,7 +547,7 @@ function LemonadeAppContent() {
     } else {
       console.log('🏁 已到达最后步骤，无法继续推进');
     }
-  };
+  }, [currentStep, selectedFoodType, isFreeOrder, completedAnswers, displayedText, isTyping, clearText, setCurrentStep, handleQuestionTransition, STEP_CONTENT]);
   
   // 表单步骤管理hook
   const formSteps = useFormSteps({
@@ -509,17 +589,6 @@ function LemonadeAppContent() {
   // 免单状态统一管理
   // ===========================================
   
-  // 统一的免单管理函数
-  const handleFreeDrinkClaim = () => {
-    setShowFreeDrinkModal(false);
-    setIsFreeOrder(true);
-    setSelectedFoodType(['drink']); // 免单只能选奶茶
-    setBudget('0'); // 立即设置预算为0
-    setCurrentStep(0); // 重新开始流程
-    setEditingStep(null);
-    setCompletedAnswers({});
-  };
-
   // 免单状态重置函数
   const resetFreeOrderState = () => {
     setIsFreeOrder(false);
@@ -581,8 +650,8 @@ function LemonadeAppContent() {
   // 免单状态管理结束
   // ==========================================
 
-  // 登出处理函数
-  const handleLogout = () => {
+  // 🔧 优化：使用 useCallback 稳定函数引用
+  const handleLogout = useCallback(() => {
     CookieManager.clearUserSession();
     CookieManager.clearConversationState();
     localStorage.removeItem('user_id');
@@ -599,20 +668,32 @@ function LemonadeAppContent() {
     
     setAuthResetTrigger(prev => prev + 1);
     
-    // 重置滚动位置到当前问题页面
+    // 重置滚动位置到当前问题页面 - 使用动态计算
+    const currentPagePos = scrollDimensions.getCurrentPagePosition();
     scrollViewRef.current?.scrollTo({
-      y: getCurrentPagePosition(),
+      y: currentPagePos,
       animated: false,
     });
-    scrollPosition.setValue(getCurrentPagePosition());
+    scrollPosition.setValue(currentPagePos);
     setFocusMode('current');
     saveFocusMode('current');
-  };
+  }, [resetAllState, setInputError, clearText, inputSectionAnimation, currentQuestionAnimation, setAuthResetTrigger, scrollDimensions]);
 
-  // 邀请处理函数
-  const handleInvite = () => {
+  // 🔧 优化：使用 useCallback 稳定函数引用
+  const handleInvite = useCallback(() => {
     setShowFreeDrinkModal(true);
-  };
+  }, [setShowFreeDrinkModal]);
+
+  // 🔧 优化：使用 useCallback 稳定函数引用
+  const handleFreeDrinkClaim = useCallback(() => {
+    setShowFreeDrinkModal(false);
+    setIsFreeOrder(true);
+    setSelectedFoodType(['drink']); // 免单只能选奶茶
+    setBudget('0'); // 立即设置预算为0
+    setCurrentStep(0); // 重新开始流程
+    setEditingStep(null);
+    setCompletedAnswers({});
+  }, [setShowFreeDrinkModal, setIsFreeOrder, setSelectedFoodType, setBudget, setCurrentStep, setEditingStep, setCompletedAnswers]);
 
   // 移除ScrollView引用，不再需要
   
@@ -650,31 +731,32 @@ function LemonadeAppContent() {
   const [hasInitializedScroll, setHasInitializedScroll] = useState(false);
   
   // 滚动阈值和页面高度 - 基于动态内容高度
-  const pageHeight = height - 60; // 减少当前页高度，配合更薄的移动端头部
-  const bufferContainerHeight = 300; // 缓冲容器高度，更新为和实际容器一致
-  const SNAP_THRESHOLD = 200; // 使用单个问题高度作为吸附阈值
-  const FOCUS_HYSTERESIS = 60; // 焦点切换滞后，避免在中间抖动
-  
-  // 🎯 当前问题页位置调整 - 包含缓冲容器偏移
-  const CURRENT_PAGE_OFFSET = 167; // 向上偏移167px，让当前问题页不那么靠上
-  const getCurrentPagePosition = () => bufferContainerHeight + completedQuestionsHeight - CURRENT_PAGE_OFFSET;
-  
-  // 🔥 修正：限制滚动范围，只允许在两个容器间滚动  
-  const maxScrollPosition = getCurrentPagePosition(); // 最大滚动到当前问题页面位置
-  const minScrollPosition = 0; // 最小滚动位置，允许看到缓冲区内容
-  const dynamicContentHeight = Math.max(maxScrollPosition + pageHeight, bufferContainerHeight + completedQuestionsHeight + pageHeight);
+  const pageHeight = scrollDimensions.pageHeight;
+  const bufferContainerHeight = scrollDimensions.bufferContainerHeight;
+  const SNAP_THRESHOLD = scrollDimensions.SNAP_THRESHOLD;
+  const FOCUS_HYSTERESIS = scrollDimensions.FOCUS_HYSTERESIS;
+  const getCurrentPagePosition = scrollDimensions.getCurrentPagePosition;
+  const maxScrollPosition = scrollDimensions.maxScrollPosition;
+  const minScrollPosition = scrollDimensions.minScrollPosition;
+  const dynamicContentHeight = scrollDimensions.dynamicContentHeight;
   
   // 当前滚动进度 (1 = 已完成问题页面在焦点, 0 = 当前问题页面在焦点)
   // 基于两个容器间的滚动范围计算
-  const scrollProgress = scrollPosition.interpolate({
-    inputRange: [bufferContainerHeight, getCurrentPagePosition()], // 从已完成问题页面顶部到当前问题页面
-    outputRange: [1, 0], // 在已完成问题页面时为1，在当前问题页面时为0
-    extrapolate: 'clamp',
-  });
+  // 🔧 优化：使用 useMemo 缓存滚动进度插值
+  const scrollProgress = useMemo(() => {
+    return scrollPosition.interpolate({
+      inputRange: [bufferContainerHeight, getCurrentPagePosition()], // 从已完成问题页面顶部到当前问题页面
+      outputRange: [1, 0], // 在已完成问题页面时为1，在当前问题页面时为0
+      extrapolate: 'clamp',
+    });
+  }, [scrollPosition, bufferContainerHeight, getCurrentPagePosition]);
 
   // 基于 focusMode 的页面不透明度，避免空白缓冲容器影响视觉弱化判断
-  const completedPageOpacity = focusMode === 'completed' ? 1 : 0.4;
-  const currentPageOpacity = focusMode === 'current' ? 1 : 0.4;
+  // 🔧 优化：使用 useMemo 缓存页面透明度值
+  const pageOpacity = useMemo(() => ({
+    completedPageOpacity: focusMode === 'completed' ? 1 : 0.4,
+    currentPageOpacity: focusMode === 'current' ? 1 : 0.4
+  }), [focusMode]);
   
   // 滚动处理函数
   const handleScroll = (event: any) => {
@@ -849,7 +931,8 @@ function LemonadeAppContent() {
   // 防止动画冲突的状态
   const [isInputAnimating, setIsInputAnimating] = useState(false);
   
-  const animateInputSection = (toValue: number, duration: number = 300) => {
+  // 🔧 优化：使用 useCallback 稳定函数引用
+  const animateInputSection = useCallback((toValue: number, duration: number = 300) => {
     if (isInputAnimating) return; // 防止冲突
     
     setIsInputAnimating(true);
@@ -860,30 +943,119 @@ function LemonadeAppContent() {
     }).start(() => {
       setIsInputAnimating(false);
     });
-  };
+  }, [isInputAnimating, inputSectionAnimation]);
 
-  const handleQuestionTransition = (questionText: string, hasUserInput: boolean = false) => {
-    // 重置动画状态，避免冲突
-    inputSectionAnimation.setValue(1); // 直接设置为1，确保输入框可见
-    currentQuestionAnimation.setValue(1);
-    
-    if (!hasUserInput) {
-      // 无用户输入：使用AI流式打字机效果
-      typeText(questionText, { 
-        instant: false,
-        streaming: true,
+  // 🔧 优化：使用 useCallback 稳定函数引用
+  const handleAuthSuccess = useCallback(async (result: AuthResult) => {
+    // 如果这只是手机号验证步骤，只处理答案动画，不完成认证
+    if (result.isPhoneVerificationStep) {
+      const phoneAnswer = { type: 'phone', value: result.phoneNumber };
+      
+      // 手机号作为答案，触发答案动画
+      await handleAnswerSubmission(-1, phoneAnswer, { 
+        isEditing: false, 
+        skipAnimation: false,
         onComplete: () => {
-          // 打字完成后，确保输入框可见
-          inputSectionAnimation.setValue(1);
+          // 答案动画完成后，这里不需要做其他事情，验证码问题会自动显示
         }
       });
-    } else {
-      // 有用户输入：直接显示文本，确保输入框可见
-      setTextDirectly(questionText);
-      // 确保输入框可见
-      inputSectionAnimation.setValue(1);
+      
+      return; // 提前返回，不执行完整的认证流程
     }
-  };
+    
+    setIsAuthenticated(true);
+    setAuthResult(result);
+    
+    CookieManager.clearConversationState();
+    CookieManager.saveUserSession(result.userId!, result.phoneNumber, result.isNewUser || false);
+    
+    if (result.userId) {
+      localStorage.setItem('user_id', result.userId);
+      localStorage.setItem('phone_number', result.phoneNumber);
+    }
+    
+    const phoneAnswer = { type: 'phone', value: result.phoneNumber };
+    
+    // 检查用户偏好以决定是否启用快速下单
+    try {
+      if (result.userId && !result.isNewUser) {
+        // 仅对老用户检查偏好
+        const preferencesCheck = await checkPreferencesCompleteness(result.userId);
+        
+        if (preferencesCheck.success && preferencesCheck.can_quick_order) {
+          // 用户有完整偏好，可以快速下单
+          console.log('🚀 启用快速下单模式');
+          
+          // 获取偏好数据并填充表单
+          const formDataResponse = await getPreferencesAsFormData(result.userId);
+          
+          if (formDataResponse.success && formDataResponse.has_preferences) {
+            const formData = formDataResponse.form_data;
+            
+            // 自动填充所有表单数据
+            setAddress(formData.address);
+            setSelectedFoodType(formData.selectedFoodType);
+            setSelectedAllergies(formData.selectedAllergies);
+            setSelectedPreferences(formData.selectedPreferences);
+            setBudget(formData.budget);
+            setOtherAllergyText(formData.otherAllergyText || '');
+            setOtherPreferenceText(formData.otherPreferenceText || '');
+            setSelectedAddressSuggestion(formData.selectedAddressSuggestion);
+            
+            // 标记前面步骤为已完成，但不包括预算步骤
+            const completedAnswers = {
+              [-1]: { type: 'phone' as const, value: result.phoneNumber },
+              [0]: { type: 'address' as const, value: formData.address },
+              [1]: { type: 'foodType' as const, value: convertToChineseDisplay(formData.selectedFoodType) },
+              [2]: { type: 'allergy' as const, value: convertToChineseDisplay(formData.selectedAllergies) },
+              [3]: { type: 'preference' as const, value: convertToChineseDisplay(formData.selectedPreferences) }
+              // 不包括预算步骤，让用户在预算步骤手动确认
+            };
+            
+            // 显式清除步骤4及之后的答案，确保预算步骤显示
+            const currentCompletedAnswers: any = { ...completedAnswers };
+            delete currentCompletedAnswers[4];
+            delete currentCompletedAnswers[5];
+            
+            // 批量状态更新
+            setCompletedAnswers(currentCompletedAnswers);
+            
+            // 确保对应的答案动画设置为可见状态
+            Object.keys(currentCompletedAnswers).forEach(key => {
+              const index = parseInt(key);
+              if (index >= 0 && index < answerAnimations.length) {
+                answerAnimations[index].setValue(1);
+              }
+            });
+            
+            setIsQuickOrderMode(true); // 设置快速下单模式
+            setIsOrderCompleted(false);
+            setIsSearchingRestaurant(false);
+            setCurrentStep(4); // 跳到预算步骤（第4步）
+            
+            return;
+          }
+        }
+      }
+    } catch (error) {
+      console.warn('检查用户偏好时出错，使用常规流程:', error);
+    }
+    
+    // 常规流程：新用户或没有完整偏好的老用户
+    await handleAnswerSubmission(-1, phoneAnswer, {
+      skipAnimation: true, // 认证不需要动画
+      onComplete: () => {
+        // 立即推进到第一步，无延迟
+        setCurrentStep(0);
+      }
+    });
+  }, [
+    handleAnswerSubmission, setIsAuthenticated, setAuthResult, setAddress, 
+    setSelectedFoodType, setSelectedAllergies, setSelectedPreferences, setBudget,
+    setOtherAllergyText, setOtherPreferenceText, setSelectedAddressSuggestion,
+    setCompletedAnswers, answerAnimations, setIsQuickOrderMode, 
+    setIsOrderCompleted, setIsSearchingRestaurant, setCurrentStep
+  ]);
 
   // 当打字机效果完成后显示输入框 - 立即触发版本
   useEffect(() => {
@@ -1064,112 +1236,6 @@ function LemonadeAppContent() {
 
   // 移除自动切换回当前问题的逻辑 - 只有用户手动下滑才切换
 
-  // 鉴权成功回调 - 集成偏好系统
-  const handleAuthSuccess = async (result: AuthResult) => {
-    // 如果这只是手机号验证步骤，只处理答案动画，不完成认证
-    if (result.isPhoneVerificationStep) {
-      const phoneAnswer = { type: 'phone', value: result.phoneNumber };
-      
-      // 手机号作为答案，触发答案动画
-      await handleAnswerSubmission(-1, phoneAnswer, { 
-        isEditing: false, 
-        skipAnimation: false,
-        onComplete: () => {
-          // 答案动画完成后，这里不需要做其他事情，验证码问题会自动显示
-        }
-      });
-      
-      return; // 提前返回，不执行完整的认证流程
-    }
-    
-    setIsAuthenticated(true);
-    setAuthResult(result);
-    
-    CookieManager.clearConversationState();
-    CookieManager.saveUserSession(result.userId!, result.phoneNumber, result.isNewUser || false);
-    
-    if (result.userId) {
-      localStorage.setItem('user_id', result.userId);
-      localStorage.setItem('phone_number', result.phoneNumber);
-    }
-    
-    const phoneAnswer = { type: 'phone', value: result.phoneNumber };
-    
-    // 检查用户偏好以决定是否启用快速下单
-    try {
-      if (result.userId && !result.isNewUser) {
-        // 仅对老用户检查偏好
-        const preferencesCheck = await checkPreferencesCompleteness(result.userId);
-        
-        if (preferencesCheck.success && preferencesCheck.can_quick_order) {
-          // 用户有完整偏好，可以快速下单
-          console.log('🚀 启用快速下单模式');
-          
-          // 获取偏好数据并填充表单
-          const formDataResponse = await getPreferencesAsFormData(result.userId);
-          
-          if (formDataResponse.success && formDataResponse.has_preferences) {
-            const formData = formDataResponse.form_data;
-            
-            // 自动填充所有表单数据
-            setAddress(formData.address);
-            setSelectedFoodType(formData.selectedFoodType);
-            setSelectedAllergies(formData.selectedAllergies);
-            setSelectedPreferences(formData.selectedPreferences);
-            setBudget(formData.budget);
-            setOtherAllergyText(formData.otherAllergyText || '');
-            setOtherPreferenceText(formData.otherPreferenceText || '');
-            setSelectedAddressSuggestion(formData.selectedAddressSuggestion);
-            
-            // 标记前面步骤为已完成，但不包括预算步骤
-            const completedAnswers = {
-              [-1]: { type: 'phone' as const, value: result.phoneNumber },
-              [0]: { type: 'address' as const, value: formData.address },
-              [1]: { type: 'foodType' as const, value: convertToChineseDisplay(formData.selectedFoodType) },
-              [2]: { type: 'allergy' as const, value: convertToChineseDisplay(formData.selectedAllergies) },
-              [3]: { type: 'preference' as const, value: convertToChineseDisplay(formData.selectedPreferences) }
-              // 不包括预算步骤，让用户在预算步骤手动确认
-            };
-            
-            // 显式清除步骤4及之后的答案，确保预算步骤显示
-            const currentCompletedAnswers: any = { ...completedAnswers };
-            delete currentCompletedAnswers[4];
-            delete currentCompletedAnswers[5];
-            
-            // 批量状态更新
-            setCompletedAnswers(currentCompletedAnswers);
-            
-            // 确保对应的答案动画设置为可见状态
-            Object.keys(currentCompletedAnswers).forEach(key => {
-              const index = parseInt(key);
-              if (index >= 0 && index < answerAnimations.length) {
-                answerAnimations[index].setValue(1);
-              }
-            });
-            
-            setIsQuickOrderMode(true); // 设置快速下单模式
-            setIsOrderCompleted(false);
-            setIsSearchingRestaurant(false);
-            setCurrentStep(4); // 跳到预算步骤（第4步）
-            
-            return;
-          }
-        }
-      }
-    } catch (error) {
-      console.warn('检查用户偏好时出错，使用常规流程:', error);
-    }
-    
-    // 常规流程：新用户或没有完整偏好的老用户
-    await handleAnswerSubmission(-1, phoneAnswer, {
-      skipAnimation: true, // 认证不需要动画
-      onComplete: () => {
-        // 立即推进到第一步，无延迟
-        setCurrentStep(0);
-      }
-    });
-  };
-  
   // 鉴权问题文本变化回调
   const handleAuthQuestionChange = (question: string) => {
     setAuthQuestionText(question);
@@ -1347,14 +1413,14 @@ function LemonadeAppContent() {
             {/* Debug log: rendering completed questions */}
             {/* 已完成问题区域 */}
             {/* 显示有效的已完成问题，包括已安定的过渡问题 */}
-            {Object.keys(getEffectiveCompletedAnswers()).length > 0 && (
+            {Object.keys(effectiveCompletedAnswers).length > 0 && (
               <>
                 {/* 已完成问题列表 */}
-                {Object.keys(getEffectiveCompletedAnswers())
+                {Object.keys(effectiveCompletedAnswers)
                   .sort((a, b) => parseInt(a) - parseInt(b))
                   .map((stepIndex) => {
                     const index = parseInt(stepIndex);
-                    const answer = getEffectiveCompletedAnswers()[index];
+                    const answer = effectiveCompletedAnswers[index];
                     
                     // 移除过渡问题检查逻辑
                     
@@ -1368,7 +1434,7 @@ function LemonadeAppContent() {
                         key={index}
                         onLayout={(event) => {
                           // 测量每个已完成问题的实际位置，用于流动动画目标位置计算
-                          if (index === Object.keys(getEffectiveCompletedAnswers()).length - 1) {
+                          if (index === Object.keys(effectiveCompletedAnswers).length - 1) {
                             const { height } = event.nativeEvent.layout;
                             setSingleQuestionHeight(height + 16); // 包括margin
                             console.log('📏 测量到单个问题高度:', height + 16);
@@ -1376,7 +1442,7 @@ function LemonadeAppContent() {
                         }}
                         style={{
                           // 动态调节内容颜色 - 已完成问题页面的透明度
-                          opacity: completedPageOpacity,
+                          opacity: pageOpacity.completedPageOpacity,
                         }}
                       >
                         <CompletedQuestion
@@ -1423,7 +1489,7 @@ function LemonadeAppContent() {
               style={{
                 flex: 1,
                 // 动态调节内容颜色 - 当前问题页面的透明度
-                opacity: currentPageOpacity,
+                opacity: pageOpacity.currentPageOpacity,
                 // 动画期间稍微降低透明度，提供视觉反馈
                 // Note: movingQuestion removed as flow animation system was simplified
               }}
