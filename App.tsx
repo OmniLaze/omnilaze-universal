@@ -842,19 +842,38 @@ function OmnilazeAppContent() {
     let targetOffset;
     let targetMode;
     
-    // 基于中点判断吸附方向
-    if (offsetY < midPoint) {
-      // 吸附到已完成问题页面（缓冲区底部）
-      targetOffset = completedPagePosition;
-      targetMode = 'completed';
-      setFocusMode('completed');
-      saveFocusMode('completed');
+    // 移动端：只在接近某一页时才吸附，避免频繁抖动
+    if (Platform.OS !== 'web') {
+      const nearCompleted = Math.abs(offsetY - completedPagePosition) <= 60;
+      const nearCurrent = Math.abs(offsetY - currentPagePosition) <= 60;
+      if (nearCompleted && !nearCurrent) {
+        targetOffset = completedPagePosition;
+        targetMode = 'completed';
+        setFocusMode('completed');
+        saveFocusMode('completed');
+      } else if (nearCurrent && !nearCompleted) {
+        targetOffset = currentPagePosition;
+        targetMode = 'current';
+        setFocusMode('current');
+        saveFocusMode('current');
+      } else {
+        // 离任意页面较远或两者都很近：不吸附
+        console.log('⏭ 移动端：离目标较远或模棱两可，不执行吸附');
+        return;
+      }
     } else {
-      // 吸附到当前问题页面
-      targetOffset = currentPagePosition;
-      targetMode = 'current';
-      setFocusMode('current');
-      saveFocusMode('current');
+      // 网页端保持原先中点吸附逻辑
+      if (offsetY < midPoint) {
+        targetOffset = completedPagePosition;
+        targetMode = 'completed';
+        setFocusMode('completed');
+        saveFocusMode('completed');
+      } else {
+        targetOffset = currentPagePosition;
+        targetMode = 'current';
+        setFocusMode('current');
+        saveFocusMode('current');
+      }
     }
     
     console.log('🎯 吸附决策:', { 
@@ -865,11 +884,20 @@ function OmnilazeAppContent() {
       willSnap: Math.abs(offsetY - targetOffset) > 10 ? 'YES' : 'NO'
     });
     
-    // 平滑吸附动画
-    scrollViewRef.current?.scrollTo({
-      y: targetOffset,
-      animated: true,
-    });
+    // 仅在需要时触发吸附滚动
+    const distance = Math.abs(offsetY - targetOffset);
+    const snapThreshold = Platform.OS === 'web' ? 10 : 40; // 移动端阈值更大，避免频繁轻微吸附
+
+    console.log('🧮 吸附距离与阈值:', { distance, snapThreshold, platform: Platform.OS });
+
+    if (distance > snapThreshold) {
+      scrollViewRef.current?.scrollTo({
+        y: targetOffset,
+        animated: true,
+      });
+    } else {
+      console.log('⏭ 跳过吸附（距离过小）');
+    }
   };
   
   // 程序化切换页面
