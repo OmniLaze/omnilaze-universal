@@ -18,7 +18,11 @@ import {
 const { height, width } = Dimensions.get('window');
 
 // 导入全局CSS样式来移除焦点边框
-import './src/styles/global.css';
+// Only load global CSS on web to avoid accessing document in native
+if (Platform.OS === 'web') {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  require('./src/styles/global.css');
+}
 
 // Components
 import { ProgressSteps } from './src/components/ProgressSteps';
@@ -60,14 +64,21 @@ import { TIMING, DEV_CONFIG } from './src/constants';
 function OmnilazeAppContent() {
   // 修复React Native Web字体缩放问题 + 移动端强制适配
   useEffect(() => {
-    if (Platform.OS === 'web') {
+    // Guard against non-web environments where document/window don't exist
+    if (Platform.OS !== 'web') {
+      return;
+    }
+    if (typeof document === 'undefined' || typeof window === 'undefined') {
+      return;
+    }
+    try {
       // 1. 强制viewport设置
-      const existingViewport = document.querySelector('meta[name="viewport"]');
-      if (existingViewport) {
-        existingViewport.setAttribute('content', 
-          'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover'
-        );
-      }
+        const existingViewport = document.querySelector('meta[name="viewport"]');
+        if (existingViewport) {
+          existingViewport.setAttribute('content', 
+            'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover'
+          );
+        }
       
       // 2. 检测移动设备
       const isMobileDevice = () => {
@@ -138,6 +149,8 @@ function OmnilazeAppContent() {
       console.log('🔧 已应用移动端强制适配 + 字体缩放修复');
       
       return () => window.removeEventListener('resize', handleResize);
+    } catch (err) {
+      console.warn('Web adaptation skipped due to missing browser APIs:', err);
     }
   }, []);
 
@@ -654,8 +667,10 @@ function OmnilazeAppContent() {
   const handleLogout = useCallback(() => {
     CookieManager.clearUserSession();
     CookieManager.clearConversationState();
-    localStorage.removeItem('user_id');
-    localStorage.removeItem('phone_number');
+    if (Platform.OS === 'web' && typeof localStorage !== 'undefined') {
+      localStorage.removeItem('user_id');
+      localStorage.removeItem('phone_number');
+    }
     
     resetAllState();
     resetFreeOrderState(); // 使用统一的免单重置
@@ -700,7 +715,7 @@ function OmnilazeAppContent() {
   // focusMode状态管理：保存到cookie
   const [focusMode, setFocusMode] = useState<'current' | 'completed'>(() => {
     // 页面加载时从localStorage恢复focusMode，默认为current
-    if (Platform.OS === 'web') {
+    if (Platform.OS === 'web' && typeof localStorage !== 'undefined') {
       try {
         const saved = localStorage.getItem('omnilaze_focus_mode');
         return saved === 'completed' ? 'completed' : 'current';
@@ -714,7 +729,7 @@ function OmnilazeAppContent() {
   
   // 保存focusMode到localStorage
   const saveFocusMode = (mode: 'current' | 'completed') => {
-    if (Platform.OS === 'web') {
+    if (Platform.OS === 'web' && typeof localStorage !== 'undefined') {
       try {
         localStorage.setItem('omnilaze_focus_mode', mode);
         console.log('focusMode已保存:', mode);
@@ -818,7 +833,7 @@ function OmnilazeAppContent() {
     console.log('📍 吸附位置计算:', {
       completedPagePosition,
       currentPagePosition,
-      getCurrentPagePositionCalc: `${bufferContainerHeight} + ${completedQuestionsHeight} - ${CURRENT_PAGE_OFFSET} = ${currentPagePosition}`
+      getCurrentPagePositionCalc: `${bufferContainerHeight} + ${completedQuestionsHeight} - ${scrollDimensions.CURRENT_PAGE_OFFSET} = ${currentPagePosition}`
     });
     
     // 计算中点，用于判断吸附方向
@@ -969,7 +984,7 @@ function OmnilazeAppContent() {
     CookieManager.clearConversationState();
     CookieManager.saveUserSession(result.userId!, result.phoneNumber, result.isNewUser || false);
     
-    if (result.userId) {
+    if (result.userId && Platform.OS === 'web' && typeof localStorage !== 'undefined') {
       localStorage.setItem('user_id', result.userId);
       localStorage.setItem('phone_number', result.phoneNumber);
     }

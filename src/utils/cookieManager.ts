@@ -1,27 +1,48 @@
-// Cookie管理工具
+import { Platform } from 'react-native';
+
+const isWeb = Platform.OS === 'web' && typeof document !== 'undefined';
+const memoryStore = new Map<string, string>();
+
+// Basic in-memory fallback for native platforms
+const memorySet = (name: string, value: string) => memoryStore.set(name, value);
+const memoryGet = (name: string): string | null => (memoryStore.has(name) ? (memoryStore.get(name) as string) : null);
+const memoryDelete = (name: string) => memoryStore.delete(name);
+
+// Cookie管理工具（Web 使用 cookie，原生使用内存存储作为兼容层）
 export const CookieManager = {
   // 设置Cookie
   setCookie: (name: string, value: string, days: number = 7) => {
-    const expires = new Date();
-    expires.setTime(expires.getTime() + (days * 24 * 60 * 60 * 1000));
-    document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/`;
+    if (isWeb) {
+      const expires = new Date();
+      expires.setTime(expires.getTime() + days * 24 * 60 * 60 * 1000);
+      document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/`;
+    } else {
+      memorySet(name, value);
+    }
   },
 
   // 获取Cookie
   getCookie: (name: string): string | null => {
-    const nameEQ = name + "=";
-    const ca = document.cookie.split(';');
-    for (let i = 0; i < ca.length; i++) {
-      let c = ca[i];
-      while (c.charAt(0) === ' ') c = c.substring(1, c.length);
-      if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
+    if (isWeb) {
+      const nameEQ = name + '=';
+      const ca = document.cookie.split(';');
+      for (let i = 0; i < ca.length; i++) {
+        let c = ca[i];
+        while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+        if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
+      }
+      return null;
     }
-    return null;
+    return memoryGet(name);
   },
 
   // 删除Cookie
   deleteCookie: (name: string) => {
-    document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
+    if (isWeb) {
+      document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
+    } else {
+      memoryDelete(name);
+    }
   },
 
   // 保存用户会话
@@ -111,7 +132,7 @@ export const CookieManager = {
 
   // 通用存储方法 (兼容React Native AsyncStorage接口)
   saveItem: async (key: string, value: string) => {
-    CookieManager.setCookie(key, value, 30); // 30天有效期
+    CookieManager.setCookie(key, value, 30); // Web: 30天有效期；原生：内存
   },
 
   // 通用获取方法

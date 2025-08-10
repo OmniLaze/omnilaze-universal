@@ -1,13 +1,5 @@
 import React from 'react';
-import { View } from 'react-native';
-import { 
-  IoLocationSharp,
-  IoCall,
-  IoCheckmark,
-  IoClose,
-  IoPencil,
-  IoChatbubble,
-} from 'react-icons/io5';
+import { Ionicons } from '@expo/vector-icons';
 
 interface SimpleIconProps {
   name: string;
@@ -16,13 +8,22 @@ interface SimpleIconProps {
   style?: any;
 }
 
-const iconMap: { [key: string]: any } = {
-  'location-on': IoLocationSharp,
-  'phone': IoCall,
-  'check': IoCheckmark,
-  'close': IoClose,
-  'edit': IoPencil,
-  'sms': IoChatbubble,
+const iconNameMap: Record<string, React.ComponentProps<typeof Ionicons>['name']> = {
+  // Existing mappings
+  'location-on': 'location-sharp',
+  'phone': 'call',
+  'check': 'checkmark',
+  'close': 'close',
+  'edit': 'pencil',
+  'sms': 'chatbubble',
+  // Additional names used across the app
+  'gift': 'gift',
+  'info': 'information-circle',
+  'exit': 'log-out-outline',
+  'person': 'person',
+  'copy': 'copy',
+  'language': 'language',
+  'chat': 'chatbubbles',
 };
 
 export const SimpleIcon: React.FC<SimpleIconProps> = ({ 
@@ -31,18 +32,8 @@ export const SimpleIcon: React.FC<SimpleIconProps> = ({
   color = '#000', 
   style 
 }) => {
-  const IconComponent = iconMap[name];
-  
-  if (!IconComponent) {
-    return null;
-  }
-
+  const iconName = iconNameMap[name] || 'help-circle-outline';
   return (
-    <View style={[{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }, style]}>
-      <IconComponent 
-        size={size} 
-        color={color}
-      />
-    </View>
+    <Ionicons name={iconName} size={size} color={color} style={style} />
   );
 };

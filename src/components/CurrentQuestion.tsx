@@ -98,7 +98,7 @@ export const CurrentQuestion: React.FC<CurrentQuestionProps> = ({
               {/* 问题与输入 */}
               <View style={[questionStyles.questionHeader, { marginBottom: 0 }]}>
                 <View style={{ flexDirection: 'column', width: '100%' }}>
-                  <View
+                  <Animated.View
                     style={[
                       questionStyles.questionTextContainer,
                       {
@@ -127,7 +127,7 @@ export const CurrentQuestion: React.FC<CurrentQuestionProps> = ({
                         )}
                       </Text>
                     </Animated.View>
-                  </View>
+                  </Animated.View>
                   {children}
                 </View>
               </View>
@@ -197,7 +197,7 @@ export const CurrentQuestion: React.FC<CurrentQuestionProps> = ({
                 <View style={{ flex: 1 }}>
                   <View style={[questionStyles.questionHeader, { marginBottom: 0 }]}>
                     <View style={{ flexDirection: 'column', width: '100%' }}>
-                      <View
+                      <Animated.View
                         style={[
                           questionStyles.questionTextContainer,
                           {
@@ -227,7 +227,7 @@ export const CurrentQuestion: React.FC<CurrentQuestionProps> = ({
                             )}
                           </Text>
                         </Animated.View>
-                      </View>
+                      </Animated.View>
                       {children}
                     </View>
                   </View>
