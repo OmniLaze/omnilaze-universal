@@ -1,6 +1,6 @@
 name = "omnilaze-universal-api"
 main = "worker.js"
-compatibility_date = "2024-01-15"
+compatibility_date = "2025-08-10"
 compatibility_flags = ["nodejs_compat"]
 
 # Environment variables
