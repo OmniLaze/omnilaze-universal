@@ -1384,7 +1384,7 @@ function OmnilazeAppContent() {
       )}
       
       {/* 进度条 - 仅网页端显示，移动端完全不显示 */}
-      {isAuthenticated && (
+      {isAuthenticated && Platform.OS === 'web' && (
         <ProgressSteps currentStep={currentStep} />
       )}  
 
@@ -1406,9 +1406,7 @@ function OmnilazeAppContent() {
       <ScrollView
         ref={scrollViewRef}
         style={{ flex: 1 }}
-        contentContainerStyle={{ 
-          height: dynamicContentHeight, // 使用动态计算的内容高度
-        }}
+        contentContainerStyle={Platform.OS === 'web' ? { height: dynamicContentHeight } : undefined}
         showsVerticalScrollIndicator={false}
         scrollEventThrottle={16}
         onScroll={handleScroll}
@@ -1418,33 +1416,33 @@ function OmnilazeAppContent() {
         decelerationRate={0.92} // 调整减速率，让滚动停止更快，吸附更明显
         // 暂时移除snapToOffsets，使用自定义吸附逻辑
       >
-        {/* ========== 空白缓冲容器（732px） - 为推动内容提供可滚动空间 ========== */}
-        <Animated.View 
-          style={[
-            {
-              height: 300, // 缓冲空间，足够容纳推动的内容
-              backgroundColor: theme.BACKGROUND, // 保持一致的背景色
-              transform: [{ translateY: completedQuestionsOffset }] // 与其他容器同步推动
-            }
-          ]}
-        >
-          {/* 纯空白容器，不渲染任何内容 */}
-        </Animated.View>
+        {/* ========== 空白缓冲容器（仅网页端） ========== */}
+        {Platform.OS === 'web' && (
+          <Animated.View 
+            style={[
+              {
+                height: 300,
+                backgroundColor: theme.BACKGROUND,
+                transform: [{ translateY: completedQuestionsOffset }]
+              }
+            ]}
+          />
+        )}
 
         {/* ========== 已完成问题页面（动态高度） ========== */}
         <Animated.View 
           style={[
             {
-              minHeight: 200, // 最小高度，防止内容过少
-              paddingTop: 100, // 给进度条留出空间
+              minHeight: 200,
+              paddingTop: Platform.OS === 'web' ? 100 : 16,
               paddingHorizontal: 16,
               paddingBottom: 20,
               justifyContent: 'flex-start',
-              backgroundColor: theme.BACKGROUND, // 保持一致的背景色
-              transform: [{ translateY: completedQuestionsOffset }] // 页面级别推动
+              backgroundColor: theme.BACKGROUND,
+              ...(Platform.OS === 'web' ? { transform: [{ translateY: completedQuestionsOffset }] } : {}),
             }
           ]}
-          onLayout={measureCompletedQuestionsHeight} // 恢复高度测量
+          onLayout={measureCompletedQuestionsHeight}
         >
           <View 
             style={{
@@ -1511,13 +1509,12 @@ function OmnilazeAppContent() {
         <Animated.View 
           style={[
             {
-              height: pageHeight, // 保持完整高度
-              paddingTop: 1, // 减少顶部padding，让两个页面更接近
+              ...(Platform.OS === 'web' ? { height: pageHeight, paddingTop: 1 } : { paddingTop: 12 }),
               paddingHorizontal: 16,
               paddingBottom: 40,
               justifyContent: 'flex-start',
-              backgroundColor: theme.BACKGROUND, // 保持一致的背景色
-              transform: [{ translateY: completedQuestionsOffset }] // 页面级别推动
+              backgroundColor: theme.BACKGROUND,
+              ...(Platform.OS === 'web' ? { transform: [{ translateY: completedQuestionsOffset }] } : {}),
             }
           ]}
         >

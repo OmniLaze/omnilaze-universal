@@ -15,6 +15,7 @@
  */
 
 import { ENV_CONFIG } from '../config/env';
+import { Platform } from 'react-native';
 import type { AddressSuggestion, AddressSearchResponse } from '../types';
 
 export interface ApiResponse<T = any> {
@@ -100,22 +101,25 @@ export interface OrdersResponse {
   count: number;
 }
 
-// API 基础 URL 配置
+// API 基础 URL 配置（移动端默认走可访问的HTTPS后端，避免 localhost 导致的请求失败）
 const getApiBaseUrl = () => {
-  // 生产环境：优先使用设置的URL，否则使用正确的Workers URL
+  const envUrl = process.env.REACT_APP_API_URL || ENV_CONFIG.API_URL;
+  const defaultCloudUrl = 'https://omnilaze-universal-api.stevenxxzg.workers.dev';
+
+  // 移动端（Expo Go）无法访问开发机的 localhost；优先使用 HTTPS 云端地址
+  if (Platform.OS !== 'web') {
+    // 如果显式配置了非 localhost 的地址则使用，否则回退到云端地址
+    if (!envUrl || envUrl.includes('localhost') || envUrl.includes('127.0.0.1')) {
+      return defaultCloudUrl;
+    }
+    return envUrl;
+  }
+
+  // Web 环境按原逻辑：生产用云端，开发使用配置或本地
   if (process.env.NODE_ENV === 'production') {
-    return process.env.REACT_APP_API_URL || 'https://omnilaze-universal-api.stevenxxzg.workers.dev';
+    return envUrl || defaultCloudUrl;
   }
-  
-  // 开发环境：检查本地服务器或使用线上地址
-  const localUrl = process.env.REACT_APP_API_URL || 'http://localhost:5001';
-  
-  // 如果设置了生产 URL 作为开发环境的备选，使用它
-  if (localUrl.startsWith('https://') && (localUrl.includes('workers.dev') || localUrl.includes('omnilaze.co'))) {
-    return localUrl;
-  }
-  
-  return localUrl;
+  return envUrl || defaultCloudUrl;
 };
 
 const API_BASE_URL = getApiBaseUrl();
@@ -183,21 +187,45 @@ async function enhancedFetch(url: string, options: RequestInit, timeout: number 
   }
 }
 
+// 带重试的请求（处理移动端偶发的网络抖动）
+async function fetchWithRetry(
+  request: () => Promise<Response>,
+  retries: number = 2,
+  retryDelayMs: number = 600
+): Promise<Response> {
+  try {
+    return await request();
+  } catch (error) {
+    if (retries <= 0) throw error;
+    const message = (error instanceof Error ? error.message : '').toLowerCase();
+    // 仅在网络/超时错误时重试
+    if (message.includes('network') || message.includes('fetch') || message.includes('timeout') || message.includes('abort')) {
+      await new Promise((r) => setTimeout(r, retryDelayMs));
+      return fetchWithRetry(request, retries - 1, retryDelayMs * 1.5);
+    }
+    throw error;
+  }
+}
+
 
 /**
  * 发送手机验证码
  */
 export async function sendVerificationCode(phoneNumber: string): Promise<ApiResponse> {
   try {
-    const response = await enhancedFetch(`${API_BASE_URL}/send-verification-code`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        phone_number: phoneNumber
-      })
-    });
+    const response = await fetchWithRetry(
+      () => enhancedFetch(`${API_BASE_URL}/send-verification-code`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          phone_number: phoneNumber
+        })
+      }, 12000),
+      2,
+      700
+    );
 
     const data = await response.json();
 
@@ -219,16 +247,20 @@ export async function sendVerificationCode(phoneNumber: string): Promise<ApiResp
  */
 export async function verifyCodeAndLogin(phoneNumber: string, code: string): Promise<VerificationResponse> {
   try {
-    const response = await enhancedFetch(`${API_BASE_URL}/login-with-phone`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        phone_number: phoneNumber,
-        verification_code: code
-      })
-    });
+    const response = await fetchWithRetry(
+      () => enhancedFetch(`${API_BASE_URL}/login-with-phone`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          phone_number: phoneNumber,
+          verification_code: code
+        })
+      }, 12000),
+      2,
+      700
+    );
 
     const data = await response.json();
 
