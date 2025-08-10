@@ -57,7 +57,7 @@ import type { AuthResult } from './src/types';
 import { createGlobalStyles, rightContentStyles, createProgressStyles, createQuestionStyles, createAvatarStyles, createAnswerStyles } from './src/styles/globalStyles';
 import { TIMING, DEV_CONFIG } from './src/constants';
 
-function LemonadeAppContent() {
+function OmnilazeAppContent() {
   // 修复React Native Web字体缩放问题 + 移动端强制适配
   useEffect(() => {
     if (Platform.OS === 'web') {
@@ -1653,10 +1653,10 @@ function LemonadeAppContent() {
   );
 }
 
-export default function LemonadeApp() {
+export default function OmnilazeApp() {
   return (
     <ColorThemeProvider>
-      <LemonadeAppContent />
+      <OmnilazeAppContent />
     </ColorThemeProvider>
   );
 }
