@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, TouchableOpacity, Animated, Dimensions, Platform, Modal, ScrollView, Image, Linking } from 'react-native';
+import { View, Text, TouchableOpacity, Animated, Dimensions, Platform, Modal, ScrollView, Image, Linking, StatusBar } from 'react-native';
 import { useTheme } from '../contexts/ColorThemeContext';
 import { createAvatarStyles } from '../styles/globalStyles';
 import { STEP_TITLES, COLORS } from '../constants';
@@ -125,7 +125,8 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
   const headerStyles = {
     container: {
       backgroundColor: theme.BACKGROUND,
-      paddingTop: Platform.OS === 'ios' ? 28 : 12,
+      // 留出系统状态栏空间，然后在其下方展示进度条
+      paddingTop: (Platform.OS === 'android' ? (StatusBar.currentHeight || 0) : 44) + 6,
       paddingBottom: 10,
       paddingHorizontal: 16,
       zIndex: 100,
